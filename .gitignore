@@ -1,0 +1,7 @@
+# Claude settings pessoais (não vai pro GitHub)
+.claude/settings.local.json
+.claude/
+
+# Sistema
+desktop.ini
+Thumbs.db

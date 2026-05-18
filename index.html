@@ -1,0 +1,3452 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Flapy Bleu</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { height: 100%; }
+  body { background: #00050f; display: flex; align-items: center; justify-content: center; min-height: 100dvh; font-family: 'Courier New', monospace; overflow: hidden; }
+  canvas {
+    position: fixed;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    /* No border — box-shadow only, so touch coords are pixel-perfect */
+    border: none;
+    border-radius: 8px;
+    box-shadow: 0 0 0 2px #0052FF88, 0 0 40px #0052FF66, 0 0 80px #0052FF22;
+    /* Fill screen keeping 2:3 ratio */
+    width: min(100vw, calc(100dvh * 2 / 3));
+    height: min(100dvh, calc(100vw * 3 / 2));
+    touch-action: none;
+    image-rendering: optimizeSpeed;
+    z-index: 1;
+  }
+  body { overflow: hidden; touch-action: none; }
+  #ui { display: none; }
+  #mute { position: fixed; bottom: 14px; right: 14px; background: #0052FF18; border: 1px solid #0052FF44; color: #0052FF; font-family: 'Courier New', monospace; font-size: 12px; padding: 10px 14px; border-radius: 6px; cursor: pointer; touch-action: manipulation; z-index: 10; }
+</style>
+</head>
+<body>
+<div id="ui">💎 FLAPY BLEU — tap or SPACE to flap</div>
+<canvas id="c" width="400" height="600"></canvas>
+<button id="mute">🔊 SOM</button>
+<script>
+const canvas = document.getElementById('c');
+// roundRect polyfill for older browsers
+if (!CanvasRenderingContext2D.prototype.roundRect) {
+  CanvasRenderingContext2D.prototype.roundRect = function(x,y,w,h,r) {
+    var rArr = Array.isArray(r) ? r : [r,r,r,r];
+    var tl=rArr[0]||0, tr=rArr[1]||0, br=rArr[2]||0, bl=rArr[3]||0;
+    var rr = Math.min(tl, w/2, h/2); // use tl for uniform compat, array ignored in polyfill for simplicity
+    // flatten to single radius for the polyfill path
+    var rr = Math.min((rArr[0]+rArr[1]+rArr[2]+rArr[3])/4, w/2, h/2);
+    this.moveTo(x+rr, y);
+    this.lineTo(x+w-rr, y);
+    this.arcTo(x+w,y, x+w,y+rr, rr);
+    this.lineTo(x+w, y+h-rr);
+    this.arcTo(x+w,y+h, x+w-rr,y+h, rr);
+    this.lineTo(x+rr, y+h);
+    this.arcTo(x,y+h, x,y+h-rr, rr);
+    this.lineTo(x, y+rr);
+    this.arcTo(x,y, x+rr,y, rr);
+    this.closePath();
+  };
+}
+const ctx = canvas.getContext('2d', {alpha: false});
+const W = canvas.width, H = canvas.height;
+
+// ─── AUDIO ───────────────────────────────────
+var _ac = null, muted = false;
+document.getElementById('mute').onclick = function() {
+  muted = !muted;
+  document.getElementById('mute').textContent = muted ? '🔇 MUDO' : '🔊 SOM';
+  if(muted) stopMusic(); else if(gameState==='playing') startMusic(getPhaseIdx());
+};
+function getAC() {
+  if (!_ac) { try { _ac = new (window.AudioContext || window.webkitAudioContext)(); } catch(e){} }
+  if (_ac && _ac.state === 'suspended') _ac.resume();
+  return _ac;
+}
+function beep(f1, f2, dur, type, vol) {
+  if (muted) return;
+  var a = getAC(); if (!a) return;
+  try {
+    var o = a.createOscillator(), g = a.createGain();
+    o.connect(g); g.connect(a.destination);
+    o.type = type || 'sine';
+    o.frequency.setValueAtTime(f1, a.currentTime);
+    if (f2 && f2 !== f1) o.frequency.exponentialRampToValueAtTime(f2, a.currentTime + dur);
+    g.gain.setValueAtTime(vol || 0.2, a.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, a.currentTime + dur);
+    o.start(a.currentTime);
+    o.stop(a.currentTime + dur + 0.05);
+  } catch(e) {}
+}
+
+// ─── FASES (10 fases, muda a cada 10 pontos para teste) ─────
+const PHASES = [
+  { speed: 2.4, gap: 148, label: 'PHASE 1'  },
+  { speed: 2.4, gap: 148, label: 'PHASE 2'  },
+  { speed: 2.4, gap: 148, label: 'PHASE 3'  },
+  { speed: 2.4, gap: 148, label: 'PHASE 4'  },
+  { speed: 2.4, gap: 148, label: 'PHASE 5'  },
+  { speed: 2.4, gap: 148, label: 'PHASE 6'  },
+  { speed: 2.4, gap: 148, label: 'PHASE 7'  },
+  { speed: 2.4, gap: 148, label: 'PHASE 8'  },
+  { speed: 2.4, gap: 185, label: 'PHASE 9'  },
+  { speed: 2.4, gap: 148, label: 'PHASE 10' },
+]; // ← mesma dificuldade em todas, ajustar depois
+function getPhaseIdx() { return Math.min(9, Math.floor(score / 4)); }
+function getPhase()    { return PHASES[getPhaseIdx()]; }
+
+// ─── PHASE VISUALS ────────────────────────────────
+const PHASE_VISUALS = [
+  // 0 — PERPDEX TERMINAL
+  { name:'PERPDEX TERMINAL', bg:['#020812','#040d18'], groundColor:'#030a12', groundLine:'#00ff41',
+    glowColor:'#00ff41', candleUp:'#00e676', candleDown:'#ff1744', trend:0, type:'terminal' },
+  // 1 — BASE NETWORK (sunny sky + blue pipes)
+  { name:'BASE NETWORK', bg:['#55aaee','#88ccff'], groundColor:'#3a8c2a', groundLine:'#0052FF',
+    glowColor:'#0052FF', candleUp:'#0052FF', candleDown:'#FF8C00', trend:0, type:'base_pipe' },
+  // 2 — TO THE MOON (mountains)
+  { name:'TO THE MOON', bg:['#1a3a6b','#4e88c8'], groundColor:'#5c7090', groundLine:'#ffffff',
+    glowColor:'#FFE066', candleUp:'#e0e8ff', candleDown:'#7a99cc', trend:-20, type:'mountain' },
+  // 3 — CRYPTO FOREST (pine trees + drizzle)
+  { name:'CRYPTO FOREST', bg:['#040e06','#091c0a'], groundColor:'#071408', groundLine:'#4CAF50',
+    glowColor:'#66BB6A', candleUp:'#8D6E63', candleDown:'#5D4037', trend:0, type:'forest' },
+  // 4 — HEAVEN'S GATE (titan hands + face)
+  { name:"HEAVEN'S GATE", bg:['#0d0824','#2a1255'], groundColor:'#2e2000', groundLine:'#FFD700',
+    glowColor:'#FFD700', candleUp:'#FFD700', candleDown:'#FF8C00', trend:0, type:'heaven' },
+  // 5 — DUNGEON CASTLE (ghost dungeon + stone walls)
+  { name:'DUNGEON CASTLE', bg:['#080510','#14091e'], groundColor:'#0a0618', groundLine:'#664488',
+    glowColor:'#8855bb', candleUp:'#9966cc', candleDown:'#cc3366', trend:5, type:'castle' },
+  // 6 — OUTER SPACE (lasers + wormhole)
+  { name:'OUTER SPACE', bg:['#000008','#02000f'], groundColor:'#020008', groundLine:'#00ffee',
+    glowColor:'#00ffee', candleUp:'#00ffee', candleDown:'#ff00cc', trend:0, type:'laser' },
+  // 7 — CELESTIAL DESERT (vine thorns + colossal ruins)
+  { name:'CELESTIAL DESERT', bg:['#1a0800','#321200'], groundColor:'#280f04', groundLine:'#ffaa44',
+    glowColor:'#ff8833', candleUp:'#ff8833', candleDown:'#cc4400', trend:0, type:'vine' },
+  // 8 — THE LIMBO (grotesque growths + monsters)
+  { name:'THE LIMBO', bg:['#040408','#080510'], groundColor:'#030307', groundLine:'#7722aa',
+    glowColor:'#bb44ee', candleUp:'#aa22cc', candleDown:'#224400', trend:0, type:'limbo' },
+  // 9 — COINBASE PLANET (rockets + money + fireworks)
+  { name:'COINBASE PLANET', bg:['#44aaee','#77ccff'], groundColor:'#2a8a20', groundLine:'#FFD700',
+    glowColor:'#FFD700', candleUp:'#0052FF', candleDown:'#FF6B00', trend:0, type:'rocket' },
+];
+function getPhaseVisual() { return PHASE_VISUALS[getPhaseIdx()]; }
+
+// ─── PHASE MUSIC ────────────────────────────────────────────
+const PHASE_MUSIC = [
+  { n:[110,0,138,165,138,110,0,0, 146,138,165,110,0,138,0,0],  d:120, w:'square',   v:.05  },
+  { n:[523,659,784,659,523,0,392,523, 659,784,659,523,440,523,0,0], d:110, w:'sine', v:.055 },
+  { n:[349,440,523,440,349,0,294,349, 440,523,698,523,440,349,0,0], d:155, w:'sine', v:.05  },
+  { n:[220,0,261,329,261,220,0,196, 0,247,294,247,220,0,196,0], d:195, w:'triangle',v:.055 },
+  { n:[262,330,392,523,392,330,262,0, 220,277,330,440,392,330,0,262], d:155, w:'sine', v:.06 },
+  { n:[110,0,130,0,146,130,110,0, 98,0,116,130,116,98,0,0],   d:190, w:'sawtooth', v:.04  },
+  { n:[440,0,554,659,0,880,659,554, 440,0,659,880,0,659,554,0], d:95, w:'square',   v:.045 },
+  { n:[294,330,370,440,370,330,294,0, 247,294,330,370,330,294,0,0], d:175, w:'sine', v:.055 },
+  { n:[185,0,207,246,220,185,0,174, 0,207,0,185,174,0,185,0], d:215, w:'sine',     v:.045 },
+  { n:[523,659,784,880,1047,880,784,659, 523,0,659,784,880,1047,880,0], d:105, w:'sine', v:.06 }
+];
+function startMusic(pi) {
+  if (_mPhase === pi) return;
+  stopMusic(); _mPhase = pi; _mPos = 0; _tickMusic();
+}
+function stopMusic() { clearTimeout(_mTimeout); _mTimeout = null; _mPhase = -1; }
+function _tickMusic() {
+  if (_mPhase < 0 || muted) return;
+  var pm = PHASE_MUSIC[_mPhase], f = pm.n[_mPos % pm.n.length];
+  if (f > 0) {
+    var a = getAC();
+    if (a) try {
+      var o = a.createOscillator(), g = a.createGain();
+      o.connect(g); g.connect(a.destination);
+      o.type = pm.w; o.frequency.value = f;
+      g.gain.setValueAtTime(pm.v, a.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, a.currentTime + pm.d/1000*.8);
+      o.start(a.currentTime); o.stop(a.currentTime + pm.d/1000);
+    } catch(e) {}
+  }
+  _mPos++;
+  _mTimeout = setTimeout(_tickMusic, pm.d);
+}
+
+// ─── AWARD / CHEST ──────────────────────────────────────────
+function chestCoinsRand() {
+  return Math.floor(10 + 90 * Math.pow(Math.random(), 1.8));
+}
+function drawTreasureChest(cx, cy, opened, openAnim) {
+  ctx.save(); ctx.translate(cx, cy);
+  var bw=90, bh=52, lidH=26;
+  ctx.globalAlpha=.3; ctx.fillStyle='#000';
+  ctx.beginPath(); ctx.ellipse(2,bh+7,bw/2-4,9,0,0,Math.PI*2); ctx.fill();
+  ctx.globalAlpha=1;
+  var bg=ctx.createLinearGradient(0,0,0,bh);
+  bg.addColorStop(0,'#8B5A2B'); bg.addColorStop(1,'#4a2c10');
+  ctx.fillStyle=bg; ctx.strokeStyle='#2a1a08'; ctx.lineWidth=2;
+  ctx.fillRect(-bw/2,0,bw,bh); ctx.strokeRect(-bw/2,0,bw,bh);
+  ctx.strokeStyle='#3a2010'; ctx.lineWidth=1;
+  [-1,0,1].forEach(function(xi){ ctx.beginPath(); ctx.moveTo(xi*bw/3,0); ctx.lineTo(xi*bw/3,bh); ctx.stroke(); });
+  ctx.fillStyle='#C8960C'; ctx.fillRect(-bw/2,bh*.43,bw,6);
+  ctx.save();
+  ctx.translate(-bw/2, 0);
+  ctx.rotate(opened ? -Math.PI*.78*Math.min(1,openAnim/14) : 0);
+  var lg=ctx.createLinearGradient(0,-lidH,0,0);
+  lg.addColorStop(0,'#a06030'); lg.addColorStop(1,'#7a4a20');
+  ctx.fillStyle=lg; ctx.strokeStyle='#2a1a08'; ctx.lineWidth=2;
+  ctx.fillRect(0,-lidH,bw,lidH); ctx.strokeRect(0,-lidH,bw,lidH);
+  ctx.fillStyle='#b07030';
+  ctx.beginPath(); ctx.ellipse(bw/2,-lidH,bw/2,10,0,Math.PI,0); ctx.fill();
+  ctx.strokeStyle='#2a1a08'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.ellipse(bw/2,-lidH,bw/2,10,0,Math.PI,0); ctx.stroke();
+  ctx.fillStyle='#C8960C'; ctx.fillRect(0,-lidH*.55,bw,5);
+  ctx.restore();
+  if (opened && openAnim>3) {
+    var gp=Math.min(1,(openAnim-3)/8);
+    ctx.globalAlpha=gp*.7;
+    var ig=ctx.createRadialGradient(0,bh*.4,2,0,bh*.4,bw*.5);
+    ig.addColorStop(0,'#FFE040'); ig.addColorStop(1,'rgba(255,200,0,0)');
+    ctx.fillStyle=ig; ctx.fillRect(-bw/2+3,3,bw-6,bh-6);
+    ctx.globalAlpha=1;
+    if (openAnim>7) {
+      var nc=Math.min(openAnim-7,8);
+      for (var ci=0;ci<nc;ci++) {
+        var ca=(ci/8)*Math.PI*1.6+.2;
+        ctx.beginPath(); ctx.arc(Math.cos(ca-Math.PI/2)*22,bh*.4+Math.sin(ca)*12,5,0,Math.PI*2);
+        ctx.fillStyle='#FFD700'; ctx.shadowColor='#FFD700'; ctx.shadowBlur=10; ctx.fill();
+      }
+      ctx.shadowBlur=0;
+    }
+  }
+  var la=(opened&&openAnim>3)?Math.max(0,1-(openAnim-3)/4):1;
+  if (la>0) {
+    ctx.globalAlpha=la;
+    ctx.fillStyle='#C8960C'; ctx.strokeStyle='#7a5a00'; ctx.lineWidth=1.5;
+    ctx.fillRect(-11,bh*.4-10,22,18); ctx.strokeRect(-11,bh*.4-10,22,18);
+    ctx.fillStyle='#4a2c10';
+    ctx.beginPath(); ctx.arc(0,bh*.4-4,4,0,Math.PI*2); ctx.fill();
+    ctx.fillRect(-2.5,bh*.4-4,5,8);
+    ctx.globalAlpha=1;
+  }
+  ctx.strokeStyle='#C8960C'; ctx.lineWidth=2.5;
+  ctx.strokeRect(-bw/2+1,1,bw-2,bh-2);
+  ctx.restore();
+}
+function drawAwardScreen() {
+  ctx.fillStyle='rgba(0,5,20,.84)'; ctx.fillRect(0,0,W,H);
+  var cx=W/2, cy=H/2+10;
+  ctx.textAlign='center';
+  ctx.font='bold 17px Courier New';
+  var tg=ctx.createLinearGradient(cx-80,0,cx+80,0);
+  tg.addColorStop(0,'#FFD700'); tg.addColorStop(1,'#00D4FF');
+  ctx.fillStyle=tg; ctx.shadowColor='#FFD700'; ctx.shadowBlur=18;
+  var aTitle=chestType==='rare'?'⭐ FASE ÉPICA COMPLETA! ⭐':'PHASE '+(completedPhase+1)+' COMPLETE!';
+  ctx.fillText(aTitle, cx, cy-140);
+  ctx.shadowBlur=0;
+  var bOff=chestBounce>0?-Math.abs(Math.sin(chestBounce/12*Math.PI))*22:0;
+  if(chestBounce>0) chestBounce--;
+  drawTreasureChest(cx, cy-28+bOff, chestOpened, chestOpenAnim);
+  if(chestOpened && chestOpenAnim<20) chestOpenAnim++;
+  if (!chestOpened) {
+    for(var di=0;di<3;di++) {
+      ctx.beginPath(); ctx.arc(cx-20+di*20,cy+48,5,0,Math.PI*2);
+      ctx.fillStyle=di<chestClicks?'#FFD700':'#ffffff22';
+      ctx.shadowColor=di<chestClicks?'#FFD700':'transparent'; ctx.shadowBlur=8;
+      ctx.fill(); ctx.shadowBlur=0;
+    }
+    ctx.font='12px Courier New'; ctx.fillStyle='#ffffff66';
+    ctx.fillText('clique o baú para abrir', cx, cy+68);
+  }
+  if (chestOpened && chestOpenAnim>=14) {
+    ctx.font='bold 30px Courier New'; ctx.fillStyle='#FFD700';
+    ctx.shadowColor='#FFD700'; ctx.shadowBlur=24;
+    ctx.fillText('+'+chestCoins, cx, cy+60);
+    ctx.shadowBlur=0;
+    ctx.font='13px Courier New'; ctx.fillStyle='#88ccff';
+    ctx.fillText('moedas do dragão 🐉', cx, cy+82);
+    ctx.font='11px Courier New'; ctx.fillStyle='#ffffff55';
+    ctx.fillText('toque para continuar', cx, cy+108);
+  }
+}
+
+// ─── IDLE TABS ───────────────────────────────────────────────
+function drawIdleTabs() {
+  var labels=['JOGAR','LOJA','SKINS','RANK'], keys=['play','shop','skins','leaderboard'];
+  var tw=88, th=38, gap=5, total=labels.length*(tw+gap)-gap;
+  var tx0=W/2-total/2, ty=H-56;
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  for(var ti=0;ti<labels.length;ti++) {
+    var tx=tx0+ti*(tw+gap), act=idleTab===keys[ti];
+    // background
+    ctx.fillStyle = act ? '#0052FF' : '#0a1a3a';
+    ctx.beginPath(); ctx.roundRect(tx, ty, tw, th, 8); ctx.fill();
+    // border
+    ctx.strokeStyle = act ? '#4488ff' : '#0052FF66';
+    ctx.lineWidth = act ? 2 : 1;
+    ctx.stroke();
+    // active indicator bar at bottom
+    if(act){ ctx.fillStyle='#00D4FF'; ctx.fillRect(tx+8, ty+th-4, tw-16, 3); }
+    // label
+    ctx.font = act ? 'bold 12px Courier New' : 'bold 11px Courier New';
+    ctx.fillStyle = act ? '#ffffff' : '#6699cc';
+    ctx.fillText(labels[ti], tx+tw/2, ty+th/2 - (act?1:0));
+  }
+  ctx.textBaseline='alphabetic';
+}
+function drawShopCards(yStart, compact) {
+  var cols=3, tw=76, th=compact?82:80, gapX=8, gapY=compact?4:5;
+  var startX=W/2-((cols*(tw+gapX)-gapX)/2);
+  for(var si=1;si<SKINS.length;si++){
+    var idx2=si-1, col=idx2%cols, row=Math.floor(idx2/cols);
+    var sx=startX+col*(tw+gapX)+tw/2, sy=yStart+row*(th+gapY);
+    var sk=SKINS[si], owned=unlockedSkins.indexOf(si)>=0, equipped=activeSkin===si&&owned;
+    var canBuy=!owned&&coinCount>=sk.price;
+    // card bg
+    ctx.fillStyle=equipped?sk.body+'44':owned?sk.body+'1a':'#ffffff08';
+    ctx.strokeStyle=equipped?sk.body:owned?sk.body+'66':canBuy?sk.glow+'66':'#ffffff18';
+    ctx.lineWidth=equipped?2:1;
+    ctx.beginPath(); ctx.roundRect(sx-tw/2,sy,tw,th,6); ctx.fill(); ctx.stroke();
+    // character preview
+    var prevSkin=activeSkin; activeSkin=si;
+    ctx.save(); ctx.translate(sx,sy+(compact?28:28)); ctx.scale(.44,.44);
+    drawBleu(0,0,frame*.28,0); ctx.restore(); activeSkin=prevSkin;
+    // name
+    ctx.textAlign='center'; ctx.font='bold 8px Courier New';
+    ctx.fillStyle=owned?'#fff':'#ffffffaa'; ctx.fillText(sk.name,sx,sy+th-18);
+    // buy/equip button
+    var btnY=sy+th-12;
+    if(owned){
+      ctx.fillStyle=equipped?sk.body+'33':'#ffffff0a';
+      ctx.strokeStyle=equipped?sk.body:'#ffffff22'; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.roundRect(sx-tw/2+4,btnY,tw-8,10,3); ctx.fill(); ctx.stroke();
+      ctx.font='6px Courier New'; ctx.fillStyle=equipped?sk.body:'#ffffff66';
+      ctx.fillText(equipped?'✓ EQUIPADA':'EQUIPAR',sx,btnY+7);
+    } else {
+      ctx.fillStyle=canBuy?'#FFD70020':'#ff000018';
+      ctx.strokeStyle=canBuy?'#FFD700':'#ff4444'; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.roundRect(sx-tw/2+4,btnY,tw-8,10,3); ctx.fill(); ctx.stroke();
+      ctx.font='6px Courier New'; ctx.fillStyle=canBuy?'#FFD700':'#ff6666';
+      ctx.fillText('🐉 '+sk.price,sx,btnY+7);
+    }
+  }
+}
+function drawShopTab() {
+  ctx.textAlign='center';
+  // Header
+  ctx.font='bold 15px Courier New'; ctx.fillStyle='#FFD700';
+  ctx.shadowColor='#FFD700'; ctx.shadowBlur=10;
+  ctx.fillText('LOJA', W/2, 36); ctx.shadowBlur=0;
+  ctx.font='11px Courier New'; ctx.fillStyle='#FFD700';
+  ctx.fillText('🐉 '+coinCount+' moedas', W/2, 54);
+
+  // ── SKINS section ──
+  ctx.textAlign='left';
+  ctx.font='bold 8px Courier New'; ctx.fillStyle='#00D4FFaa';
+  ctx.fillText('💎 SKINS — compra com moedas do dragão', 16, 70);
+  ctx.textAlign='center';
+  drawShopCards(76, false);
+
+  // ── POÇÕES section (below 4 rows of skins = 76 + 4*82 = 404) ──
+  var py = 410;
+  ctx.textAlign='left';
+  ctx.font='bold 8px Courier New'; ctx.fillStyle='#aa44ffaa';
+  ctx.fillText('⚗️ POÇÕES', 16, py);
+  var potions=[{icon:'💊',name:'Vida Extra',sub:'em breve'},{icon:'⚡',name:'Speed+',sub:'em breve'},{icon:'🛡️',name:'Shield',sub:'em breve'}];
+  for(var pi2=0;pi2<3;pi2++){
+    var px2=16+pi2*126, py2=py+5;
+    ctx.fillStyle='#ffffff04'; ctx.strokeStyle='#aa44ff22'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.roundRect(px2,py2,118,38,5); ctx.fill(); ctx.stroke();
+    ctx.font='14px Courier New'; ctx.textAlign='center'; ctx.fillStyle='#ffffff22';
+    ctx.fillText(potions[pi2].icon, px2+18, py2+23);
+    ctx.font='7px Courier New'; ctx.fillStyle='#ffffff44';
+    ctx.fillText(potions[pi2].name, px2+66, py2+14);
+    ctx.font='bold 7px Courier New'; ctx.fillStyle='#aa44ff55';
+    ctx.fillText('EM BREVE', px2+66, py2+28);
+  }
+
+  // ── ITENS ESPECIAIS ──
+  var iy = py+52;
+  ctx.textAlign='left';
+  ctx.font='bold 8px Courier New'; ctx.fillStyle='#FFD700aa';
+  ctx.fillText('🗡️ ITENS ESPECIAIS', 16, iy);
+  var items2=[{icon:'🧲',name:'Moeda x2',sub:'em breve'},{icon:'💫',name:'Auto-Flip',sub:'em breve'},{icon:'🎯',name:'Aim+',sub:'em breve'}];
+  for(var ii3=0;ii3<3;ii3++){
+    var ix2=16+ii3*126, iy2=iy+5;
+    ctx.fillStyle='#ffffff04'; ctx.strokeStyle='#FFD70022'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.roundRect(ix2,iy2,118,38,5); ctx.fill(); ctx.stroke();
+    ctx.font='14px Courier New'; ctx.textAlign='center'; ctx.fillStyle='#ffffff22';
+    ctx.fillText(items2[ii3].icon, ix2+18, iy2+23);
+    ctx.font='7px Courier New'; ctx.fillStyle='#ffffff44';
+    ctx.fillText(items2[ii3].name, ix2+66, iy2+14);
+    ctx.font='bold 7px Courier New'; ctx.fillStyle='#FFD70044';
+    ctx.fillText('EM BREVE', ix2+66, iy2+28);
+  }
+  ctx.textAlign='center';
+}
+function drawShopOverlay() {
+  ctx.fillStyle='rgba(0,5,20,.92)'; ctx.fillRect(0,0,W,H);
+  ctx.textAlign='center';
+  ctx.font='bold 14px Courier New';
+  var sg=ctx.createLinearGradient(W/2-70,0,W/2+70,0);
+  sg.addColorStop(0,'#FFD700'); sg.addColorStop(1,'#00D4FF');
+  ctx.fillStyle=sg; ctx.shadowColor='#FFD700'; ctx.shadowBlur=14;
+  ctx.fillText('LOJA — FASE '+(completedPhase+1)+' COMPLETA', W/2, 36); ctx.shadowBlur=0;
+  ctx.font='11px Courier New'; ctx.fillStyle='#FFD700';
+  ctx.fillText('🐉 '+coinCount+' moedas disponíveis', W/2, 56);
+  ctx.font='bold 8px Courier New'; ctx.fillStyle='#00D4FFaa';
+  ctx.textAlign='left'; ctx.fillText('💎 SKINS — compra com moedas', 16, 72); ctx.textAlign='center';
+  drawShopCards(76, true);
+  // future items row placeholder
+  ctx.fillStyle='#ffffff06'; ctx.strokeStyle='#ffffff11'; ctx.lineWidth=1;
+  ctx.fillRect(W/2-118,H-118,236,32); ctx.strokeRect(W/2-118,H-118,236,32);
+  ctx.font='9px Courier New'; ctx.fillStyle='#ffffff33';
+  ctx.fillText('⚗️ poções  •  🗡️ power-ups  •  🃏 itens  — em breve', W/2, H-99);
+  // continue button
+  ctx.fillStyle='#0052FF'; ctx.strokeStyle='#00D4FF'; ctx.lineWidth=2;
+  ctx.fillRect(W/2-80,H-74,160,36); ctx.strokeRect(W/2-80,H-74,160,36);
+  ctx.font='bold 12px Courier New'; ctx.fillStyle='#fff';
+  ctx.shadowColor='#00D4FF'; ctx.shadowBlur=8;
+  ctx.fillText('CONTINUAR JOGANDO', W/2, H-50); ctx.shadowBlur=0;
+}
+function drawSkinsTab() {
+  ctx.textAlign='center';
+  // Title
+  ctx.font='bold 13px Courier New'; ctx.fillStyle='#00D4FF';
+  ctx.shadowColor='#00D4FF'; ctx.shadowBlur=10;
+  ctx.fillText('MINHAS SKINS', W/2, H/2-134); ctx.shadowBlur=0;
+  ctx.font='10px Courier New'; ctx.fillStyle='#FFD700';
+  ctx.fillText('🐉 '+coinCount+' moedas', W/2, H/2-116);
+
+  // Filter: only show skins the player owns
+  var owned = unlockedSkins.slice().sort(function(a,b){return a-b;});
+  if(owned.length===0){ owned=[0]; }
+
+  var cols=3, tw2=78, th2=92, gapX=8, gapY=6;
+  var totalW2=cols*(tw2+gapX)-gapX, startX=W/2-totalW2/2;
+  for(var ii=0;ii<owned.length;ii++){
+    var si=owned[ii];
+    var col=ii%cols, row=Math.floor(ii/cols);
+    var sx2=startX+col*(tw2+gapX)+tw2/2, sy2=H/2-100+row*(th2+gapY);
+    var equipped=activeSkin===si;
+    var sk2=SKINS[si];
+    // card bg
+    ctx.fillStyle=equipped?sk2.body+'44':'#ffffff0a';
+    ctx.strokeStyle=equipped?sk2.body:sk2.body+'55';
+    ctx.lineWidth=equipped?2:1;
+    ctx.beginPath(); ctx.roundRect(sx2-tw2/2,sy2,tw2,th2,6); ctx.fill(); ctx.stroke();
+    // character preview
+    var prevSkin=activeSkin; activeSkin=si;
+    ctx.save(); ctx.translate(sx2,sy2+38); ctx.scale(.52,.52);
+    drawBleu(0,0,frame*.28,0);
+    ctx.restore(); activeSkin=prevSkin;
+    // name
+    ctx.font='bold 8px Courier New'; ctx.fillStyle='#fff'; ctx.textAlign='center';
+    ctx.fillText(sk2.name, sx2, sy2+th2-18);
+    ctx.font='7px Courier New'; ctx.fillStyle='#ffffff55';
+    ctx.fillText(sk2.rarity||'PADRÃO', sx2, sy2+th2-8);
+    // equipped badge
+    if(equipped){
+      ctx.fillStyle=sk2.body; ctx.font='bold 7px Courier New';
+      ctx.fillText('✓ USO', sx2, sy2+10);
+    }
+  }
+
+  // Empty state
+  if(owned.length<=1){
+    ctx.font='9px Courier New'; ctx.fillStyle='#ffffff33';
+    ctx.fillText('compre mais skins na Loja 🛒', W/2, H/2+100);
+  } else {
+    ctx.font='9px Courier New'; ctx.fillStyle='#ffffff33';
+    ctx.fillText('toque na skin para equipar', W/2, H/2+100);
+  }
+}
+
+
+
+// ─── SKINS ────────────────────────────────────────────────────────────
+const SKINS = [
+  // 0 – padrão (grátis)
+  { name:'PADRÃO',    rarity:'COMUM', price:0,   body:'#3b8fff', bodyLt:'#6ab4ff', shadow:'#1a5fcc', belly:'#d6eeff', outline:'#1a4fa0', glow:'#4499ff' },
+  // 1-5 skins originais
+  { name:'NEON',      rarity:'COMUM', price:80,  body:'#00e5ff', bodyLt:'#88f8ff', shadow:'#007a99', belly:'#ccfeff', outline:'#005577', glow:'#00e5ff' },
+  { name:'DOURADO',   rarity:'COMUM', price:180, body:'#FFD700', bodyLt:'#FFE866', shadow:'#B8860B', belly:'#FFF5CC', outline:'#8B6914', glow:'#FFD700' },
+  { name:'CYBERPUNK', rarity:'COMUM', price:200, body:'#ff0080', bodyLt:'#ff66bb', shadow:'#880040', belly:'#ffccee', outline:'#660030', glow:'#ff00ff' },
+  { name:'MEME',      rarity:'COMUM', price:80,  body:'#ff6600', bodyLt:'#ff9944', shadow:'#cc4400', belly:'#ffddcc', outline:'#882200', glow:'#ff8800' },
+  { name:'BASE',      rarity:'COMUM', price:250, body:'#0052FF', bodyLt:'#4488ff', shadow:'#002299', belly:'#cce0ff', outline:'#001a99', glow:'#0052FF' },
+  // 6-10 novas skins
+  { name:'ROXO',      rarity:'COMUM', price:80,  body:'#9933ff', bodyLt:'#cc88ff', shadow:'#5500cc', belly:'#eeccff', outline:'#3d0099', glow:'#aa44ff' },
+  { name:'VERDE',     rarity:'COMUM', price:80,  body:'#00cc44', bodyLt:'#44ff88', shadow:'#006622', belly:'#ccffdd', outline:'#004d1a', glow:'#00dd55' },
+  { name:'VERMELHO',  rarity:'COMUM', price:100, body:'#ff2233', bodyLt:'#ff7788', shadow:'#aa0011', belly:'#ffcccc', outline:'#880011', glow:'#ff3344' },
+  { name:'ROSA',      rarity:'COMUM', price:100, body:'#ff66cc', bodyLt:'#ffaaee', shadow:'#cc2299', belly:'#ffddff', outline:'#990077', glow:'#ff44cc' },
+  { name:'PRETO',     rarity:'COMUM', price:150, body:'#222233', bodyLt:'#444466', shadow:'#111122', belly:'#aaaacc', outline:'#000011', glow:'#5555aa' }
+];
+
+// ─── LEADERBOARD TAB ────────────────────────────────────────────────
+function drawLeaderboardTab() {
+  ctx.textAlign='center';
+  ctx.font='bold 15px Courier New';
+  var rg=ctx.createLinearGradient(W/2-70,0,W/2+70,0);
+  rg.addColorStop(0,'#FFD700'); rg.addColorStop(1,'#00D4FF');
+  ctx.fillStyle=rg; ctx.shadowColor='#FFD700'; ctx.shadowBlur=14;
+  ctx.fillText('RANKING', W/2, H/2-122); ctx.shadowBlur=0;
+
+  var rows=[
+    { label:'PONTUAÇÃO ANTERIOR', val:lastScore,  color:'#00D4FF', icon:'🎮' },
+    { label:'MELHOR SCORE',    val:highScore,  color:'#FFD700', icon:'🏆' },
+    { label:'SCORE TOTAL',     val:totalScore, color:'#aa44ff', icon:'📊' }
+  ];
+  for(var ri=0;ri<rows.length;ri++){
+    var ry=H/2-82+ri*58;
+    ctx.fillStyle='#0052FF18'; ctx.strokeStyle='#0052FF44'; ctx.lineWidth=1;
+    ctx.fillRect(W/2-112,ry,224,50); ctx.strokeRect(W/2-112,ry,224,50);
+    ctx.font='9px Courier New'; ctx.fillStyle='#ffffff55';
+    ctx.textAlign='left'; ctx.fillText(rows[ri].icon+' '+rows[ri].label, W/2-104, ry+14);
+    ctx.textAlign='right';
+    ctx.font='bold 20px Courier New'; ctx.fillStyle=rows[ri].color;
+    ctx.shadowColor=rows[ri].color; ctx.shadowBlur=8;
+    ctx.fillText(rows[ri].val, W/2+104, ry+38); ctx.shadowBlur=0;
+  }
+  ctx.textAlign='center';
+
+  // Global placeholder
+  ctx.fillStyle='#ffffff06'; ctx.strokeStyle='#0052FF22'; ctx.lineWidth=1;
+  ctx.fillRect(W/2-112,H/2+98,224,46); ctx.strokeRect(W/2-112,H/2+98,224,46);
+  ctx.font='10px Courier New'; ctx.fillStyle='#FFD70066';
+  ctx.fillText('🌐 RANKING GLOBAL', W/2, H/2+116);
+  ctx.font='9px Courier New'; ctx.fillStyle='#ffffff33';
+  ctx.fillText('em breve — conecte sua wallet', W/2, H/2+132);
+}
+
+// ─── DAILY LOGIN ────────────────────────────────────────────────────
+var dailyModal=false, dailyDay=1, dailyReward='coins', dailyRewardVal=50;
+function checkDailyLogin() {
+  var today = new Date().toDateString();
+  var dl = JSON.parse(localStorage.getItem('bleuDaily')||'{"date":"","streak":0}');
+  if(dl.date===today) return;
+  var yest = new Date(); yest.setDate(yest.getDate()-1);
+  var streak = dl.date===yest.toDateString() ? dl.streak+1 : 1;
+  localStorage.setItem('bleuDaily', JSON.stringify({date:today, streak:streak}));
+  dailyDay = ((streak-1)%7)+1;
+  if(dailyDay===2)      { dailyReward='chest'; dailyRewardVal=1; }
+  else if(dailyDay===3) { dailyReward='skin';  dailyRewardVal=0; }
+  else                  { dailyReward='coins'; dailyRewardVal=30+dailyDay*10; }
+  dailyModal=true;
+}
+function claimDailyReward() {
+  if(dailyReward==='coins') { coinCount+=dailyRewardVal; localStorage.setItem('bleuCoins',coinCount); }
+  else if(dailyReward==='chest') { /* trigger bonus chest after dismiss */ }
+  else if(dailyReward==='skin') {
+    var locked = SKINS.map(function(_,i){return i;}).filter(function(i){return unlockedSkins.indexOf(i)<0;});
+    if(locked.length>0){ var newSk=locked[Math.floor(Math.random()*locked.length)]; unlockedSkins.push(newSk); localStorage.setItem('bleuSkins',JSON.stringify(unlockedSkins)); }
+  }
+  dailyModal=false;
+}
+function drawDailyModal() {
+  ctx.fillStyle='rgba(0,5,20,.9)'; ctx.fillRect(0,0,W,H);
+  ctx.textAlign='center';
+  ctx.font='bold 18px Courier New';
+  var dg=ctx.createLinearGradient(W/2-80,0,W/2+80,0);
+  dg.addColorStop(0,'#FFD700'); dg.addColorStop(1,'#00D4FF');
+  ctx.fillStyle=dg; ctx.shadowColor='#FFD700'; ctx.shadowBlur=20;
+  ctx.fillText('LOGIN DIÁRIO', W/2, H/2-122); ctx.shadowBlur=0;
+  ctx.font='11px Courier New'; ctx.fillStyle='#ffffff66';
+  ctx.fillText('Dia '+dailyDay+' de 7', W/2, H/2-98);
+
+  // 7-day progress strip
+  var icons=['💰','📦','🎨','💰','💰','💰','🎁'];
+  for(var d=1;d<=7;d++){
+    var dw=34, dh=38, dgap=4;
+    var total7=7*dw+6*dgap, dx7=W/2-total7/2+(d-1)*(dw+dgap), dy7=H/2-72;
+    var done=d<dailyDay, today=(d===dailyDay);
+    ctx.fillStyle=done?'#0052FF44':today?'#0052FF22':'#ffffff08';
+    ctx.strokeStyle=today?'#FFD700':done?'#0052FF':'#ffffff22'; ctx.lineWidth=today?2:1;
+    ctx.fillRect(dx7,dy7,dw,dh); ctx.strokeRect(dx7,dy7,dw,dh);
+    ctx.font='16px Courier New'; ctx.fillStyle=done||today?'#FFD700':'#ffffff44';
+    ctx.fillText(icons[d-1], dx7+dw/2, dy7+22);
+    if(done){ ctx.font='8px Courier New'; ctx.fillStyle='#00D4FF88'; ctx.fillText('✓',dx7+dw/2,dy7+34); }
+  }
+
+  // Today's reward box
+  ctx.font='bold 13px Courier New'; ctx.fillStyle='#ffffff88';
+  ctx.fillText('Recompensa de hoje:', W/2, H/2+12);
+  ctx.font='bold 24px Courier New';
+  if(dailyReward==='coins'){
+    ctx.fillStyle='#FFD700'; ctx.shadowColor='#FFD700'; ctx.shadowBlur=18;
+    ctx.fillText('+'+dailyRewardVal+' moedas 🐉', W/2, H/2+48);
+  } else if(dailyReward==='chest'){
+    ctx.fillStyle='#C8960C'; ctx.shadowColor='#C8960C'; ctx.shadowBlur=18;
+    ctx.fillText('📦 Baú Grátis!', W/2, H/2+48);
+  } else {
+    ctx.fillStyle='#00D4FF'; ctx.shadowColor='#00D4FF'; ctx.shadowBlur=18;
+    ctx.fillText('🎨 Skin Especial!', W/2, H/2+48);
+  }
+  ctx.shadowBlur=0;
+
+  // Claim button
+  ctx.fillStyle='#0052FF'; ctx.strokeStyle='#00D4FF'; ctx.lineWidth=2;
+  ctx.fillRect(W/2-65,H/2+78,130,34); ctx.strokeRect(W/2-65,H/2+78,130,34);
+  ctx.font='bold 13px Courier New'; ctx.fillStyle='#fff';
+  ctx.shadowColor='#00D4FF'; ctx.shadowBlur=8;
+  ctx.fillText('COLETAR', W/2, H/2+100); ctx.shadowBlur=0;
+}
+
+// ─── SCORE POPUP ─────────────────────────────────────────────────────
+var scorePopups=[], scoreGlow=0;
+function spawnScorePopup(x,y,txt) {
+  if(scorePopups.length>5) return;
+  scorePopups.push({x:x, y:y, life:38, vy:-1.4, txt:txt||'+1'});
+}
+function updateScorePopups() {
+  scorePopups=scorePopups.filter(function(p){return p.life>0;});
+  for(var i=0;i<scorePopups.length;i++){
+    var p=scorePopups[i];
+    ctx.save(); ctx.globalAlpha=Math.min(1,p.life/20);
+    ctx.textAlign='center'; ctx.font='bold 14px Courier New';
+    ctx.fillStyle='#FFD700'; ctx.shadowColor='#FFD700'; ctx.shadowBlur=10;
+    ctx.fillText(p.txt||'+1', p.x, p.y); ctx.shadowBlur=0;
+    ctx.restore();
+    p.y+=p.vy; p.x+=(Math.random()-.5)*.4; p.life--;
+  }
+}
+// ─── HIGHSCORE ───────────────────────────────
+let highScore = parseInt(localStorage.getItem('bleuHS') || '0');
+let newRecord = false;
+
+// ─── NFT CHARACTER SYSTEM ────────────────────
+var unlockedChars = parseInt(localStorage.getItem('bleuChars') || '1'); // 1=Bleu only, 2=Brett unlocked
+var activeChar    = parseInt(localStorage.getItem('bleuActiveChar') || '0'); // 0=Bleu, 1=Brett
+var nftFlash      = 0; // NFT unlock animation counter
+var showCharSel   = false; // show character selector in idle
+
+// ─── STATE ───────────────────────────────────
+let bleu, pipes, score, frame, gameState, particles, lastGapCenter;
+let phaseFlash = 0, lastPhaseIdx = 0;
+let screenShake = 0, scorePop = 0, hitFlash = 0, bleuSquish = 0;
+let coins = [], coinCount = parseInt(localStorage.getItem('bleuCoins')||'0');
+var _mTimeout=null, _mPhase=-1, _mPos=0;
+var completedPhase=0, chestClicks=0, chestBounce=0, chestOpened=false, chestCoins=0, chestOpenAnim=0;
+var idleTab='play';
+var totalScore=parseInt(localStorage.getItem('bleuTotal')||'0');
+var shopOverlay=false, paused=false;
+var _bgGrad=null, _bgGradPhase=-1;
+var combo=0, comboFlash=0, comboBest=0, recFlash=0, coinsThisRun=0, milestoneIdx=0;
+var lastScore=parseInt(localStorage.getItem('bleuLastScore')||'0');
+var deadChestAvail=false; // free chest available after dying
+// ── LAUNCH SEQUENCE ──────────────────────────────────────────
+var LAUNCH_PHASE = 1; // test: trigger at phase 1 (score 4). Production: set to 9
+var launchFrame=0, launchStage=0, rocketY=0, bleuEnteredRocket=false, launchTriggered=false;
+const MILESTONES=[5,10,25,50,100];
+var activeSkin=parseInt(localStorage.getItem('bleuSkin')||'0');
+var unlockedSkins=JSON.parse(localStorage.getItem('bleuSkins')||'[0]');
+var chestType='normal';
+
+function resetGame() {
+  bleu          = { x:90, y:H/2, vy:0, flap:0 };
+  pipes         = [];
+  coins         = [];
+  score         = 0;
+  frame         = 0;
+  gameState     = 'idle';
+  particles     = [];
+  newRecord     = false;
+  lastGapCenter = H / 2;
+  phaseFlash    = 0;
+  lastPhaseIdx  = 0;
+  nftFlash      = 0;
+  screenShake = 0; scorePop = 0; hitFlash = 0; bleuSquish = 0;
+  idleTab = 'play'; scorePopups = []; scoreGlow = 0; chestType = 'normal'; shopOverlay = false; paused = false;
+  combo = 0; comboFlash = 0; coinsThisRun = 0; milestoneIdx = 0; recFlash = 0; deadChestAvail=false;
+  launchFrame=0; launchStage=0; rocketY=-800; bleuEnteredRocket=false; launchTriggered=false;
+}
+resetGame();
+
+// ─────────────────────────────────────────────
+//  BLEU — personagem principal
+// ─────────────────────────────────────────────
+function drawBleu(x, y, flapAnim, vy) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(Math.max(-0.35, Math.min(0.45, vy * 0.028)));
+
+  var wf = Math.sin(flapAnim * 2.4) * 10;
+  var sf = Math.sin(flapAnim * 1.2) * 1.2;
+  var ff = Math.sin(flapAnim * 3.1);
+  var ef = Math.abs(Math.sin(flapAnim * 2.4));
+
+  var sk = SKINS[activeSkin] || SKINS[0];
+  var cBody    = sk.body;
+  var cBodyLt  = sk.bodyLt;
+  var cBelly   = sk.belly;
+  var cShadow  = sk.shadow;
+  var cBlush   = 'rgba(255,160,160,0.55)';
+  var cEye     = '#ffffff';
+  var cPupil   = '#111111';
+  var cOutline = sk.outline;
+
+  ctx.lineJoin = 'round';
+  ctx.lineCap  = 'round';
+
+  // BODY
+  var bodyGrad = ctx.createRadialGradient(2, -4, 4, 2, -4, 22);
+  bodyGrad.addColorStop(0, cBodyLt);
+  bodyGrad.addColorStop(0.55, cBody);
+  bodyGrad.addColorStop(1, cShadow);
+  ctx.beginPath();
+  ctx.ellipse(0, 4 + sf, 20, 16, -0.1, 0, Math.PI * 2);
+  ctx.fillStyle = bodyGrad; ctx.fill();
+  ctx.lineWidth = 1.8; ctx.strokeStyle = cOutline; ctx.stroke();
+
+  // Belly patch
+  ctx.beginPath();
+  ctx.ellipse(5, 8 + sf, 11, 9, 0.15, 0, Math.PI * 2);
+  ctx.fillStyle = cBelly; ctx.globalAlpha = 0.75; ctx.fill(); ctx.globalAlpha = 1;
+
+  // WING
+  ctx.save();
+  ctx.translate(2, -4 + sf);
+  ctx.rotate((-0.4 + wf * 0.045) * Math.PI);
+  var wGrad = ctx.createLinearGradient(0, 0, 0, -28);
+  wGrad.addColorStop(0, cBody); wGrad.addColorStop(1, cBodyLt);
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.bezierCurveTo(-6, -14, 4, -28, 12, -22);
+  ctx.bezierCurveTo(16, -18, 14, -8, 0, 0);
+  ctx.fillStyle = wGrad; ctx.fill();
+  ctx.lineWidth = 1.5; ctx.strokeStyle = cOutline; ctx.stroke();
+  ctx.lineWidth = 0.8; ctx.strokeStyle = cShadow; ctx.globalAlpha = 0.5;
+  ctx.beginPath(); ctx.moveTo(0,0); ctx.bezierCurveTo(2,-10,8,-18,11,-20); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0,0); ctx.bezierCurveTo(-2,-10,5,-20,10,-22); ctx.stroke();
+  ctx.globalAlpha = 1;
+  ctx.restore();
+
+  // HEAD
+  var headGrad = ctx.createRadialGradient(-2, -18, 3, -2, -18, 18);
+  headGrad.addColorStop(0, cBodyLt);
+  headGrad.addColorStop(0.6, cBody);
+  headGrad.addColorStop(1, cShadow);
+  ctx.beginPath();
+  ctx.arc(4, -18, 17, 0, Math.PI * 2);
+  ctx.fillStyle = headGrad; ctx.fill();
+  ctx.lineWidth = 1.8; ctx.strokeStyle = cOutline; ctx.stroke();
+
+  // EARS
+  ctx.beginPath();
+  ctx.ellipse(-7, -33, 5, 7, -0.3, 0, Math.PI * 2);
+  ctx.fillStyle = cBody; ctx.fill();
+  ctx.lineWidth = 1.4; ctx.strokeStyle = cOutline; ctx.stroke();
+  ctx.beginPath();
+  ctx.ellipse(8, -33, 4, 6, 0.3, 0, Math.PI * 2);
+  ctx.fillStyle = cBody; ctx.fill(); ctx.stroke();
+  ctx.beginPath();
+  ctx.ellipse(-7, -33, 2.5, 4, -0.3, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(255,180,200,0.7)'; ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(8, -33, 2, 3.5, 0.3, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(255,180,200,0.7)'; ctx.fill();
+
+  // EYES
+  var eyeScaleY = ef < 0.08 ? 0.2 : 1;
+  ctx.save();
+  ctx.translate(-3, -20); ctx.scale(1, eyeScaleY);
+  ctx.beginPath(); ctx.ellipse(0, 0, 6.5, 7, 0, 0, Math.PI * 2);
+  ctx.fillStyle = cEye; ctx.fill();
+  ctx.lineWidth = 1.2; ctx.strokeStyle = cOutline; ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(0.5, 0.5, 4, 4.5, 0, 0, Math.PI * 2);
+  ctx.fillStyle = cPupil; ctx.fill();
+  ctx.beginPath(); ctx.arc(-1.5, -2, 1.8, 0, Math.PI * 2);
+  ctx.fillStyle = '#ffffff'; ctx.fill();
+  ctx.restore();
+
+  ctx.save();
+  ctx.translate(10, -20); ctx.scale(1, eyeScaleY);
+  ctx.beginPath(); ctx.ellipse(0, 0, 5.5, 6.5, 0, 0, Math.PI * 2);
+  ctx.fillStyle = cEye; ctx.fill();
+  ctx.lineWidth = 1.2; ctx.strokeStyle = cOutline; ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(0.5, 0.5, 3.5, 4, 0, 0, Math.PI * 2);
+  ctx.fillStyle = cPupil; ctx.fill();
+  ctx.beginPath(); ctx.arc(-1, -2, 1.5, 0, Math.PI * 2);
+  ctx.fillStyle = '#ffffff'; ctx.fill();
+  ctx.restore();
+
+  // BLUSH
+  ctx.beginPath(); ctx.ellipse(-10, -14, 5, 3, 0, 0, Math.PI * 2);
+  ctx.fillStyle = cBlush; ctx.fill();
+  ctx.beginPath(); ctx.ellipse(16, -14, 4.5, 3, 0, 0, Math.PI * 2);
+  ctx.fillStyle = cBlush; ctx.fill();
+
+  // SMILE
+  ctx.beginPath(); ctx.arc(4, -12, 7, 0.15, Math.PI - 0.15);
+  ctx.lineWidth = 1.8; ctx.strokeStyle = cOutline; ctx.stroke();
+
+  // GLOW
+  ctx.save();
+  ctx.globalAlpha = 0.13 + ff * 0.05;
+  var glowStr = scoreGlow>0 ? 0.3+scoreGlow/15*.4 : 0.13+ff*.05;
+  ctx.globalAlpha = glowStr;
+  ctx.shadowColor = sk.glow; ctx.shadowBlur = scoreGlow>0 ? 22+scoreGlow*1.5 : 0;
+  ctx.beginPath(); ctx.arc(4, -10, 22, 0, Math.PI * 2);
+  ctx.fillStyle = sk.glow; ctx.fill();
+  ctx.globalAlpha = 1;
+  ctx.restore();
+
+  ctx.restore();
+}
+
+// ─── BRETT — coming soon ──
+function drawBrett(x, y, flapAnim, vy) { drawBleu(x, y, flapAnim, vy); }
+function drawBrett_ORIG(x, y, flapAnim, vy) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(Math.max(-0.45, Math.min(0.65, vy * 0.04)));
+
+  const R  = 20;
+  const wf = Math.sin(flapAnim * 2.2) * 11;
+
+  // ASAS VERMELHAS / LARANJAS
+  ctx.save();
+  const lgw = ctx.createLinearGradient(-R-28, wf, -R, 5);
+  lgw.addColorStop(0, '#FF6600cc'); lgw.addColorStop(1, '#FF220066');
+  ctx.fillStyle = lgw;
+  ctx.beginPath();
+  ctx.moveTo(-R+2, 0);
+  ctx.bezierCurveTo(-R-4, -10+wf, -R-18, -16+wf, -R-28, -4+wf);
+  ctx.bezierCurveTo(-R-20, 10+wf, -R-6, 12, -R+2, 8);
+  ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = '#FF8800aa'; ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.strokeStyle = '#FF6600cc'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(-R+2,4); ctx.bezierCurveTo(-R-6,-2+wf,-R-14,-4+wf,-R-22,0+wf); ctx.stroke();
+  ctx.restore();
+  ctx.save();
+  const rgw = ctx.createLinearGradient(R+28, wf, R, 5);
+  rgw.addColorStop(0, '#FF6600cc'); rgw.addColorStop(1, '#FF220066');
+  ctx.fillStyle = rgw;
+  ctx.beginPath();
+  ctx.moveTo(R-2, 0);
+  ctx.bezierCurveTo(R+4, -10+wf, R+18, -16+wf, R+28, -4+wf);
+  ctx.bezierCurveTo(R+20, 10+wf, R+6, 12, R-2, 8);
+  ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = '#FF8800aa'; ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.restore();
+
+  // ANEL PRATA
+  ctx.shadowColor = '#C0C0C0'; ctx.shadowBlur = 18;
+  ctx.strokeStyle = '#888'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(0, 0, R+8, 0, Math.PI*2); ctx.stroke();
+  ctx.strokeStyle = '#C0C0C0'; ctx.lineWidth = 4;
+  ctx.beginPath(); ctx.arc(0, 0, R+5, 0, Math.PI*2); ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  // CABEÇA laranja
+  const hg = ctx.createRadialGradient(-6, -7, 1, 0, 0, R);
+  hg.addColorStop(0, '#FF9A5C'); hg.addColorStop(0.45, '#FF6B20'); hg.addColorStop(1, '#CC3300');
+  ctx.fillStyle = hg;
+  ctx.shadowColor = '#FF6B20'; ctx.shadowBlur = 10;
+  ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI*2); ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = '#881100'; ctx.lineWidth = 1.5; ctx.stroke();
+
+  // ORELHAS TEAL
+  ctx.fillStyle = '#00897B';
+  ctx.beginPath(); ctx.moveTo(-R+6,-R+5); ctx.lineTo(-R-8,-R-18); ctx.lineTo(-R+14,-R-1); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = '#004D40'; ctx.lineWidth = 1; ctx.stroke();
+  ctx.fillStyle = '#80CBC4';
+  ctx.beginPath(); ctx.moveTo(-R+5,-R+3); ctx.lineTo(-R-4,-R-11); ctx.lineTo(-R+9,-R+1); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#00897B';
+  ctx.beginPath(); ctx.moveTo(R-6,-R+5); ctx.lineTo(R+8,-R-18); ctx.lineTo(R-14,-R-1); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = '#004D40'; ctx.lineWidth = 1; ctx.stroke();
+  ctx.fillStyle = '#80CBC4';
+  ctx.beginPath(); ctx.moveTo(R-5,-R+3); ctx.lineTo(R+4,-R-11); ctx.lineTo(R-9,-R+1); ctx.closePath(); ctx.fill();
+
+  // OLHOS — âmbar/dourado
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.ellipse(-10,-4,9,10,0.1,0,Math.PI*2); ctx.fill();
+  const li = ctx.createRadialGradient(-11,-5,0,-10,-3,6.5);
+  li.addColorStop(0,'#FFB300'); li.addColorStop(0.6,'#FF8F00'); li.addColorStop(1,'#E65100');
+  ctx.fillStyle = li;
+  ctx.beginPath(); ctx.ellipse(-10,-3,6.5,7.5,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#0a0010'; ctx.beginPath(); ctx.ellipse(-10,-3,4,5.5,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.ellipse(-7.5,-7,2.4,2.4,0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(-12,-1.5,1.2,1.2,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#0a0010'; ctx.beginPath(); ctx.ellipse(-10,-12.8,8.5,2.2,0,0,Math.PI*2); ctx.fill();
+
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.ellipse(10,-4,9,10,-0.1,0,Math.PI*2); ctx.fill();
+  const ri = ctx.createRadialGradient(11,-5,0,10,-3,6.5);
+  ri.addColorStop(0,'#FFB300'); ri.addColorStop(0.6,'#FF8F00'); ri.addColorStop(1,'#E65100');
+  ctx.fillStyle = ri;
+  ctx.beginPath(); ctx.ellipse(10,-3,6.5,7.5,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#0a0010'; ctx.beginPath(); ctx.ellipse(10,-3,4,5.5,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.ellipse(12.5,-7,2.4,2.4,0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(8,-1.5,1.2,1.2,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#0a0010'; ctx.beginPath(); ctx.ellipse(10,-12.8,8.5,2.2,0,0,Math.PI*2); ctx.fill();
+
+  // NARIZ
+  ctx.fillStyle = '#881100';
+  ctx.beginPath(); ctx.ellipse(0,5,3.5,2.2,0,0,Math.PI*2); ctx.fill();
+
+  // SORRISO
+  ctx.strokeStyle = '#881100'; ctx.lineWidth = 2.5; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(-11,11); ctx.quadraticCurveTo(0,23,11,11); ctx.stroke();
+  const tg = ctx.createLinearGradient(0,11,0,18);
+  tg.addColorStop(0,'#ffffff'); tg.addColorStop(1,'#ffeedd');
+  ctx.fillStyle = tg;
+  ctx.fillRect(-9,11,5,7); ctx.fillRect(-3,11,5,7); ctx.fillRect(4,11,4,6);
+  ctx.strokeStyle = '#ddb'; ctx.lineWidth = 0.5;
+  ctx.strokeRect(-9,11,5,7); ctx.strokeRect(-3,11,5,7); ctx.strokeRect(4,11,4,6);
+
+  // BOCHECHAS
+  ctx.globalAlpha = 0.22;
+  const bL = ctx.createRadialGradient(-17,5,0,-17,5,9);
+  bL.addColorStop(0,'#FF4500'); bL.addColorStop(1,'transparent');
+  ctx.fillStyle = bL; ctx.beginPath(); ctx.ellipse(-17,5,9,6,0,0,Math.PI*2); ctx.fill();
+  const bR = ctx.createRadialGradient(17,5,0,17,5,9);
+  bR.addColorStop(0,'#FF4500'); bR.addColorStop(1,'transparent');
+  ctx.fillStyle = bR; ctx.beginPath(); ctx.ellipse(17,5,9,6,0,0,Math.PI*2); ctx.fill();
+  ctx.globalAlpha = 1;
+
+  // COROA PRATA
+  ctx.shadowColor = '#C0C0C0'; ctx.shadowBlur = 14;
+  const crg = ctx.createLinearGradient(0,-R-18,0,-R);
+  crg.addColorStop(0,'#E8E8E8'); crg.addColorStop(1,'#888888');
+  ctx.fillStyle = crg;
+  ctx.beginPath();
+  ctx.moveTo(-16,-R-1); ctx.lineTo(-16,-R-13); ctx.lineTo(-9,-R-7);
+  ctx.lineTo(0,-R-20); ctx.lineTo(9,-R-7); ctx.lineTo(16,-R-13);
+  ctx.lineTo(16,-R-1); ctx.closePath(); ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = '#999';
+  ctx.fillRect(-16,-R-4,32,5);
+  ctx.shadowBlur = 10;
+  ctx.fillStyle = '#FF2255'; ctx.shadowColor='#FF2255';
+  ctx.beginPath(); ctx.arc(-9,-R-9,3,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#0052FF'; ctx.shadowColor='#0052FF';
+  ctx.beginPath(); ctx.arc(0,-R-16,3.5,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#00FF88'; ctx.shadowColor='#00FF88';
+  ctx.beginPath(); ctx.arc(9,-R-9,3,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#ffffffaa'; ctx.shadowBlur = 0;
+  ctx.beginPath(); ctx.ellipse(-9.8,-R-10,1.2,1.2,0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(-0.8,-R-17,1.4,1.4,0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(8.2,-R-10,1.2,1.2,0,0,Math.PI*2); ctx.fill();
+
+  // CORRENTE PRATA
+  ctx.shadowColor = '#C0C0C0'; ctx.shadowBlur = 8;
+  ctx.strokeStyle = '#C0C0C0'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+  for(var ci=-3; ci<=3; ci++){
+    ctx.beginPath(); ctx.arc(ci*4.2, R+2+Math.abs(ci)*0.4, 2.5, 0, Math.PI*2); ctx.stroke();
+  }
+  ctx.shadowBlur = 0;
+
+  // PENDENTE RUBI VERMELHO
+  ctx.shadowColor = '#FF1122'; ctx.shadowBlur = 16;
+  ctx.fillStyle = '#FF1122';
+  ctx.beginPath(); ctx.moveTo(0,R+9); ctx.lineTo(6,R+15); ctx.lineTo(0,R+21); ctx.lineTo(-6,R+15); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#FF7788';
+  ctx.beginPath(); ctx.moveTo(0,R+9); ctx.lineTo(3,R+13); ctx.lineTo(0,R+16); ctx.lineTo(-3,R+13); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#ffffffcc';
+  ctx.beginPath(); ctx.moveTo(0,R+9); ctx.lineTo(1.5,R+11); ctx.lineTo(0,R+13); ctx.lineTo(-1.5,R+11); ctx.closePath(); ctx.fill();
+  ctx.shadowBlur = 0;
+
+  ctx.restore();
+}
+
+// ─── CHARACTER DISPATCHER ────────────────────
+function drawCharacter(x, y, flap, vy) {
+  drawBleu(x, y, flap, vy);
+}
+
+// ─── COLLECTIBLE COIN ────────────────────────
+function drawCoin(cx, cy) {
+  var r = 9;
+  // Glow
+  ctx.shadowColor = '#88ddff'; ctx.shadowBlur = 12;
+  // Coin body gradient
+  var cg = ctx.createRadialGradient(cx - r*0.3, cy - r*0.3, r*0.08, cx, cy, r);
+  cg.addColorStop(0, '#d8f4ff');
+  cg.addColorStop(0.45, '#88ccff');
+  cg.addColorStop(1, '#3388cc');
+  ctx.fillStyle = cg;
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.fill();
+  ctx.shadowBlur = 0;
+  // Crisp outline
+  ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.stroke();
+  ctx.strokeStyle = '#2266aa'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.arc(cx, cy, r - 1, 0, Math.PI*2); ctx.stroke();
+  // Inner dragon symbol (mini dragon head)
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.scale(0.42, 0.42);
+  // Head
+  ctx.fillStyle = '#0044bb';
+  ctx.beginPath(); ctx.arc(1, 0, 9, 0, Math.PI*2); ctx.fill();
+  // Snout
+  ctx.fillStyle = '#1155cc';
+  ctx.beginPath(); ctx.ellipse(8, 2, 5, 3.5, 0, 0, Math.PI*2); ctx.fill();
+  // Horn left
+  ctx.fillStyle = '#ffcc22';
+  ctx.beginPath(); ctx.moveTo(-3,-9); ctx.lineTo(-5,-16); ctx.lineTo(0,-9); ctx.closePath(); ctx.fill();
+  // Horn right
+  ctx.beginPath(); ctx.moveTo(5,-9); ctx.lineTo(7,-16); ctx.lineTo(3,-9); ctx.closePath(); ctx.fill();
+  // Eye
+  ctx.fillStyle = '#88ccff';
+  ctx.beginPath(); ctx.arc(5, -3, 3, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#000d33';
+  ctx.beginPath(); ctx.arc(5, -3, 1.6, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath(); ctx.arc(6.2, -4.2, 1, 0, Math.PI*2); ctx.fill();
+  // Whiskers
+  ctx.strokeStyle = '#aaddff'; ctx.lineWidth = 1.5; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(10,0); ctx.lineTo(17,-4); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(10,2); ctx.lineTo(17,3); ctx.stroke();
+  ctx.restore();
+  // Spin highlight
+  ctx.fillStyle = '#ffffff55';
+  ctx.beginPath(); ctx.ellipse(cx - r*0.35, cy - r*0.35, r*0.28, r*0.18, -0.6, 0, Math.PI*2); ctx.fill();
+}
+
+// ─── NFT UNLOCK BANNER ────────────────────────
+function drawNFTBanner() {
+  if(nftFlash <= 0) return;
+  nftFlash--;
+  var alpha = nftFlash > 100 ? 1 : nftFlash / 100;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  // Dark overlay
+  ctx.fillStyle = '#000000bb';
+  ctx.fillRect(0, H/2-80, W, 130);
+  // Gold border
+  ctx.strokeStyle = '#FFD700'; ctx.lineWidth = 2;
+  ctx.strokeRect(14, H/2-78, W-28, 126);
+  // Glow
+  ctx.shadowColor = '#FFD700'; ctx.shadowBlur = 30;
+  ctx.strokeStyle = '#FFD70066'; ctx.lineWidth = 4;
+  ctx.strokeRect(14, H/2-78, W-28, 126);
+  ctx.shadowBlur = 0;
+  ctx.textAlign = 'center';
+  // NFT badge
+  ctx.fillStyle = '#FFD700'; ctx.font = 'bold 11px Courier New';
+  ctx.fillText('✦ NFT DESBLOQUEADO ✦', W/2, H/2-58);
+  // Big text
+  ctx.font = 'bold 30px Courier New';
+  var ng = ctx.createLinearGradient(W/2-90, 0, W/2+90, 0);
+  ng.addColorStop(0,'#FF6B20'); ng.addColorStop(0.5,'#FFD700'); ng.addColorStop(1,'#FF6B20');
+  ctx.fillStyle = ng;
+  ctx.shadowColor = '#FF6B20'; ctx.shadowBlur = 24;
+  ctx.fillText('BRETT', W/2, H/2-24);
+  ctx.shadowBlur = 0;
+  // Sub
+  ctx.fillStyle = '#ffffffcc'; ctx.font = '10px Courier New';
+  ctx.fillText('Novo personagem jogável desbloqueado!', W/2, H/2+0);
+  ctx.fillStyle = '#00D4FFaa'; ctx.font = '9px Courier New';
+  ctx.fillText('Mude o personagem na tela inicial', W/2, H/2+16);
+  // Mini Brett preview
+  ctx.globalAlpha = alpha * 0.9;
+  ctx.restore();
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  drawBrett(W/2, H/2+52, frame*0.22, 0);
+  ctx.restore();
+}
+
+// ─── CHAR SELECT (idle) — hidden until more chars released ──
+function drawCharSelect() {
+  return; // single character for now
+  if(unlockedChars < 2) return;
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#FFD700'; ctx.font = 'bold 9px Courier New';
+  ctx.shadowColor = '#FFD700'; ctx.shadowBlur = 5;
+  ctx.fillText('PERSONAGEM  ◄ clique lateral ►', W/2, H/2+72);
+  ctx.shadowBlur = 0;
+  // Bleu button
+  var bx1 = W/2 - 55, bx2 = W/2 + 15, by = H/2+80, bw = 40, bh = 16;
+  ctx.fillStyle = activeChar===0 ? '#0052FF44' : '#ffffff11';
+  ctx.fillRect(bx1, by, bw, bh);
+  ctx.strokeStyle = activeChar===0 ? '#0052FF' : '#ffffff33'; ctx.lineWidth = 1;
+  ctx.strokeRect(bx1, by, bw, bh);
+  ctx.fillStyle = activeChar===0 ? '#00D4FF' : '#ffffff66'; ctx.font = '9px Courier New'; ctx.textAlign = 'center';
+  ctx.fillText('BLEU', bx1+bw/2, by+11);
+  // Brett button
+  ctx.fillStyle = activeChar===1 ? '#FF6B2044' : '#ffffff11';
+  ctx.fillRect(bx2, by, bw, bh);
+  ctx.strokeStyle = activeChar===1 ? '#FF6B20' : '#ffffff33'; ctx.lineWidth = 1;
+  ctx.strokeRect(bx2, by, bw, bh);
+  ctx.fillStyle = activeChar===1 ? '#FFD700' : '#ffffff66'; ctx.font = '9px Courier New';
+  ctx.fillText('BRETT', bx2+bw/2, by+11);
+}
+
+// ─── PIPE / OBSTACLE ─────────────────────────
+function makePipe(x) {
+  const pv  = getPhaseVisual();
+  const baseGap = getPhase().gap;
+  // Variable gap: ±35px, skewed so smaller gaps are rarer
+  const gapVar = (Math.random()-0.5) * 70;
+  const gap = Math.max(120, Math.min(baseGap + 40, baseGap + gapVar));
+  // Bigger vertical jitter for more varied heights
+  const jitter = (Math.random() - 0.5) * 110;
+  let center   = lastGapCenter + pv.trend + jitter;
+  const minC   = 120 + gap/2;
+  const maxC   = H - 82 - gap/2;
+  center       = Math.max(minC, Math.min(maxC, center));
+  lastGapCenter = center;
+  const topH   = center - gap/2;
+  const botY   = center + gap/2;
+  return {
+    x, topH, gap, bodyW:42, wickW:5,
+    topBodyH: topH * (0.45 + Math.random()*0.4),
+    botBodyH: (H-80-botY) * (0.45 + Math.random()*0.4),
+    isGreen: Math.random() > 0.5, botY, passed:false
+  };
+}
+
+// ─── DRAW CANDLE (phases 0-1 and space) ──────
+function drawCandle(p, upColor, downColor) {
+  const color = p.isGreen ? upColor : downColor;
+  const cx    = p.x + p.bodyW/2;
+  ctx.shadowColor = color + '99'; ctx.shadowBlur = 14;
+  // wick top
+  ctx.fillStyle = '#888';
+  ctx.fillRect(cx - p.wickW/2, 0, p.wickW, p.topH - p.topBodyH);
+  // body top
+  ctx.fillStyle = color;
+  ctx.fillRect(p.x, p.topH - p.topBodyH, p.bodyW, p.topBodyH);
+  ctx.strokeStyle = '#ffffff22'; ctx.lineWidth = 1;
+  ctx.strokeRect(p.x, p.topH - p.topBodyH, p.bodyW, p.topBodyH);
+  // flame top
+  ctx.fillStyle = '#ffcc00';
+  ctx.beginPath(); ctx.arc(cx, 3, 3.5, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#fff8';
+  ctx.beginPath(); ctx.arc(cx, 2, 1.5, 0, Math.PI*2); ctx.fill();
+  // body bottom
+  ctx.fillStyle = color;
+  ctx.fillRect(p.x, p.botY, p.bodyW, p.botBodyH);
+  ctx.strokeRect(p.x, p.botY, p.bodyW, p.botBodyH);
+  // wick bottom
+  ctx.fillStyle = '#888';
+  ctx.fillRect(cx - p.wickW/2, p.botY+p.botBodyH, p.wickW, H-80-p.botY-p.botBodyH);
+  // flame bottom
+  ctx.fillStyle = '#ffcc00';
+  ctx.beginPath(); ctx.arc(cx, H-82, 3.5, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#fff8';
+  ctx.beginPath(); ctx.arc(cx, H-83, 1.5, 0, Math.PI*2); ctx.fill();
+  ctx.shadowBlur = 0;
+}
+
+// ─── DRAW SWORD & SPEAR OBSTACLE (phase 3) — medieval weapons, tip at gap ──
+function drawSkeletonArmObstacle(p) {
+  var cx = p.x + p.bodyW / 2;
+  function drawWeapon(y1, y2, dir) {
+    var h = y2 - y1;
+    if (h < 20) return;
+    var tipY  = dir < 0 ? y2 : y1;
+    var wallY = dir < 0 ? y1 : y2;
+
+    if (false) { // sword branch disabled — spears only
+      // ══ SWORD ══
+      var guardDist = Math.min(h * 0.22, 52);
+      var guardY    = tipY + dir * guardDist;  // dir moves toward wall
+
+      // Blade — tapers to a point at tipY, wide at guardY
+      var bladeG = ctx.createLinearGradient(cx - 7, 0, cx + 7, 0);
+      bladeG.addColorStop(0, '#6a7ea0');
+      bladeG.addColorStop(0.3, '#d8e8ff');
+      bladeG.addColorStop(0.55, '#ffffff');
+      bladeG.addColorStop(1, '#506080');
+      ctx.fillStyle = bladeG;
+      ctx.beginPath();
+      ctx.moveTo(cx, tipY);
+      ctx.lineTo(cx - 6.5, guardY);
+      ctx.lineTo(cx + 6.5, guardY);
+      ctx.closePath(); ctx.fill();
+      // Fuller groove
+      ctx.strokeStyle = '#a0b8d0aa'; ctx.lineWidth = 1.3;
+      ctx.beginPath(); ctx.moveTo(cx, tipY + dir * (-3)); ctx.lineTo(cx, guardY); ctx.stroke();
+      // Edge gleam
+      ctx.strokeStyle = '#eef6ff77'; ctx.lineWidth = 0.9;
+      ctx.beginPath(); ctx.moveTo(cx + 2, tipY); ctx.lineTo(cx + 5.5, guardY); ctx.stroke();
+      // Blade outline
+      ctx.strokeStyle = '#3a4a6088'; ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.moveTo(cx, tipY); ctx.lineTo(cx - 6.5, guardY);
+      ctx.moveTo(cx, tipY); ctx.lineTo(cx + 6.5, guardY);
+      ctx.stroke();
+
+      // Cross-guard
+      var gW = 21, gH = 6;
+      var gg = ctx.createLinearGradient(cx - gW, guardY, cx + gW, guardY);
+      gg.addColorStop(0, '#7a5a18'); gg.addColorStop(0.5, '#f2c03a'); gg.addColorStop(1, '#7a5a18');
+      ctx.fillStyle = gg;
+      ctx.beginPath(); ctx.ellipse(cx, guardY, gW, gH/2 + 1, 0, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle = '#5a3e0e'; ctx.lineWidth = 1; ctx.stroke();
+      ctx.shadowColor = '#f4c840'; ctx.shadowBlur = 6;
+      ctx.fillStyle = '#f4c840';
+      ctx.beginPath(); ctx.arc(cx - gW, guardY, 5.5, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(cx + gW, guardY, 5.5, 0, Math.PI*2); ctx.fill();
+      ctx.shadowBlur = 0;
+
+      // Grip — wrapped leather
+      var gripLen = Math.min(h * 0.30, 72);
+      var gripEnd = guardY + dir * gripLen;
+      var nStrip = 7;
+      for (var gi = 0; gi < nStrip; gi++) {
+        var s1 = guardY + dir * gi * (gripLen / nStrip);
+        var s2 = guardY + dir * (gi + 1) * (gripLen / nStrip);
+        ctx.fillStyle = gi % 2 === 0 ? '#2a1004' : '#5c2a0e';
+        ctx.fillRect(cx - 4, Math.min(s1, s2), 8, Math.abs(s2 - s1) + 0.5);
+      }
+      ctx.strokeStyle = '#111'; ctx.lineWidth = 0.8;
+      ctx.strokeRect(cx - 4, Math.min(guardY, gripEnd), 8, Math.abs(gripEnd - guardY));
+      // Grip wrapping diagonal lines
+      ctx.strokeStyle = '#88440022'; ctx.lineWidth = 1;
+      for (var wr = 0; wr < 5; wr++) {
+        var wy = guardY + dir * wr * (gripLen / 5);
+        ctx.beginPath(); ctx.moveTo(cx - 4, wy); ctx.lineTo(cx + 4, wy + dir * (gripLen / 5)); ctx.stroke();
+      }
+
+      // Pommel
+      ctx.shadowColor = '#f0c040'; ctx.shadowBlur = 10;
+      ctx.fillStyle = '#b88010';
+      ctx.beginPath(); ctx.arc(cx, gripEnd, 9, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#f4d050';
+      ctx.beginPath(); ctx.arc(cx - 2.5, gripEnd + dir * (-2), 4, 0, Math.PI*2); ctx.fill();
+      ctx.shadowBlur = 0;
+
+    } else {
+      // ══ SPEAR / LANCE ══
+      var headLen = Math.min(h * 0.30, 60);
+      var headBaseY = tipY + dir * headLen;
+      var headW = 10;
+
+      // Leaf-shaped spearhead
+      var shG = ctx.createLinearGradient(cx - headW, 0, cx + headW, 0);
+      shG.addColorStop(0, '#5566aa');
+      shG.addColorStop(0.35, '#cce0ff');
+      shG.addColorStop(0.55, '#ffffff');
+      shG.addColorStop(1, '#3a4466');
+      ctx.fillStyle = shG;
+      ctx.beginPath();
+      ctx.moveTo(cx, tipY);
+      ctx.quadraticCurveTo(cx - headW - 3, tipY + dir * headLen * 0.52, cx - headW * 0.4, headBaseY);
+      ctx.lineTo(cx, headBaseY + dir * (-5));
+      ctx.lineTo(cx + headW * 0.4, headBaseY);
+      ctx.quadraticCurveTo(cx + headW + 3, tipY + dir * headLen * 0.52, cx, tipY);
+      ctx.fill();
+      // Spine line
+      ctx.strokeStyle = '#b0ccee99'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(cx, tipY + dir * (-1)); ctx.lineTo(cx, headBaseY); ctx.stroke();
+      // Edge gleam
+      ctx.strokeStyle = '#ddeeff88'; ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(cx + 2, tipY);
+      ctx.quadraticCurveTo(cx + headW + 1, tipY + dir * headLen * 0.5, cx + headW * 0.3, headBaseY);
+      ctx.stroke();
+
+      // Socket ring where head meets shaft
+      var sockLen = 9;
+      ctx.fillStyle = '#445566';
+      ctx.fillRect(cx - 5, Math.min(headBaseY, headBaseY + dir * sockLen), 10, sockLen);
+      ctx.strokeStyle = '#6688aa'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(cx - 5.5, headBaseY); ctx.lineTo(cx + 5.5, headBaseY); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx - 5.5, headBaseY + dir * sockLen); ctx.lineTo(cx + 5.5, headBaseY + dir * sockLen); ctx.stroke();
+
+      // Wooden shaft
+      var shaftStart = headBaseY + dir * sockLen;
+      var shaftLen2  = Math.min(h * 0.56, h - headLen - sockLen - 14);
+      var shaftEnd   = shaftStart + dir * shaftLen2;
+      var woodG = ctx.createLinearGradient(cx - 4, 0, cx + 4, 0);
+      woodG.addColorStop(0, '#3c1a06'); woodG.addColorStop(0.45, '#9c6030');
+      woodG.addColorStop(0.55, '#c07840'); woodG.addColorStop(1, '#4a2008');
+      ctx.fillStyle = woodG;
+      ctx.fillRect(cx - 3.5, Math.min(shaftStart, shaftEnd), 7, Math.abs(shaftEnd - shaftStart));
+      // Wood grain
+      ctx.strokeStyle = '#2a100433'; ctx.lineWidth = 0.8;
+      for (var wi = -2; wi <= 2; wi += 2) {
+        ctx.beginPath();
+        ctx.moveTo(cx + wi, shaftStart); ctx.lineTo(cx + wi, shaftEnd); ctx.stroke();
+      }
+
+      // Butt spike (metal, points toward wall)
+      var butTipY = shaftEnd + dir * 9;
+      ctx.shadowColor = '#aabbdd'; ctx.shadowBlur = 5;
+      ctx.fillStyle = '#8899bb';
+      ctx.beginPath();
+      ctx.moveTo(cx, butTipY);
+      ctx.lineTo(cx - 3.5, shaftEnd);
+      ctx.lineTo(cx + 3.5, shaftEnd);
+      ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#ccddeebb';
+      ctx.beginPath(); ctx.moveTo(cx + 1, butTipY + dir * (-2)); ctx.lineTo(cx + 3, shaftEnd); ctx.stroke();
+      ctx.shadowBlur = 0;
+    }
+  }
+
+  drawWeapon(0, p.topH, -1);
+  drawWeapon(p.botY, H-80, 1);
+}
+
+// ─── DRAW WORM OBSTACLE (phase 2) — giant worm with teeth at gap tip ──
+function drawWormObstacle(p) {
+  var cx = p.x + p.bodyW / 2;
+
+  function drawWorm(y1, y2, dir) {
+    var h = y2 - y1;
+    if (h < 20) return;
+    var headY = dir < 0 ? y2 : y1;   // gap edge
+    var wallY = dir < 0 ? y1 : y2;   // wall side
+
+    var segR = Math.min(p.bodyW / 2 * 0.88, 19);
+    var nSegs = Math.max(3, Math.floor(h / (segR * 1.55)));
+
+    // Segments: wall→head (head renders on top)
+    for (var si = nSegs; si >= 0; si--) {
+      var t = si / nSegs;                           // 0=wall, 1=head
+      var segY = wallY + (headY - wallY) * t;
+      var r = segR * (0.48 + t * 0.52);
+      var wobble = Math.sin(frame * 0.07 + si * 0.95) * (4 * (1 - t));
+      var sg = ctx.createRadialGradient(
+        cx + wobble - r*0.3, segY - dir*r*0.25, r*0.08,
+        cx + wobble, segY, r);
+      sg.addColorStop(0, '#c8a060');
+      sg.addColorStop(0.45, '#8a4e20');
+      sg.addColorStop(1, '#3e1a06');
+      ctx.fillStyle = sg;
+      ctx.beginPath(); ctx.arc(cx + wobble, segY, r, 0, Math.PI*2); ctx.fill();
+      // Segment ring line
+      ctx.strokeStyle = '#3e1a0666'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(cx + wobble, segY, r, 0, Math.PI*2); ctx.stroke();
+      // Segment divider groove
+      if (si < nSegs) {
+        var midY = wallY + (headY - wallY) * ((si + 0.5) / nSegs);
+        ctx.strokeStyle = '#2a0e0444'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.arc(cx + wobble, midY, r * 0.88, 0, Math.PI*2); ctx.stroke();
+      }
+    }
+
+    // ── HEAD ──
+    var hR = segR * 1.18;
+    var hg = ctx.createRadialGradient(cx - hR*0.28, headY + dir*hR*0.28, hR*0.1, cx, headY, hR*1.15);
+    hg.addColorStop(0, '#e0b070');
+    hg.addColorStop(0.4, '#a05a28');
+    hg.addColorStop(1, '#2e0e02');
+    ctx.fillStyle = hg;
+    ctx.beginPath(); ctx.arc(cx, headY, hR, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = '#1a0800'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(cx, headY, hR, 0, Math.PI*2); ctx.stroke();
+
+    // Eyes — on wall side of head
+    var eyeRow = headY + dir * hR * 0.28;
+    var eyeOff = hR * 0.40;
+    ctx.fillStyle = '#080400';
+    ctx.beginPath(); ctx.arc(cx - eyeOff, eyeRow, 4.5, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx + eyeOff, eyeRow, 4.5, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#ffee00cc';
+    ctx.beginPath(); ctx.arc(cx - eyeOff + 1.2, eyeRow - 1, 1.8, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx + eyeOff + 1.2, eyeRow - 1, 1.8, 0, Math.PI*2); ctx.fill();
+    // Shine dot
+    ctx.fillStyle = '#ffffff88';
+    ctx.beginPath(); ctx.arc(cx - eyeOff - 1.5, eyeRow - 1.8, 1.2, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx + eyeOff - 1.5, eyeRow - 1.8, 1.2, 0, Math.PI*2); ctx.fill();
+
+    // ── MOUTH — opens toward gap ──
+    var mouthCY = headY - dir * hR * 0.40; // gap-side of head
+    var mW = hR * 0.84;
+    var mH = hR * 0.52;
+    // Dark cavity
+    ctx.fillStyle = '#0d0000';
+    ctx.beginPath(); ctx.ellipse(cx, mouthCY, mW, mH, 0, 0, Math.PI*2); ctx.fill();
+    // Gum ridge
+    ctx.strokeStyle = '#662222'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.ellipse(cx, mouthCY, mW, mH, 0, 0, Math.PI*2); ctx.stroke();
+
+    // Lower teeth (pointing into gap)
+    var toothDir = -dir;
+    var nTeeth = 7;
+    ctx.shadowColor = '#fffde888'; ctx.shadowBlur = 4;
+    ctx.fillStyle = '#fffff0';
+    for (var ti = 0; ti < nTeeth; ti++) {
+      var tx = cx - mW + (ti + 0.5) * (mW * 2 / nTeeth);
+      var tLen = (ti % 2 === 0) ? mH * 0.88 : mH * 0.58;
+      ctx.beginPath();
+      ctx.moveTo(tx - 3.8, mouthCY);
+      ctx.lineTo(tx, mouthCY + toothDir * tLen);
+      ctx.lineTo(tx + 3.8, mouthCY);
+      ctx.closePath(); ctx.fill();
+    }
+    // Upper teeth (shorter, opposite side)
+    ctx.fillStyle = '#eeeedd';
+    for (var ti2 = 0; ti2 < nTeeth - 1; ti2++) {
+      var tx2 = cx - mW + (ti2 + 1) * (mW * 2 / nTeeth);
+      ctx.beginPath();
+      ctx.moveTo(tx2 - 2.8, mouthCY);
+      ctx.lineTo(tx2, mouthCY - toothDir * mH * 0.42);
+      ctx.lineTo(tx2 + 2.8, mouthCY);
+      ctx.closePath(); ctx.fill();
+    }
+    ctx.shadowBlur = 0;
+    // Tongue hint
+    ctx.fillStyle = '#cc2233aa';
+    ctx.beginPath(); ctx.ellipse(cx, mouthCY + toothDir * mH * 0.3, mW * 0.42, mH * 0.28, 0, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  drawWorm(0, p.topH, -1);
+  drawWorm(p.botY, H-80, 1);
+}
+
+// ─── (old drawMountainObstacle removed — replaced by drawWormObstacle) ──
+function drawMountainObstacle(p) {
+  var c1 = '#2d4a6e', c2 = '#3d608a', c3 = '#4a6fa5', snow = '#f0f8ff', snowS = '#c8dff0';
+  var cx = p.x + p.bodyW/2;
+  // Visual width extends well beyond collision box for naturalism
+  var vw = 110;
+  var L = cx - vw/2, R = cx + vw/2;
+
+  // ── TOP obstacle — mountain peak hangs down from ceiling ──
+  // Invisible solid fill for collision (drawn first, below everything)
+  ctx.fillStyle = c1;
+  ctx.fillRect(p.x, 0, p.bodyW, p.topH);
+
+  // Wide mountain body: full-width base at ceiling, narrow peak at topH
+  ctx.fillStyle = c1;
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.lineTo(W, 0);
+  ctx.lineTo(W, p.topH * 0.4);
+  ctx.lineTo(cx + vw*0.42, p.topH * 0.72);
+  ctx.lineTo(cx + 22, p.topH);
+  ctx.lineTo(cx, p.topH);          // peak tip
+  ctx.lineTo(cx - 22, p.topH);
+  ctx.lineTo(cx - vw*0.42, p.topH * 0.72);
+  ctx.lineTo(0, p.topH * 0.4);
+  ctx.closePath(); ctx.fill();
+
+  // Lighter face (right-lit)
+  ctx.fillStyle = c3;
+  ctx.beginPath();
+  ctx.moveTo(cx, 0); ctx.lineTo(W, 0); ctx.lineTo(W, p.topH * 0.4);
+  ctx.lineTo(cx + vw*0.42, p.topH * 0.72);
+  ctx.lineTo(cx + 22, p.topH); ctx.lineTo(cx, p.topH);
+  ctx.closePath(); ctx.fill();
+
+  // Mid tone band
+  ctx.fillStyle = c2;
+  ctx.beginPath();
+  ctx.moveTo(cx - vw*0.18, 0); ctx.lineTo(cx + vw*0.18, 0);
+  ctx.lineTo(cx + 22, p.topH); ctx.lineTo(cx, p.topH); ctx.lineTo(cx - 22, p.topH);
+  ctx.closePath(); ctx.fill();
+
+  // Snow cap on peak
+  ctx.fillStyle = snow;
+  ctx.beginPath();
+  ctx.moveTo(cx - vw*0.12, p.topH * 0.42);
+  ctx.lineTo(cx - 22, p.topH);
+  ctx.lineTo(cx, p.topH);
+  ctx.lineTo(cx + 22, p.topH);
+  ctx.lineTo(cx + vw*0.12, p.topH * 0.42);
+  ctx.quadraticCurveTo(cx, p.topH * 0.35, cx - vw*0.12, p.topH * 0.42);
+  ctx.fill();
+  ctx.fillStyle = snowS;
+  ctx.beginPath();
+  ctx.moveTo(cx - 10, p.topH * 0.68);
+  ctx.lineTo(cx, p.topH); ctx.lineTo(cx + 10, p.topH * 0.68);
+  ctx.quadraticCurveTo(cx, p.topH * 0.62, cx - 10, p.topH * 0.68);
+  ctx.fill();
+
+  // ── BOTTOM obstacle — mountain peak rises from ground ──
+  var bH = H - 80 - p.botY;
+  ctx.fillStyle = c1;
+  ctx.fillRect(p.x, p.botY, p.bodyW, bH);
+
+  ctx.fillStyle = c1;
+  ctx.beginPath();
+  ctx.moveTo(0, H-80); ctx.lineTo(W, H-80);
+  ctx.lineTo(W, p.botY + bH * 0.4);
+  ctx.lineTo(cx + vw*0.42, p.botY + bH * 0.28);
+  ctx.lineTo(cx + 22, p.botY);
+  ctx.lineTo(cx, p.botY);
+  ctx.lineTo(cx - 22, p.botY);
+  ctx.lineTo(cx - vw*0.42, p.botY + bH * 0.28);
+  ctx.lineTo(0, p.botY + bH * 0.4);
+  ctx.closePath(); ctx.fill();
+
+  ctx.fillStyle = c3;
+  ctx.beginPath();
+  ctx.moveTo(cx, H-80); ctx.lineTo(W, H-80);
+  ctx.lineTo(W, p.botY + bH * 0.4);
+  ctx.lineTo(cx + vw*0.42, p.botY + bH * 0.28);
+  ctx.lineTo(cx + 22, p.botY); ctx.lineTo(cx, p.botY);
+  ctx.closePath(); ctx.fill();
+
+  ctx.fillStyle = c2;
+  ctx.beginPath();
+  ctx.moveTo(cx - vw*0.18, H-80); ctx.lineTo(cx + vw*0.18, H-80);
+  ctx.lineTo(cx + 22, p.botY); ctx.lineTo(cx, p.botY); ctx.lineTo(cx - 22, p.botY);
+  ctx.closePath(); ctx.fill();
+
+  // Snow cap on bottom peak
+  ctx.fillStyle = snow;
+  ctx.beginPath();
+  ctx.moveTo(cx - vw*0.12, p.botY + bH * 0.42);
+  ctx.lineTo(cx - 22, p.botY); ctx.lineTo(cx, p.botY); ctx.lineTo(cx + 22, p.botY);
+  ctx.lineTo(cx + vw*0.12, p.botY + bH * 0.42);
+  ctx.quadraticCurveTo(cx, p.botY + bH * 0.48, cx - vw*0.12, p.botY + bH * 0.42);
+  ctx.fill();
+  ctx.fillStyle = snowS;
+  ctx.beginPath();
+  ctx.moveTo(cx - 10, p.botY + bH * 0.25);
+  ctx.lineTo(cx, p.botY); ctx.lineTo(cx + 10, p.botY + bH * 0.25);
+  ctx.quadraticCurveTo(cx, p.botY + bH * 0.3, cx - 10, p.botY + bH * 0.25);
+  ctx.fill();
+}
+
+// ─── AoT UGLY GIANTS BACKGROUND (phase 4) ─────
+
+// ─── OBSTACLE DISPATCHER ───────────────────────
+function drawObstacle(p) {
+  var pi = getPhaseIdx();
+  var pv = getPhaseVisual();
+  if(pi === 0) {
+    drawCandle(p, pv.candleUp, pv.candleDown);
+  } else if(pi === 1) {
+    drawBasePipeObstacle(p);
+  } else if(pi === 2) {
+    drawWormObstacle(p);
+  } else if(pi === 3) {
+    drawSkeletonArmObstacle(p);
+  } else if(pi === 4) {
+    drawTitanHand(p);
+  } else if(pi === 5) {
+    drawCastleObstacle(p);
+  } else if(pi === 6) {
+    drawLaserObstacle(p);
+  } else if(pi === 7) {
+    drawVineObstacle(p);
+  } else if(pi === 8) {
+    drawGrotesqueObstacle(p);
+  } else if(pi === 9) {
+    drawRocketObstacle(p);
+  }
+}
+
+// ─── DRAW TITAN HAND (phase 4 — heaven) ───────
+function drawTitanHand(p) {
+  var s1 = '#7a8090', s2 = '#565a68', s3 = '#a0a4b0', s4 = '#30323c';
+  var pw = p.bodyW, cx = p.x + pw/2;
+  var fw = pw / 4;
+
+  // === TOP HAND — fingers point DOWN toward gap ===
+  var tFL = Math.min(38, p.topBodyH * 0.58);
+  var tPH = Math.max(0, p.topBodyH - tFL);
+  var tPY = p.topH - p.topBodyH; // top of palm
+
+  // arm/wrist from top to palm
+  if(tPY > 0) {
+    ctx.fillStyle = s2;
+    ctx.fillRect(p.x + 5, 0, pw - 10, tPY);
+    // stone texture lines
+    ctx.strokeStyle = s4; ctx.lineWidth = 1;
+    for(var sy = 8; sy < tPY; sy += 16) {
+      ctx.beginPath(); ctx.moveTo(p.x+5, sy); ctx.lineTo(p.x+15, sy+4); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(p.x+pw-5, sy+2); ctx.lineTo(p.x+pw-15, sy+6); ctx.stroke();
+    }
+  }
+  // palm
+  if(tPH > 0) {
+    var pg = ctx.createLinearGradient(p.x, tPY, p.x+pw, tPY+tPH);
+    pg.addColorStop(0, s3); pg.addColorStop(1, s1);
+    ctx.fillStyle = pg;
+    ctx.fillRect(p.x - 3, tPY, pw + 6, tPH);
+    ctx.strokeStyle = s4; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(p.x-3, tPY+tPH*0.45); ctx.lineTo(p.x+pw+3, tPY+tPH*0.45); ctx.stroke();
+    // knuckle bumps at bottom of palm
+    for(var ki = 0; ki < 4; ki++) {
+      ctx.fillStyle = s3;
+      ctx.beginPath(); ctx.arc(p.x + ki*fw + fw/2, tPY+tPH, 3, Math.PI, 0); ctx.fill();
+    }
+  }
+  // fingers (4) pointing down
+  var tFY = p.topH - tFL;
+  for(var f = 0; f < 4; f++) {
+    var fxl = p.x + f*fw + 1;
+    var fLen = tFL - (f===0||f===3 ? 7 : 0);
+    var fg = ctx.createLinearGradient(fxl, tFY, fxl, tFY+fLen);
+    fg.addColorStop(0, s1); fg.addColorStop(1, s2);
+    ctx.fillStyle = fg;
+    ctx.fillRect(fxl, tFY, fw-2, fLen);
+    // knuckle lines
+    ctx.fillStyle = s4;
+    ctx.fillRect(fxl, tFY + fLen*0.38, fw-2, 1.5);
+    ctx.fillRect(fxl, tFY + fLen*0.65, fw-2, 1.5);
+    // fingertip rounding shadow
+    ctx.fillStyle = '#00000044';
+    ctx.fillRect(fxl, tFY + fLen - 4, fw-2, 4);
+  }
+  // shadow under fingers into gap
+  ctx.fillStyle = '#00000055';
+  ctx.fillRect(p.x - 3, p.topH - 5, pw + 6, 5);
+
+  // === BOTTOM HAND — fingers point UP toward gap ===
+  var bFL = Math.min(38, p.botBodyH * 0.58);
+  var bPH = Math.max(0, p.botBodyH - bFL);
+  var bFY = p.botY; // top of fingers
+
+  // fingers (4) pointing up
+  for(var f2 = 0; f2 < 4; f2++) {
+    var fxl2 = p.x + f2*fw + 1;
+    var fLen2 = bFL - (f2===0||f2===3 ? 7 : 0);
+    var fg2 = ctx.createLinearGradient(fxl2, bFY, fxl2, bFY+fLen2);
+    fg2.addColorStop(0, s2); fg2.addColorStop(1, s1);
+    ctx.fillStyle = fg2;
+    ctx.fillRect(fxl2, bFY, fw-2, fLen2);
+    ctx.fillStyle = s4;
+    ctx.fillRect(fxl2, bFY + fLen2*0.35, fw-2, 1.5);
+    ctx.fillRect(fxl2, bFY + fLen2*0.62, fw-2, 1.5);
+    // fingertip shadow
+    ctx.fillStyle = '#00000044';
+    ctx.fillRect(fxl2, bFY, fw-2, 4);
+  }
+  // palm
+  var bPY = p.botY + bFL;
+  if(bPH > 0) {
+    var bg = ctx.createLinearGradient(p.x, bPY, p.x+pw, bPY+bPH);
+    bg.addColorStop(0, s1); bg.addColorStop(1, s3);
+    ctx.fillStyle = bg;
+    ctx.fillRect(p.x - 3, bPY, pw + 6, bPH);
+    // palm crease
+    ctx.strokeStyle = s4; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(p.x-3, bPY+bPH*0.5); ctx.lineTo(p.x+pw+3, bPY+bPH*0.5); ctx.stroke();
+  }
+  // arm/wrist going off-screen
+  var bWY = bPY + bPH;
+  if(bWY < H-80) {
+    ctx.fillStyle = s2;
+    ctx.fillRect(p.x + 5, bWY, pw - 10, H-80-bWY);
+    ctx.strokeStyle = s4; ctx.lineWidth = 1;
+    for(var sy2 = bWY; sy2 < H-80; sy2 += 16) {
+      ctx.beginPath(); ctx.moveTo(p.x+5, sy2); ctx.lineTo(p.x+15, sy2+4); ctx.stroke();
+    }
+  }
+  // shadow above hand into gap
+  ctx.fillStyle = '#00000055';
+  ctx.fillRect(p.x - 3, p.botY, pw + 6, 5);
+}
+
+// ─── DRAW BASE PIPE OBSTACLE (phase 1) ─────────
+function drawBasePipeObstacle(p) {
+  var pB = '#0052FF', pD = '#0030cc', pL = '#4488ff', pHL = '#ffffff33', pOut = '#001888';
+  var cx = p.x + p.bodyW/2;
+  var rimH = 16, rimExt = 6;
+
+  function pipeGrad(x, w) {
+    var g = ctx.createLinearGradient(x, 0, x+w, 0);
+    g.addColorStop(0, pD); g.addColorStop(0.25, pL); g.addColorStop(0.6, pB); g.addColorStop(1, pD);
+    return g;
+  }
+
+  // TOP pipe — hangs from ceiling
+  // Body
+  ctx.fillStyle = pipeGrad(p.x, p.bodyW);
+  ctx.fillRect(p.x, 0, p.bodyW, p.topH - rimH);
+  // Rim (wider)
+  ctx.fillStyle = pipeGrad(p.x - rimExt, p.bodyW + rimExt*2);
+  ctx.fillRect(p.x - rimExt, p.topH - rimH, p.bodyW + rimExt*2, rimH);
+  // Outlines
+  ctx.strokeStyle = pOut; ctx.lineWidth = 1.5;
+  ctx.strokeRect(p.x, 0, p.bodyW, p.topH - rimH);
+  ctx.strokeRect(p.x - rimExt, p.topH - rimH, p.bodyW + rimExt*2, rimH);
+  // Shine
+  ctx.fillStyle = pHL; ctx.fillRect(p.x + 5, 4, 8, p.topH - rimH - 8);
+  // BASE text
+  if(p.topH > 45) {
+    ctx.shadowColor = '#ffffff'; ctx.shadowBlur = 6;
+    ctx.fillStyle = '#ffffffdd'; ctx.font = 'bold 10px Courier New'; ctx.textAlign = 'center';
+    ctx.fillText('BASE', cx, p.topH * 0.52);
+    ctx.shadowBlur = 0;
+  }
+
+  // BOTTOM pipe — rises from ground
+  ctx.fillStyle = pipeGrad(p.x, p.bodyW);
+  ctx.fillRect(p.x, p.botY + rimH, p.bodyW, H-80-p.botY - rimH);
+  ctx.fillStyle = pipeGrad(p.x - rimExt, p.bodyW + rimExt*2);
+  ctx.fillRect(p.x - rimExt, p.botY, p.bodyW + rimExt*2, rimH);
+  ctx.strokeStyle = pOut; ctx.lineWidth = 1.5;
+  ctx.strokeRect(p.x, p.botY + rimH, p.bodyW, H-80-p.botY - rimH);
+  ctx.strokeRect(p.x - rimExt, p.botY, p.bodyW + rimExt*2, rimH);
+  ctx.fillStyle = pHL; ctx.fillRect(p.x + 5, p.botY + rimH + 4, 8, H-84-p.botY - rimH);
+  if(H-80-p.botY > 45) {
+    ctx.shadowColor = '#ffffff'; ctx.shadowBlur = 6;
+    ctx.fillStyle = '#ffffffdd'; ctx.font = 'bold 10px Courier New'; ctx.textAlign = 'center';
+    ctx.fillText('BASE', cx, p.botY + (H-80-p.botY)*0.52 + rimH*0.5);
+    ctx.shadowBlur = 0;
+  }
+}
+
+// ─── DRAW CASTLE OBSTACLE (phase 5) ────────────
+function drawCastleObstacle(p) {
+  var stD = '#1e1628', stM = '#2e2040', stL = '#403058', mortar = '#120e1c';
+  var spkC = '#707090', spkD = '#303040', spkH = '#aaaacc88';
+  var bw = p.bodyW;
+
+  function drawBricks(x, y, w, h) {
+    ctx.fillStyle = stM;
+    ctx.fillRect(x, y, w, h);
+    ctx.strokeStyle = mortar; ctx.lineWidth = 0.8;
+    var bH = 10;
+    for(var r = 0; r * bH < h; r++) {
+      var rowY = y + r * bH;
+      var offX = r % 2 === 0 ? 0 : 9;
+      ctx.beginPath(); ctx.moveTo(x, rowY); ctx.lineTo(x+w, rowY); ctx.stroke();
+      for(var bx4 = x + offX; bx4 < x + w; bx4 += 18) {
+        ctx.beginPath(); ctx.moveTo(bx4, rowY); ctx.lineTo(bx4, Math.min(rowY+bH, y+h)); ctx.stroke();
+      }
+    }
+    // Side shadow edges
+    ctx.fillStyle = stD + 'cc';
+    ctx.fillRect(x, y, 3, h);
+    ctx.fillRect(x+w-3, y, 3, h);
+  }
+
+  function drawSpikeBattlement(x, gapEdgeY, dir) {
+    // dir: -1 top obstacle (down), 1 bottom obstacle (up)
+    // Merlons (teeth)
+    var mW = 9, gap3 = 5, mH = 13;
+    for(var mi = 0; mi < 3; mi++) {
+      var mx = x + 2 + mi * (mW + gap3);
+      ctx.fillStyle = stL;
+      ctx.fillRect(mx, gapEdgeY, mW, dir * mH);
+      ctx.strokeStyle = mortar; ctx.lineWidth = 0.8;
+      ctx.strokeRect(mx, gapEdgeY, mW, dir * mH);
+    }
+    // Metal spikes pointing into gap
+    for(var si = 0; si < 4; si++) {
+      var sx = x + 3 + si * (bw / 4);
+      var sLen = 20 + (si % 2) * 7;
+      ctx.fillStyle = spkC;
+      ctx.beginPath();
+      ctx.moveTo(sx - 3, gapEdgeY);
+      ctx.lineTo(sx, gapEdgeY + dir * sLen);
+      ctx.lineTo(sx + 3, gapEdgeY);
+      ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = spkD; ctx.lineWidth = 0.8; ctx.stroke();
+      ctx.fillStyle = spkH;
+      ctx.beginPath();
+      ctx.moveTo(sx - 1, gapEdgeY);
+      ctx.lineTo(sx, gapEdgeY + dir * sLen * 0.55);
+      ctx.lineTo(sx + 1, gapEdgeY);
+      ctx.closePath(); ctx.fill();
+    }
+  }
+
+  // TOP obstacle
+  drawBricks(p.x, 0, bw, p.topH);
+  drawSpikeBattlement(p.x, p.topH, -1);
+  ctx.shadowColor = '#9966cc'; ctx.shadowBlur = 8;
+  ctx.strokeStyle = '#9966cc88'; ctx.lineWidth = 1.5;
+  ctx.strokeRect(p.x, 0, bw, p.topH);
+  ctx.shadowBlur = 0;
+
+  // BOTTOM obstacle
+  drawBricks(p.x, p.botY, bw, H-80-p.botY);
+  drawSpikeBattlement(p.x, p.botY, 1);
+  ctx.shadowColor = '#9966cc'; ctx.shadowBlur = 8;
+  ctx.strokeStyle = '#9966cc88'; ctx.lineWidth = 1.5;
+  ctx.strokeRect(p.x, p.botY, bw, H-80-p.botY);
+  ctx.shadowBlur = 0;
+}
+
+// ─── DRAW LASER OBSTACLE (phase 6) ─────────────
+function drawLaserObstacle(p) {
+  var pv = getPhaseVisual();
+  var lc = pv.candleUp;
+  var cx = p.x + p.bodyW/2;
+  var pulse = 0.55 + 0.45 * Math.sin(frame * 0.13);
+
+  function drawBeam(y1, y2) {
+    var h = y2 - y1;
+    // Dark energy conduit behind beam
+    ctx.fillStyle = '#080814';
+    ctx.fillRect(p.x, y1, p.bodyW, h);
+    // Outer soft glow
+    ctx.shadowColor = lc; ctx.shadowBlur = 24 * pulse;
+    ctx.fillStyle = lc + '28';
+    ctx.fillRect(p.x, y1, p.bodyW, h);
+    // Mid glow
+    ctx.fillStyle = lc + '66';
+    ctx.fillRect(cx - 12, y1, 24, h);
+    // Inner bright core
+    ctx.fillStyle = lc + 'cc';
+    ctx.fillRect(cx - 5, y1, 10, h);
+    // White hot center
+    ctx.fillStyle = '#ffffffcc';
+    ctx.fillRect(cx - 2, y1, 4, h);
+    ctx.shadowBlur = 0;
+    // Moving scan line
+    var scanPos = y1 + ((frame * 4 + y1) % h);
+    ctx.fillStyle = '#ffffff33';
+    ctx.fillRect(p.x, scanPos, p.bodyW, 2);
+    // Energy emitter cap
+    ctx.shadowColor = lc; ctx.shadowBlur = 30 * pulse;
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath(); ctx.arc(cx, y1 === 0 ? 6 : y2 - 6, 7, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = lc;
+    ctx.beginPath(); ctx.arc(cx, y1 === 0 ? 6 : y2 - 6, 4, 0, Math.PI*2); ctx.fill();
+    ctx.shadowBlur = 0;
+  }
+
+  drawBeam(0, p.topH);
+  drawBeam(p.botY, H-80);
+}
+
+// ─── DRAW VINE OBSTACLE (phase 7) ──────────────
+function drawVineObstacle(p) {
+  var vD = '#2a1a08', vM = '#3d2a10', vG = '#1a3a0a', vThorn = '#5a3a10', vLeaf = '#2d6018';
+  var cx = p.x + p.bodyW/2;
+
+  function drawVineBody(y1, y2) {
+    // Main vine body
+    var vg = ctx.createLinearGradient(p.x, 0, p.x+p.bodyW, 0);
+    vg.addColorStop(0, vD); vg.addColorStop(0.4, vM); vg.addColorStop(0.7, vG); vg.addColorStop(1, vD);
+    ctx.fillStyle = vg;
+    ctx.fillRect(p.x, y1, p.bodyW, y2 - y1);
+    // Vine texture lines
+    ctx.strokeStyle = vD; ctx.lineWidth = 1;
+    for(var vy = y1+6; vy < y2-4; vy += 10) {
+      ctx.beginPath();
+      ctx.moveTo(p.x+3, vy);
+      ctx.quadraticCurveTo(cx, vy + 4, p.x+p.bodyW-3, vy);
+      ctx.stroke();
+    }
+    // Thorns on each side
+    ctx.fillStyle = vThorn;
+    for(var ty = y1+8; ty < y2-4; ty += 14) {
+      // Left thorn
+      ctx.beginPath();
+      ctx.moveTo(p.x, ty); ctx.lineTo(p.x-12, ty+5); ctx.lineTo(p.x, ty+8);
+      ctx.closePath(); ctx.fill();
+      // Right thorn
+      ctx.beginPath();
+      ctx.moveTo(p.x+p.bodyW, ty+4); ctx.lineTo(p.x+p.bodyW+12, ty+8); ctx.lineTo(p.x+p.bodyW, ty+12);
+      ctx.closePath(); ctx.fill();
+    }
+    // Leaves
+    ctx.fillStyle = vLeaf;
+    ctx.strokeStyle = '#4a9020'; ctx.lineWidth = 1;
+    var leafPositions = [y1 + (y2-y1)*0.25, y1 + (y2-y1)*0.6, y1 + (y2-y1)*0.85];
+    for(var li2 = 0; li2 < leafPositions.length; li2++) {
+      var lp = leafPositions[li2];
+      var ldir = li2 % 2 === 0 ? -1 : 1;
+      ctx.beginPath();
+      ctx.ellipse(p.x + ldir*(p.bodyW/2+14), lp, 14, 7, ldir*0.4, 0, Math.PI*2);
+      ctx.fill(); ctx.stroke();
+    }
+    ctx.strokeStyle = '#0a0a0a'; ctx.lineWidth = 1;
+    ctx.strokeRect(p.x, y1, p.bodyW, y2-y1);
+  }
+
+  drawVineBody(0, p.topH);
+  drawVineBody(p.botY, H-80);
+}
+
+// ─── DRAW GROTESQUE OBSTACLE (phase 8) ─────────
+function drawGrotesqueObstacle(p) {
+  var gD = '#0a0510', gM = '#1a0a28', gGlow = '#6622aa', gEye = '#cc44ff';
+  var cx = p.x + p.bodyW/2;
+
+  function drawGrowth(y1, y2, dir) {
+    // Base fill
+    ctx.fillStyle = gM;
+    ctx.fillRect(p.x, y1, p.bodyW, y2-y1);
+    // Bumpy outer edge (facing gap)
+    var edgeY = dir > 0 ? y1 : y2;
+    ctx.fillStyle = gD;
+    ctx.beginPath();
+    ctx.moveTo(p.x, edgeY);
+    for(var bx3 = 0; bx3 <= p.bodyW; bx3 += 6) {
+      var bump = 5 * Math.sin((bx3 + frame*0.8) * 0.7) * dir;
+      ctx.lineTo(p.x + bx3, edgeY + bump);
+    }
+    ctx.lineTo(p.x+p.bodyW, edgeY + dir*8);
+    ctx.lineTo(p.x+p.bodyW, dir>0 ? y2 : y1);
+    ctx.lineTo(p.x, dir>0 ? y2 : y1);
+    ctx.closePath(); ctx.fill();
+    // Glowing cracks
+    ctx.shadowColor = gGlow; ctx.shadowBlur = 8;
+    ctx.strokeStyle = gGlow + '88'; ctx.lineWidth = 1;
+    for(var cr = 0; cr < 3; cr++) {
+      var crx = p.x + 8 + cr*(p.bodyW/3);
+      var cry = y1 + (y2-y1)*0.3 + cr*10;
+      ctx.beginPath();
+      ctx.moveTo(crx, cry);
+      ctx.lineTo(crx + 6, cry + (y2-y1)*0.2);
+      ctx.lineTo(crx + 2, cry + (y2-y1)*0.4);
+      ctx.stroke();
+    }
+    ctx.shadowBlur = 0;
+    // Eyes staring out from gap edge
+    if(Math.abs(y2-y1) > 40) {
+      var eyeY = edgeY + dir * 18;
+      ctx.shadowColor = gEye; ctx.shadowBlur = 12;
+      ctx.fillStyle = '#000000';
+      ctx.beginPath(); ctx.ellipse(cx - 10, eyeY, 7, 5, 0, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(cx + 10, eyeY, 7, 5, 0, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = gEye;
+      ctx.beginPath(); ctx.ellipse(cx - 10, eyeY, 4, 3, 0, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(cx + 10, eyeY, 4, 3, 0, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath(); ctx.arc(cx - 8, eyeY-1, 1.5, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(cx + 12, eyeY-1, 1.5, 0, Math.PI*2); ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+  }
+
+  drawGrowth(0, p.topH, -1);
+  drawGrowth(p.botY, H-80, 1);
+}
+
+// ─── DRAW ROCKET OBSTACLE (phase 9) ────────────
+function drawRocketObstacle(p) {
+  var rBody = '#dde8ff', rDark = '#8899cc', rFin = '#0052FF', rFire = '#ff6600';
+  var cx = p.x + p.bodyW/2;
+
+  function drawRocket(y1, y2, dir) {
+    // dir: -1 = nose points DOWN (top obstacle), 1 = nose points UP (bottom obstacle)
+    var h = y2 - y1;
+    var noseH = Math.min(h * 0.22, 28);
+    var bodyH = h - noseH;
+    var noseY = dir > 0 ? y1 : y2 - noseH;
+    var bodyY = dir > 0 ? y1 + noseH : y1;
+    var exhaust = dir > 0 ? y2 : y1;
+
+    // Body
+    var rg = ctx.createLinearGradient(p.x, 0, p.x+p.bodyW, 0);
+    rg.addColorStop(0, rDark); rg.addColorStop(0.3, rBody); rg.addColorStop(0.7, rBody); rg.addColorStop(1, rDark);
+    ctx.fillStyle = rg;
+    ctx.fillRect(p.x, bodyY, p.bodyW, bodyH);
+    // Nose cone
+    ctx.fillStyle = '#ff3344';
+    ctx.beginPath();
+    ctx.moveTo(cx, noseY + (dir > 0 ? 0 : noseH));
+    ctx.lineTo(p.x + 3, noseY + (dir > 0 ? noseH : 0));
+    ctx.lineTo(p.x + p.bodyW - 3, noseY + (dir > 0 ? noseH : 0));
+    ctx.closePath(); ctx.fill();
+    // Window
+    var winY = bodyY + bodyH * 0.3;
+    ctx.fillStyle = '#88ccff';
+    ctx.beginPath(); ctx.arc(cx, winY, 8, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = rDark; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.fillStyle = '#ffffff66';
+    ctx.beginPath(); ctx.arc(cx-3, winY-3, 3, 0, Math.PI*2); ctx.fill();
+    // Fins
+    ctx.fillStyle = rFin;
+    ctx.beginPath();
+    ctx.moveTo(p.x, exhaust);
+    ctx.lineTo(p.x - 10, exhaust + dir*(-20));
+    ctx.lineTo(p.x, exhaust + dir*(-18));
+    ctx.closePath(); ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(p.x+p.bodyW, exhaust);
+    ctx.lineTo(p.x+p.bodyW+10, exhaust + dir*(-20));
+    ctx.lineTo(p.x+p.bodyW, exhaust + dir*(-18));
+    ctx.closePath(); ctx.fill();
+    // Exhaust flame
+    var flicker = 0.7 + 0.3*Math.sin(frame*0.25);
+    ctx.shadowColor = rFire; ctx.shadowBlur = 14 * flicker;
+    ctx.fillStyle = '#ffcc00';
+    ctx.beginPath();
+    ctx.moveTo(cx - 10, exhaust);
+    ctx.lineTo(cx, exhaust + dir*(-28*flicker));
+    ctx.lineTo(cx + 10, exhaust);
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle = rFire;
+    ctx.beginPath();
+    ctx.moveTo(cx - 7, exhaust);
+    ctx.lineTo(cx, exhaust + dir*(-18*flicker));
+    ctx.lineTo(cx + 7, exhaust);
+    ctx.closePath(); ctx.fill();
+    ctx.shadowBlur = 0;
+    // Outline
+    ctx.strokeStyle = rDark; ctx.lineWidth = 1; ctx.strokeRect(p.x, bodyY, p.bodyW, bodyH);
+  }
+
+  drawRocket(0, p.topH, -1);   // top: nose points down into gap
+  drawRocket(p.botY, H-80, 1); // bottom: nose points up into gap
+}
+
+// ─── BACKGROUND HELPERS ─────────────────────────
+function drawGround(pv) {
+  var gnd = ctx.createLinearGradient(0, H-80, 0, H);
+  gnd.addColorStop(0, pv.groundColor);
+  gnd.addColorStop(1, '#00000088');
+  ctx.fillStyle = gnd; ctx.fillRect(0, H-80, W, 80);
+  ctx.shadowColor = pv.groundLine; ctx.shadowBlur = 6;
+  ctx.fillStyle = pv.groundLine; ctx.fillRect(0, H-80, W, 2);
+  ctx.shadowBlur = 0;
+}
+
+function drawTicker(pv) {
+  ctx.fillStyle = '#000000cc'; ctx.fillRect(0, 0, W, 22);
+  ctx.fillStyle = pv.glowColor; ctx.font = '11px Courier New'; ctx.textAlign = 'left';
+  var tick = 'BLEU/USD  $0.0420  +6900%  BASE +12%  ETH +2.1%  SCORE: ' + score + '   ';
+  ctx.fillText(tick, W - (frame * 1.3 % (tick.length * 7.5)), 15);
+}
+
+function drawClouds(alphaScale) {
+  ctx.fillStyle = '#ffffff';
+  for(var i = 0; i < 5; i++) {
+    var cx = W + 80 - ((i*160 + frame*0.5) % (W+200));
+    var cy = 45 + i * 58 + Math.sin(frame*0.009 + i) * 10;
+    var r  = 18 + (i%3)*11;
+    ctx.save();
+    ctx.globalAlpha = alphaScale * (0.55 + (i%3)*0.18);
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI*2);
+    ctx.arc(cx + r*0.9,  cy - r*0.35, r*0.65, 0, Math.PI*2);
+    ctx.arc(cx + r*1.75, cy,           r*0.75, 0, Math.PI*2);
+    ctx.arc(cx + r*0.8,  cy + r*0.3,  r*0.55, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+// ─── MOUNTAIN BACKGROUND (phase 2 — optimized) ──
+function drawMountainBackground() {
+  // far mountains (lighter)
+  ctx.fillStyle = '#4a6fa5';
+  var mts = [{x:0,h:220,w:160},{x:120,h:180,w:140},{x:230,h:250,w:180},{x:350,h:200,w:160}];
+  for(var m = 0; m < mts.length; m++) {
+    var mt = mts[m];
+    var mx = ((mt.x - frame*0.08) % (W+200) + W+200) % (W+200) - 80;
+    ctx.beginPath();
+    ctx.moveTo(mx, H-80);
+    ctx.lineTo(mx + mt.w/2, H-80-mt.h);
+    ctx.lineTo(mx + mt.w, H-80);
+    ctx.closePath(); ctx.fill();
+    // snow
+    ctx.fillStyle = '#ffffffaa';
+    ctx.beginPath();
+    ctx.moveTo(mx+mt.w/2-20, H-80-mt.h*0.8);
+    ctx.lineTo(mx+mt.w/2, H-80-mt.h);
+    ctx.lineTo(mx+mt.w/2+20, H-80-mt.h*0.8);
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#4a6fa5';
+  }
+  // near mountains (darker)
+  ctx.fillStyle = '#2d4a6e';
+  var mts2 = [{x:60,h:160,w:130},{x:200,h:140,w:120},{x:310,h:170,w:140},{x:460,h:150,w:130}];
+  for(var m2 = 0; m2 < mts2.length; m2++) {
+    var mt2 = mts2[m2];
+    var mx2 = ((mt2.x - frame*0.18) % (W+200) + W+200) % (W+200) - 80;
+    ctx.beginPath();
+    ctx.moveTo(mx2, H-80);
+    ctx.lineTo(mx2 + mt2.w/2, H-80-mt2.h);
+    ctx.lineTo(mx2 + mt2.w, H-80);
+    ctx.closePath(); ctx.fill();
+    // snow
+    ctx.fillStyle = '#ffffffcc';
+    ctx.beginPath();
+    ctx.moveTo(mx2+mt2.w/2-14, H-80-mt2.h*0.82);
+    ctx.lineTo(mx2+mt2.w/2, H-80-mt2.h);
+    ctx.lineTo(mx2+mt2.w/2+14, H-80-mt2.h*0.82);
+    ctx.closePath(); ctx.fill();
+  }
+}
+// ─── SUNNY SKY (phase 1 — BASE NETWORK) ─────────
+function drawSunnyBlueSkyBg() {
+  // Sun
+  var sunX = W - 65, sunY = 65;
+  ctx.shadowColor = '#FFE060'; ctx.shadowBlur = 35;
+  ctx.fillStyle = '#FFF7AA';
+  ctx.beginPath(); ctx.arc(sunX, sunY, 26, 0, Math.PI*2); ctx.fill();
+  ctx.shadowBlur = 0;
+  var sunHalo = ctx.createRadialGradient(sunX, sunY, 20, sunX, sunY, 80);
+  sunHalo.addColorStop(0,'#FFE06066'); sunHalo.addColorStop(1,'transparent');
+  ctx.fillStyle = sunHalo; ctx.fillRect(0,0,W,H);
+  // Fluffy clouds
+  drawClouds(0.62);
+  // Subtle Base hex pattern
+  drawBaseHexPattern();
+}
+
+// ─── FOREST TREES (phase 3) ──────────────────────
+function drawForestTrees() {
+  var trees = [
+    {ox:20, h:120, w:50}, {ox:90,  h:90,  w:40},
+    {ox:170,h:145, w:56}, {ox:248, h:105, w:44},
+    {ox:318,h:125, w:52}, {ox:372, h:84,  w:36},
+  ];
+  for(var t = 0; t < trees.length; t++) {
+    var tx = ((trees[t].ox - frame*0.15) % (W+90) + W+90) % (W+90) - 45;
+    var th = trees[t].h, tw = trees[t].w;
+    var tcx = tx + tw/2;
+    // trunk
+    ctx.fillStyle = '#6D4C41';
+    ctx.fillRect(tcx - 6, H-80-th*0.3, 12, th*0.3);
+    ctx.strokeStyle = '#3e2723'; ctx.lineWidth = 1.5;
+    ctx.strokeRect(tcx - 6, H-80-th*0.3, 12, th*0.3);
+    // foliage layer 1
+    ctx.fillStyle = '#43A047';
+    ctx.beginPath(); ctx.moveTo(tx-2,H-80-th*0.28); ctx.lineTo(tcx,H-80-th*0.68); ctx.lineTo(tx+tw+2,H-80-th*0.28); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#76D275'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(tx-2,H-80-th*0.28); ctx.lineTo(tcx,H-80-th*0.68); ctx.lineTo(tx+tw+2,H-80-th*0.28); ctx.closePath(); ctx.stroke();
+    // foliage layer 2
+    ctx.fillStyle = '#4CAF50';
+    ctx.beginPath(); ctx.moveTo(tx+4,H-80-th*0.54); ctx.lineTo(tcx,H-80-th*0.88); ctx.lineTo(tx+tw-4,H-80-th*0.54); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#81C784'; ctx.lineWidth = 1.8;
+    ctx.beginPath(); ctx.moveTo(tx+4,H-80-th*0.54); ctx.lineTo(tcx,H-80-th*0.88); ctx.lineTo(tx+tw-4,H-80-th*0.54); ctx.closePath(); ctx.stroke();
+    // foliage layer 3
+    ctx.fillStyle = '#66BB6A';
+    ctx.beginPath(); ctx.moveTo(tx+10,H-80-th*0.8); ctx.lineTo(tcx,H-80-th); ctx.lineTo(tx+tw-10,H-80-th*0.8); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#A5D6A7'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(tx+10,H-80-th*0.8); ctx.lineTo(tcx,H-80-th); ctx.lineTo(tx+tw-10,H-80-th*0.8); ctx.closePath(); ctx.stroke();
+    // snow tip
+    ctx.fillStyle = '#dff0ff99';
+    ctx.beginPath(); ctx.moveTo(tcx-7,H-80-th*0.93); ctx.lineTo(tcx,H-80-th); ctx.lineTo(tcx+7,H-80-th*0.93); ctx.closePath(); ctx.fill();
+  }
+}
+// ─── DRIZZLE (phase 3) ───────────────────────────
+function drawDrizzle() {
+  ctx.strokeStyle = '#a8cce0';
+  ctx.lineWidth = 0.7;
+  for(var i = 0; i < 45; i++) {
+    var dx = ((i*113 + frame*(1.6 + (i%4)*0.35)) % (W+20) + W+20) % (W+20) - 10;
+    var dy = ((i*71  + frame*(3.2 + (i%3)*0.5))  % (H-80)  + H-80)  % (H-80);
+    ctx.globalAlpha = 0.1 + (i%5)*0.035;
+    ctx.beginPath();
+    ctx.moveTo(dx, dy);
+    ctx.lineTo(dx - 3, dy + 10);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+}
+
+// ─── GHOST DUNGEON BG (phase 5) ──────────────────
+function drawGhostDungeonBg() {
+  // Chains — simple zigzag lines only (no per-link arcs)
+  ctx.lineWidth = 2;
+  for(var ch=0; ch<5; ch++){
+    var chx = 35 + ch*72;
+    var chLen = 60 + (ch%3)*20;
+    ctx.strokeStyle = '#443366aa';
+    ctx.beginPath(); ctx.moveTo(chx,22);
+    for(var cl=8; cl<chLen; cl+=8){
+      ctx.lineTo(chx + ((cl/8)%2===0 ? -4:4), 22+cl);
+    }
+    ctx.stroke();
+  }
+  // Ghosts — simplified (arc + flat bottom, no quadratic wiggles)
+  var ghosts=[{ox:50,y:120},{ox:200,y:180},{ox:310,y:100},{ox:130,y:270},{ox:360,y:220}];
+  for(var gi=0; gi<ghosts.length; gi++){
+    var gx=((ghosts[gi].ox - frame*0.18+gi*40)%(W+100)+W+100)%(W+100)-50;
+    var gy=ghosts[gi].y + Math.sin(frame*0.018+gi*1.3)*10;
+    ctx.globalAlpha=0.22+(gi%3)*0.06;
+    ctx.fillStyle='#eeeeff';
+    ctx.beginPath();
+    ctx.arc(gx,gy,18,Math.PI,0);
+    ctx.lineTo(gx+18,gy+22); ctx.lineTo(gx-18,gy+22);
+    ctx.closePath(); ctx.fill();
+    // eyes
+    ctx.fillStyle='#220044';
+    ctx.fillRect(gx-10,gy-5,7,8); ctx.fillRect(gx+3,gy-5,7,8);
+    ctx.globalAlpha=1;
+  }
+  // Ground mist
+  var mist=ctx.createLinearGradient(0,H-160,0,H-80);
+  mist.addColorStop(0,'transparent'); mist.addColorStop(1,'#330055aa');
+  ctx.fillStyle=mist; ctx.fillRect(0,H-160,W,80);
+}
+function drawSpacePlanetsBg() {
+  drawStarField(70, 0.22);
+  // Nebula glows
+  var pv2 = getPhaseVisual();
+  ctx.fillStyle = '#00ffee06';
+  ctx.beginPath(); ctx.ellipse(W*0.25, H*0.3, 130, 80, 0.5, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#ff00cc05';
+  ctx.beginPath(); ctx.ellipse(W*0.72, H*0.55, 100, 70, -0.3, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#0044ff04';
+  ctx.beginPath(); ctx.ellipse(W*0.5, H*0.7, 90, 50, 0.2, 0, Math.PI*2); ctx.fill();
+  // Planets
+  var planets = [
+    {ox:70,  y:110, r:38, c1:'#7a3818', c2:'#cc6633', ring:true},
+    {ox:260, y:195, r:24, c1:'#183a60', c2:'#3a7ab8', ring:false},
+    {ox:360, y:68,  r:16, c1:'#4a2808', c2:'#907050', ring:false},
+  ];
+  for(var pi2 = 0; pi2 < planets.length; pi2++) {
+    var pl = planets[pi2];
+    var plx = ((pl.ox - frame*0.055) % (W+120) + W+120) % (W+120) - 60;
+    var plg = ctx.createRadialGradient(plx - pl.r*0.35, pl.y - pl.r*0.35, pl.r*0.08, plx, pl.y, pl.r);
+    plg.addColorStop(0, pl.c2); plg.addColorStop(0.65, pl.c1); plg.addColorStop(1, '#00000088');
+    ctx.fillStyle = plg;
+    ctx.beginPath(); ctx.arc(plx, pl.y, pl.r, 0, Math.PI*2); ctx.fill();
+    if(pl.ring) {
+      ctx.strokeStyle = '#aa886655'; ctx.lineWidth = 5;
+      ctx.save();
+      ctx.translate(plx, pl.y);
+      ctx.scale(1, 0.3);
+      ctx.beginPath(); ctx.arc(0, 0, pl.r*1.85, 0, Math.PI*2); ctx.stroke();
+      ctx.restore();
+    }
+    ctx.shadowColor = pl.c2; ctx.shadowBlur = 12;
+    ctx.strokeStyle = pl.c2 + '55'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(plx, pl.y, pl.r, 0, Math.PI*2); ctx.stroke();
+    ctx.shadowBlur = 0;
+  }
+}
+
+// ─── ASTEROIDS (phase 6) ─────────────────────────
+function drawAsteroids() {
+  var asteroids = [
+    {ox:60,  y:140, r:14, speed:0.12, rot:0.008},
+    {ox:200, y:220, r: 9, speed:0.08, rot:-0.012},
+    {ox:320, y:100, r:18, speed:0.06, rot:0.006},
+    {ox:140, y:310, r:11, speed:0.10, rot:-0.009},
+    {ox:370, y:250, r: 7, speed:0.14, rot:0.015},
+    {ox:80,  y:380, r:13, speed:0.07, rot:-0.007},
+  ];
+  for(var ai3 = 0; ai3 < asteroids.length; ai3++) {
+    var ast = asteroids[ai3];
+    var ax = ((ast.ox - frame * ast.speed * 60) % (W + ast.r*3) + W + ast.r*3) % (W + ast.r*3) - ast.r*1.5;
+    var ay = ast.y;
+    var astRot = ast.rot * frame;
+    ctx.save();
+    ctx.translate(ax, ay);
+    ctx.rotate(astRot);
+    // rocky body
+    ctx.fillStyle = '#3a3a4a';
+    ctx.shadowColor = '#aaaacc'; ctx.shadowBlur = 6;
+    ctx.beginPath();
+    var nPts = 8;
+    for(var pi3=0; pi3<nPts; pi3++){
+      var ang = (pi3/nPts)*Math.PI*2;
+      var rr = ast.r*(0.75 + 0.25*Math.sin(pi3*2.1+ai3));
+      pi3===0 ? ctx.moveTo(Math.cos(ang)*rr, Math.sin(ang)*rr)
+              : ctx.lineTo(Math.cos(ang)*rr, Math.sin(ang)*rr);
+    }
+    ctx.closePath(); ctx.fill();
+    ctx.shadowBlur=0;
+    // highlight
+    ctx.fillStyle='#5a5a7a44';
+    ctx.beginPath(); ctx.arc(-ast.r*0.25, -ast.r*0.25, ast.r*0.4, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+}
+// ─── CELESTIAL DESERT BG (phase 7) ───────────────
+function drawCelestialDesertBg() {
+  // Large celestial moon
+  var moonX = W*0.2, moonY = 90;
+  var mg2 = ctx.createRadialGradient(moonX-15, moonY-15, 4, moonX, moonY, 55);
+  mg2.addColorStop(0,'#ffeecc'); mg2.addColorStop(0.6,'#cc8844'); mg2.addColorStop(1,'#55220088');
+  ctx.fillStyle = mg2;
+  ctx.beginPath(); ctx.arc(moonX, moonY, 55, 0, Math.PI*2); ctx.fill();
+  ctx.shadowColor = '#cc7722'; ctx.shadowBlur = 30;
+  ctx.strokeStyle = '#ffaa5544'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.arc(moonX, moonY, 55, 0, Math.PI*2); ctx.stroke();
+  ctx.shadowBlur = 0;
+  // Colossal building silhouettes
+  var ruins = [{ox:10,h:320,w:55},{ox:100,h:260,w:40},{ox:230,h:380,w:70},{ox:320,h:290,w:50},{ox:390,h:340,w:60}];
+  for(var ri = 0; ri < ruins.length; ri++) {
+    var r2 = ruins[ri];
+    var rx = ((r2.ox - frame*0.05) % (W+150) + W+150) % (W+150) - 70;
+    ctx.fillStyle = '#1a0800aa';
+    ctx.fillRect(rx, H-80-r2.h, r2.w, r2.h);
+    // Arched window openings
+    for(var rw = 0; rw < 3; rw++) {
+      var rwY = H-80-r2.h + rw*(r2.h/3.5) + 20;
+      ctx.fillStyle = '#ff880022';
+      ctx.beginPath(); ctx.arc(rx + r2.w/2, rwY + 14, 10, Math.PI, 0); ctx.fill();
+      ctx.fillRect(rx + r2.w/2 - 10, rwY + 14, 20, 14); ctx.fill();
+    }
+    // Battlements on top
+    for(var rb = 0; rb < Math.floor(r2.w/12); rb++) {
+      ctx.fillStyle = '#1a0800bb';
+      ctx.fillRect(rx + rb*12, H-80-r2.h - 10, 8, 10);
+    }
+    ctx.fillStyle = '#1a0800aa';
+  }
+  // Sandy desert ground band
+  var sand = ctx.createLinearGradient(0, H-120, 0, H-80);
+  sand.addColorStop(0,'#4a2800aa'); sand.addColorStop(1,'#6a3c1088');
+  ctx.fillStyle = sand; ctx.fillRect(0, H-120, W, 40);
+  // Dune wave
+  ctx.fillStyle = '#3a200666';
+  ctx.beginPath();
+  ctx.moveTo(0, H-100);
+  for(var dx = 0; dx <= W; dx += 10) {
+    ctx.lineTo(dx, H-100 + 8*Math.sin((dx + frame*0.5)*0.04));
+  }
+  ctx.lineTo(W, H-80); ctx.lineTo(0, H-80); ctx.closePath(); ctx.fill();
+}
+
+// ─── POISON DROPS (phase 7) ──────────────────────
+function drawPoisonDrops() {
+  var nDrops = 20;
+  for (var pd = 0; pd < nDrops; pd++) {
+    var pdx = (pd * 67 + 23) % W;
+    var pdy = ((frame * (1.6 + (pd % 5) * 0.25) + pd * 43) % (H - 80));
+    var pdR = 2.5 + (pd % 3) * 0.8;
+    ctx.globalAlpha = 0.38 + Math.sin(frame * 0.09 + pd * 1.1) * 0.18;
+    var pdg = ctx.createRadialGradient(pdx - 0.8, pdy - 0.8, 0.3, pdx, pdy, pdR);
+    pdg.addColorStop(0, '#ccff55');
+    pdg.addColorStop(0.5, '#77cc00');
+    pdg.addColorStop(1, '#224400');
+    ctx.fillStyle = pdg;
+    ctx.shadowColor = '#88ff22'; ctx.shadowBlur = 9;
+    ctx.beginPath(); ctx.arc(pdx, pdy, pdR, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(pdx - pdR * 0.38, pdy - pdR * 0.65);
+    ctx.quadraticCurveTo(pdx, pdy - pdR * 2.3, pdx + pdR * 0.38, pdy - pdR * 0.65);
+    ctx.closePath(); ctx.fill();
+    ctx.shadowBlur = 0;
+  }
+  ctx.globalAlpha = 1;
+}
+
+// ─── LIMBO BG (phase 8) ──────────────────────────
+function drawLimboBg() {
+  // Flickering darkness
+  var flicker = 0.7 + 0.3*Math.sin(frame*0.11)*Math.cos(frame*0.07);
+  ctx.globalAlpha = flicker * 0.15;
+  ctx.fillStyle = '#440066';
+  ctx.fillRect(0, 22, W, H-102);
+  ctx.globalAlpha = 1;
+  // Monster silhouettes in bg
+  var monsters = [{ox:30,y:380},{ox:180,y:360},{ox:320,y:390},{ox:80,y:420},{ox:280,y:350}];
+  for(var mi2 = 0; mi2 < monsters.length; mi2++) {
+    var mx4 = ((monsters[mi2].ox - frame*0.08) % (W+120) + W+120) % (W+120) - 60;
+    var my4 = monsters[mi2].y + Math.sin(frame*0.015 + mi2*2) * 8;
+    ctx.globalAlpha = 0.18 + (mi2%3)*0.05;
+    ctx.fillStyle = '#220033';
+    // Blob body
+    ctx.beginPath(); ctx.ellipse(mx4, my4, 28, 20, 0, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(mx4-18, my4+5, 14, 10, 0.3, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(mx4+18, my4+5, 14, 10, -0.3, 0, Math.PI*2); ctx.fill();
+    // Glowing eyes
+    ctx.shadowColor = '#cc44ff'; ctx.shadowBlur = 8;
+    ctx.fillStyle = '#cc44ff';
+    ctx.beginPath(); ctx.ellipse(mx4-9, my4-5, 4, 3, 0, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(mx4+9, my4-5, 4, 3, 0, 0, Math.PI*2); ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 1;
+  }
+  // Random flickering particles
+  for(var lp2 = 0; lp2 < 12; lp2++) {
+    var lpx = (lp2*97 + frame*0.3) % W;
+    var lpy = (lp2*53 + frame*0.5) % (H-100) + 22;
+    var lalpha = Math.abs(Math.sin(frame*0.09 + lp2*1.7)) * 0.35;
+    ctx.globalAlpha = lalpha;
+    ctx.fillStyle = lp2%3===0 ? '#cc44ff' : lp2%3===1 ? '#44ffcc' : '#ff44aa';
+    ctx.beginPath(); ctx.arc(lpx, lpy, 2, 0, Math.PI*2); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+// ─── COINBASE PLANET BG (phase 9) ────────────────
+function drawCoinbasePlanetBg() {
+  // Bright sun
+  var sunX2 = W - 50, sunY2 = 55;
+  ctx.shadowColor = '#FFE060'; ctx.shadowBlur = 40;
+  ctx.fillStyle = '#FFF7AA';
+  ctx.beginPath(); ctx.arc(sunX2, sunY2, 30, 0, Math.PI*2); ctx.fill();
+  ctx.shadowBlur = 0;
+  var sunHalo2 = ctx.createRadialGradient(sunX2, sunY2, 22, sunX2, sunY2, 90);
+  sunHalo2.addColorStop(0,'#FFE06055'); sunHalo2.addColorStop(1,'transparent');
+  ctx.fillStyle = sunHalo2; ctx.fillRect(0,0,W,H);
+  // Fluffy clouds
+  drawClouds(0.45);
+  // Fireworks
+  drawFireworks();
+  // Money/coins falling
+  drawMoneyFalling();
+  // Base logo watermark
+  ctx.globalAlpha = 0.08;
+  ctx.fillStyle = '#0052FF'; ctx.font = 'bold 120px Courier New'; ctx.textAlign = 'center';
+  ctx.fillText('B', W/2, H/2 + 50);
+  ctx.globalAlpha = 1;
+}
+function drawFireworks() {
+  for(var fw=0; fw<6; fw++){
+    var flife = (frame*1.2 + fw*40) % 60;
+    if(flife > 45) continue;
+    var fx = 40 + fw*65, fy = 60 + fw*30;
+    var frad = flife * 1.8;
+    ctx.globalAlpha = (1 - flife/45) * 0.7;
+    ctx.strokeStyle = fw%3===0 ? '#FFD700' : fw%3===1 ? '#00D4FF' : '#FF6B00';
+    ctx.lineWidth = 1.5;
+    for(var sp=0; sp<8; sp++){
+      var sa = sp*Math.PI*0.25;
+      ctx.beginPath();
+      ctx.moveTo(fx, fy);
+      ctx.lineTo(fx + Math.cos(sa)*frad, fy + Math.sin(sa)*frad);
+      ctx.stroke();
+    }
+  }
+  ctx.globalAlpha = 1;
+}
+function drawMoneyFalling() {
+  ctx.font = 'bold 13px Courier New'; ctx.textAlign = 'center';
+  for(var ci2=0; ci2<8; ci2++){
+    var mx5 = (ci2*53 + 15) % W;
+    var my5 = (frame*1.2 + ci2*55) % (H-80);
+    ctx.globalAlpha = 0.3 + (ci2%3)*0.1;
+    ctx.fillStyle = ci2%2===0 ? '#FFD700' : '#00D4FF';
+    ctx.fillText('$', mx5, my5);
+  }
+  ctx.globalAlpha = 1;
+}
+function drawTitanFaceBg() {
+  // Lightweight: 2 giant heads, flat colors, minimal arcs
+  function drawGiant(fcx, fcy, sc) {
+    var fR = 130*sc;
+    // head
+    ctx.globalAlpha = 0.28;
+    ctx.fillStyle = '#8a2828';
+    ctx.beginPath(); ctx.arc(fcx, fcy, fR, 0, Math.PI*2); ctx.fill();
+    // brow
+    ctx.fillStyle = '#3a1808';
+    ctx.beginPath(); ctx.ellipse(fcx, fcy-fR*0.55, fR*0.65, fR*0.16, 0, 0, Math.PI*2); ctx.fill();
+    // eyes (simplified: no gradients, no veins)
+    var iris_off = Math.sin(frame*0.012+fcx)*8|0;
+    for(var e=-1;e<=1;e+=2){
+      var ex=fcx+e*fR*0.28, ey=fcy-fR*0.12;
+      ctx.fillStyle='#111'; ctx.beginPath(); ctx.ellipse(ex,ey,fR*0.22,fR*0.16,0,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#cc2200'; ctx.beginPath(); ctx.arc(ex+iris_off*e*0.5,ey,fR*0.12,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#000'; ctx.beginPath(); ctx.arc(ex+iris_off*e*0.5,ey,fR*0.05,0,Math.PI*2); ctx.fill();
+    }
+    // mouth — wide grin
+    ctx.strokeStyle='#1a0404'; ctx.lineWidth=fR*0.06;
+    ctx.beginPath();
+    ctx.arc(fcx, fcy+fR*0.2, fR*0.38, 0.15, Math.PI-0.15);
+    ctx.stroke();
+    ctx.globalAlpha=1;
+  }
+  drawGiant(-40, H-40, 1.1);
+  drawGiant(W+30, H-20, 0.9);
+}
+function drawHeavenRays() {
+  // 5 rays, one shared gradient for all (no per-ray gradient)
+  ctx.save();
+  ctx.globalAlpha = 0.18 + 0.06*Math.sin(frame*0.02);
+  ctx.fillStyle = '#FFD700';
+  var n=5;
+  for(var r=0;r<n;r++){
+    var angle=(r*Math.PI*2/n)+frame*0.004;
+    ctx.beginPath();
+    ctx.moveTo(W/2,22);
+    ctx.lineTo(W/2+Math.cos(angle-0.1)*360,22+Math.sin(angle-0.1)*360);
+    ctx.lineTo(W/2+Math.cos(angle+0.1)*360,22+Math.sin(angle+0.1)*360);
+    ctx.closePath(); ctx.fill();
+  }
+  ctx.globalAlpha=1; ctx.restore();
+}
+
+function drawHeavenPillars() {
+  var p=[{x:15,w:28},{x:355,w:28},{x:80,w:20},{x:290,w:20}];
+  for(var pi=0;pi<p.length;pi++){
+    var pd=p[pi];
+    ctx.fillStyle='#5a5030';ctx.fillRect(pd.x,30,pd.w,H-110);
+    ctx.fillStyle='#7a7048';ctx.fillRect(pd.x-4,28,pd.w+8,10);
+    ctx.strokeStyle='#FFD70033';ctx.lineWidth=1.5;
+    ctx.strokeRect(pd.x,30,pd.w,H-110);
+  }
+}
+function drawBaseHexPattern() {
+  // Subtle Base logo / hex grid
+  ctx.strokeStyle = '#0052FF11'; ctx.lineWidth = 1;
+  var hx = 34, hy = 38;
+  for(var gx = -hx; gx < W+hx; gx += hx*1.5) {
+    for(var gy = 22; gy < H-80; gy += hy) {
+      var offx = (Math.floor(gy/hy) % 2) * hx*0.75;
+      var hcx = gx + offx + ((frame*0.08)%(hx*1.5));
+      ctx.beginPath();
+      for(var he = 0; he < 6; he++) {
+        var ha = he * Math.PI/3;
+        var hpx = hcx + 14*Math.cos(ha), hpy = gy + 16*Math.sin(ha);
+        he===0 ? ctx.moveTo(hpx,hpy) : ctx.lineTo(hpx,hpy);
+      }
+      ctx.closePath(); ctx.stroke();
+    }
+  }
+}
+
+// ─── MAIN BACKGROUND DRAW ────────────────────
+function drawBg() {
+  var pv = getPhaseVisual();
+  var pi = getPhaseIdx();
+
+  // Base gradient — cached per phase
+  if(_bgGradPhase!==pi){ _bgGradPhase=pi; _bgGrad=ctx.createLinearGradient(0,0,0,H); _bgGrad.addColorStop(0,pv.bg[0]); _bgGrad.addColorStop(1,pv.bg[1]); }
+  ctx.fillStyle=_bgGrad; ctx.fillRect(0,0,W,H);
+
+  // ── Phase-specific background elements ──
+  if(pi === 0) {
+    // PHASE 1 — PERPDEX TERMINAL: matrix grid + chart
+    ctx.strokeStyle = '#00ff4109'; ctx.lineWidth = 0.5;
+    for(var gxi=0; gxi<W; gxi+=36){ ctx.beginPath(); ctx.moveTo(gxi,22); ctx.lineTo(gxi,H); ctx.stroke(); }
+    for(var gyi=22; gyi<H; gyi+=36){ ctx.beginPath(); ctx.moveTo(0,gyi); ctx.lineTo(W,gyi); ctx.stroke(); }
+    ctx.strokeStyle = '#00ff4120'; ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    for(var cx2=0; cx2<=W; cx2+=4) {
+      var cy2 = H*0.42 + Math.sin((cx2+frame*0.4)*0.04)*55 + Math.cos((cx2+frame*0.22)*0.025)*30;
+      cx2===0 ? ctx.moveTo(cx2,cy2) : ctx.lineTo(cx2,cy2);
+    }
+    ctx.stroke();
+    ctx.font = '9px Courier New';
+    var chars = ['0','1','$','%','+','8','3','-'];
+    for(var mi=0; mi<14; mi++) {
+      var mx3 = (mi*37+3) % W;
+      var my3 = ((mi*83 + frame*(1+(mi%3))) % (H-100) + H-100) % (H-100) + 22;
+      ctx.globalAlpha = 0.1 + (mi%4)*0.04;
+      ctx.fillStyle = '#00ff41';
+      ctx.fillText(chars[(mi+Math.floor(frame/18+mi))%chars.length], mx3, my3);
+    }
+    ctx.globalAlpha = 1;
+
+  } else if(pi === 1) {
+    // PHASE 2 — BASE NETWORK: sunny sky + clouds
+    drawSunnyBlueSkyBg();
+
+  } else if(pi === 2) {
+    // PHASE 3 — TO THE MOON: mountains + snow
+    drawMountainBackground();
+    drawClouds(0.18);
+
+  } else if(pi === 3) {
+    // PHASE 4 — CRYPTO FOREST: pine trees + drizzle
+    drawForestTrees();
+    var lakeY = H - 180;
+    var lake = ctx.createLinearGradient(0, lakeY, 0, lakeY+40);
+    lake.addColorStop(0, '#1a3a4a66'); lake.addColorStop(1, '#0a1e2a44');
+    ctx.fillStyle = lake; ctx.fillRect(0, lakeY, W, 40);
+    ctx.strokeStyle = '#4a8aaa55'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(0,lakeY); ctx.lineTo(W,lakeY); ctx.stroke();
+    var fog = ctx.createLinearGradient(0, H-200, 0, H-80);
+    fog.addColorStop(0,'transparent'); fog.addColorStop(1,'#b0d8f018');
+    ctx.fillStyle = fog; ctx.fillRect(0, H-200, W, 120);
+    drawDrizzle();
+
+  } else if(pi === 4) {
+    // PHASE 5 — HEAVEN'S GATE: titan face + divine rays + pillars
+    drawTitanFaceBg();
+    drawHeavenRays();
+    drawHeavenPillars();
+    drawClouds(0.18);
+    var mist = ctx.createLinearGradient(0, H-200, 0, H-80);
+    mist.addColorStop(0,'transparent'); mist.addColorStop(1,'#FFD70028');
+    ctx.fillStyle = mist; ctx.fillRect(0, H-200, W, 120);
+
+  } else if(pi === 5) {
+    // PHASE 6 — DUNGEON CASTLE: ghosts + chains + stone atmosphere
+    drawGhostDungeonBg();
+
+  } else if(pi === 6) {
+    // PHASE 7 — OUTER SPACE: planets + asteroids
+    drawSpacePlanetsBg();
+    drawAsteroids();
+
+  } else if(pi === 7) {
+    // PHASE 8 — CELESTIAL DESERT: colossal ruins + moon + desert + poison rain
+    drawCelestialDesertBg();
+    drawPoisonDrops();
+
+  } else if(pi === 8) {
+    // PHASE 9 — THE LIMBO: monsters + flickering darkness
+    drawLimboBg();
+
+  } else if(pi === 9) {
+    // PHASE 10 — COINBASE PLANET: sunny + money + fireworks
+    drawCoinbasePlanetBg();
+  }
+
+  // Ticker top bar
+  drawTicker(pv);
+
+  // Ground
+  drawGround(pv);
+
+  // Phase name bottom-right
+  ctx.fillStyle = pv.glowColor + '55'; ctx.font = 'bold 10px Courier New'; ctx.textAlign = 'right';
+  ctx.fillText(pv.name, W-10, H-62);
+}
+
+// ─── BANNER DE FASE — topo compacto ──────────
+function drawPhaseBanner() {
+  if(phaseFlash <= 0) return;
+  phaseFlash--;
+  var ph    = getPhase();
+  var pv    = getPhaseVisual();
+  var alpha = phaseFlash > 90 ? 1 : phaseFlash / 90;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  // Slim bar just below the ticker (ticker is 20px tall)
+  ctx.fillStyle = '#000000ee';
+  ctx.fillRect(0, 21, W, 24);
+  // Glow border bottom
+  ctx.shadowColor = pv.glowColor; ctx.shadowBlur = 8;
+  ctx.fillStyle = pv.glowColor;
+  ctx.fillRect(0, 44, W, 1);
+  ctx.shadowBlur = 0;
+  // Left: phase label
+  ctx.textAlign = 'left';
+  ctx.fillStyle = '#FFD700'; ctx.font = 'bold 10px Courier New';
+  ctx.shadowColor = '#FFD700'; ctx.shadowBlur = 6;
+  ctx.fillText(ph.label, 8, 37);
+  ctx.shadowBlur = 0;
+  // Center: scene name with glow
+  ctx.textAlign = 'center';
+  ctx.fillStyle = pv.glowColor; ctx.font = 'bold 10px Courier New';
+  ctx.shadowColor = pv.glowColor; ctx.shadowBlur = 10;
+  ctx.fillText(pv.name, W/2, 37);
+  ctx.shadowBlur = 0;
+  // Right: speed
+  ctx.textAlign = 'right';
+  ctx.fillStyle = '#ffffff88'; ctx.font = '9px Courier New';
+  ctx.fillText('spd ' + ph.speed.toFixed(1) + 'x', W-8, 37);
+  ctx.restore();
+}
+
+// ─── PARTÍCULAS ──────────────────────────────
+function spawnParticles(x, y, color, n) {
+  n = n || 14;
+  if(particles.length > 35) return;
+  for(var i=0; i<n; i++)
+    particles.push({x:x, y:y, vx:(Math.random()-.5)*7, vy:(Math.random()-.5)*7, life:50, color:color});
+}
+function updateParticles() {
+  particles = particles.filter(function(p){ return p.life>0; });
+  for(var i=0; i<particles.length; i++){
+    var p = particles[i];
+    p.x+=p.vx; p.y+=p.vy; p.vy+=0.1; p.life--;
+    ctx.globalAlpha = p.life/50;
+    ctx.fillStyle = p.color;
+    ctx.shadowColor = p.color; ctx.shadowBlur = 6;
+    ctx.beginPath(); ctx.arc(p.x,p.y,3.5,0,Math.PI*2); ctx.fill();
+    ctx.shadowBlur = 0;
+  }
+  ctx.globalAlpha = 1;
+}
+
+// ─── COLISÃO ─────────────────────────────────
+function hitTest() {
+  var r = 14;
+  for(var i=0; i<pipes.length; i++){
+    var p = pipes[i];
+    if(bleu.x+r > p.x && bleu.x-r < p.x+p.bodyW){
+      if(bleu.y-r < p.topH) return true;
+      if(bleu.y+r > p.botY) return true;
+    }
+  }
+  return bleu.y+r > H-80 || bleu.y-r < 22;
+}
+
+// ─── LOOP PRINCIPAL ──────────────────────────
+// ─── LAUNCH SEQUENCE ───────────────────────────────────────────────────────
+function drawBigBaseRocket(cx, ry, fireLen, hatchOpen) {
+  // Rocket dimensions
+  var rW = 80, rH = 180;
+  var rx = cx - rW/2;
+
+  ctx.save();
+
+  // ── Exhaust fire (bottom) ──
+  if(fireLen > 0) {
+    var fl = fireLen, ff = Math.sin(frame * 0.4) * 0.12;
+    // outer glow
+    ctx.shadowColor = '#ff6600'; ctx.shadowBlur = 28;
+    // core flame
+    var fg = ctx.createLinearGradient(cx, ry+rH, cx, ry+rH+fl);
+    fg.addColorStop(0,'#ffffff'); fg.addColorStop(0.15,'#FFD700'); fg.addColorStop(0.5,'#ff6600'); fg.addColorStop(1,'rgba(255,60,0,0)');
+    ctx.fillStyle = fg;
+    ctx.beginPath();
+    ctx.moveTo(cx-22, ry+rH);
+    ctx.bezierCurveTo(cx-(22+ff*30), ry+rH+fl*0.5, cx-(8+ff*20), ry+rH+fl*0.9, cx, ry+rH+fl*(1+ff*0.2));
+    ctx.bezierCurveTo(cx+(8-ff*20), ry+rH+fl*0.9, cx+(22-ff*30), ry+rH+fl*0.5, cx+22, ry+rH);
+    ctx.closePath(); ctx.fill();
+    // inner flame
+    ctx.fillStyle = '#ffffff88';
+    ctx.beginPath();
+    ctx.moveTo(cx-10, ry+rH);
+    ctx.lineTo(cx, ry+rH+fl*0.55);
+    ctx.lineTo(cx+10, ry+rH);
+    ctx.closePath(); ctx.fill();
+    ctx.shadowBlur = 0;
+  }
+
+  // ── Fins (behind body) ──
+  ctx.fillStyle = '#001a99';
+  // left fin
+  ctx.beginPath(); ctx.moveTo(rx, ry+rH-10); ctx.lineTo(rx-26, ry+rH+14); ctx.lineTo(rx, ry+rH-50); ctx.closePath(); ctx.fill();
+  // right fin
+  ctx.beginPath(); ctx.moveTo(rx+rW, ry+rH-10); ctx.lineTo(rx+rW+26, ry+rH+14); ctx.lineTo(rx+rW, ry+rH-50); ctx.closePath(); ctx.fill();
+
+  // ── Body gradient ──
+  var bg = ctx.createLinearGradient(rx, 0, rx+rW, 0);
+  bg.addColorStop(0,'#0038cc'); bg.addColorStop(0.35,'#4488ff'); bg.addColorStop(0.6,'#6aabff'); bg.addColorStop(1,'#002299');
+  ctx.fillStyle = bg;
+  ctx.beginPath(); ctx.roundRect(rx, ry, rW, rH, [0,0,12,12]); ctx.fill();
+
+  // ── Body outline ──
+  ctx.strokeStyle = '#88bbff'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.roundRect(rx, ry, rW, rH, [0,0,12,12]); ctx.stroke();
+
+  // ── Nose cone ──
+  var ng = ctx.createLinearGradient(rx, ry-48, rx+rW, ry);
+  ng.addColorStop(0,'#aaccff'); ng.addColorStop(0.4,'#4488ff'); ng.addColorStop(1,'#0044cc');
+  ctx.fillStyle = ng;
+  ctx.beginPath();
+  ctx.moveTo(cx, ry-52);
+  ctx.bezierCurveTo(cx-12, ry-30, cx-rW/2, ry-10, cx-rW/2, ry);
+  ctx.lineTo(cx+rW/2, ry);
+  ctx.bezierCurveTo(cx+rW/2, ry-10, cx+12, ry-30, cx, ry-52);
+  ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = '#88bbff'; ctx.lineWidth = 1;
+  ctx.stroke();
+
+  // ── BASE logo on body ──
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 13px Courier New'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.shadowColor = '#ffffff'; ctx.shadowBlur = 10;
+  ctx.fillText('BASE', cx, ry + rH*0.28);
+  ctx.font = '9px Courier New'; ctx.shadowBlur = 0;
+  ctx.fillStyle = '#88ccff';
+  ctx.fillText('NETWORK', cx, ry + rH*0.28 + 16);
+  ctx.textBaseline = 'alphabetic';
+
+  // ── Blue circle logo ──
+  ctx.fillStyle = '#0052FF';
+  ctx.beginPath(); ctx.arc(cx, ry + rH*0.55, 14, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 14px Courier New'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText('B', cx, ry + rH*0.55);
+  ctx.textBaseline = 'alphabetic';
+
+  // ── Hatch (porthole / door on right side) ──
+  var hatchX = cx + rW*0.05, hatchY = ry + rH*0.38;
+  var hatchW = 28, hatchH = 32;
+  ctx.fillStyle = hatchOpen ? '#88ccff44' : '#003399';
+  ctx.strokeStyle = '#88aaff'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.roundRect(hatchX - hatchW/2, hatchY - hatchH/2, hatchW, hatchH, 5);
+  if(hatchOpen) {
+    ctx.fillStyle = '#aaddff22'; ctx.fill(); ctx.stroke();
+    // open hatch glow
+    ctx.shadowColor = '#00D4FF'; ctx.shadowBlur = 14;
+    ctx.strokeStyle = '#00D4FF'; ctx.stroke();
+    ctx.shadowBlur = 0;
+  } else {
+    ctx.fill(); ctx.stroke();
+  }
+
+  // ── Windows / portholes ──
+  for(var wi=0; wi<3; wi++) {
+    var wy = ry + rH*0.72 + wi * 24;
+    ctx.fillStyle = '#aaddff33';
+    ctx.strokeStyle = '#88aaff88'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.arc(cx, wy, 6, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
+function updateLaunchSequence() {
+  launchFrame++;
+  var lf = launchFrame;
+
+  // Stage 0 (0-70): rocket descends to center, hatch opens
+  // Stage 1 (70-110): bleu flies toward hatch
+  // Stage 2 (110-130): bleu enters, hatch closes, countdown
+  // Stage 3 (130-170): ignition, fire grows, shake
+  // Stage 4 (170-260): rocket launches upward + accelerates
+  // Stage 5 (260+): transition to award
+
+  if(lf < 70) {
+    launchStage = 0;
+    // Rocket descends from top
+    var targetY = H/2 - 140;
+    rocketY += (targetY - rocketY) * 0.10;
+  } else if(lf < 110) {
+    launchStage = 1;
+    // Bleu flies toward hatch
+    var hatchTX = W/2 + 10;
+    var hatchTY = rocketY + 180 * 0.38;
+    bleu.x += (hatchTX - bleu.x) * 0.08;
+    bleu.y += (hatchTY - bleu.y) * 0.08;
+    bleu.vy = 0;
+  } else if(lf < 140) {
+    launchStage = 2;
+    // Bleu disappears into rocket
+    if(lf > 124) bleuEnteredRocket = true;
+  } else if(lf < 185) {
+    launchStage = 3;
+    // Ignition — screen shake increases
+    if(lf > 145) screenShake = Math.min(8, (lf-145)*0.4);
+    if(lf === 148) {
+      beep(80, 40, 1.2, 'sawtooth', 0.22);
+      spawnParticles(W/2, rocketY+185, '#ff6600', 18);
+      spawnParticles(W/2, rocketY+185, '#FFD700', 12);
+      if(navigator.vibrate) navigator.vibrate([60,30,60,30,120]);
+    }
+  } else if(lf < 270) {
+    launchStage = 4;
+    // Rocket launches upward, accelerating
+    var spd = Math.pow((lf-185)/85, 1.6) * 22;
+    rocketY -= spd;
+    bleu.x = W/2 + 10;
+    bleu.y = rocketY + 180 * 0.38;
+    screenShake = Math.min(12, 12 - (lf-185)/85*10);
+    // exhaust smoke particles
+    if(lf % 3 === 0) {
+      spawnParticles(W/2 + (Math.random()-0.5)*20, rocketY+200, '#ff8800', 3);
+      spawnParticles(W/2 + (Math.random()-0.5)*14, rocketY+210, '#FFD700', 2);
+    }
+    if(lf === 190) {
+      beep(220, 110, 2.0, 'square', 0.15);
+      [440,660,880,1100,1320].forEach(function(fq,i){ setTimeout(function(){beep(fq,fq,0.25,'sine',0.14);},i*80); });
+      if(navigator.vibrate) navigator.vibrate([80,20,80,20,200]);
+    }
+  } else {
+    launchStage = 5;
+    screenShake = 0;
+    // Transition back to playing — chest appears on death screen instead
+    launchTriggered=false;
+    gameState='playing'; startMusic(getPhaseIdx());
+    bleu.y = H/2; bleu.vy = 0; pipes = [];
+  }
+}
+
+function drawLaunchSequence() {
+  var lf = launchFrame;
+  var stage = launchStage;
+
+  // ── Background: space gradient ──
+  var sbg = ctx.createLinearGradient(0,0,0,H);
+  var t = Math.min(1, lf/120);
+  // Transition from current phase bg to deep space
+  sbg.addColorStop(0, lerpColor('#44aaee','#000014',t));
+  sbg.addColorStop(0.5, lerpColor('#77ccff','#000828',t));
+  sbg.addColorStop(1, lerpColor('#2a8a20','#000510',t));
+  ctx.fillStyle = sbg; ctx.fillRect(0,0,W,H);
+
+  // Stars appear as we go to space
+  if(t > 0.3) {
+    var starAlpha = (t-0.3)/0.7;
+    ctx.globalAlpha = starAlpha * 0.9;
+    for(var si2=0;si2<40;si2++) {
+      var sx2=(si2*137.5)%W, sy2=(si2*83.7+si2*19)%H;
+      var sz=0.5+((si2*31)%10)/10*1.5;
+      ctx.fillStyle='#ffffff'; ctx.beginPath(); ctx.arc(sx2,sy2,sz,0,Math.PI*2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // Draw existing pipes (fading out)
+  var pipeAlpha = Math.max(0, 1 - lf/50);
+  if(pipeAlpha > 0) {
+    ctx.globalAlpha = pipeAlpha;
+    for(var pi=0;pi<pipes.length;pi++) drawObstacle(pipes[pi]);
+    ctx.globalAlpha = 1;
+  }
+
+  // ── Ground / planet surface fading ──
+  var groundAlpha = Math.max(0, 1 - lf/80);
+  if(groundAlpha > 0) {
+    ctx.globalAlpha = groundAlpha;
+    ctx.fillStyle = '#2a8a20'; ctx.fillRect(0, H-76, W, 76);
+    ctx.globalAlpha = 1;
+  }
+
+  // ── Rocket ──
+  var fireLen = 0;
+  if(stage >= 3) fireLen = Math.min(140, (lf-143)*4);
+  if(stage === 4) fireLen = 80 + Math.sin(lf*0.3)*20 + (lf-185)*0.8;
+  var hOpen = stage === 1 || (stage === 2 && lf < 128);
+  drawBigBaseRocket(W/2, rocketY, Math.max(0,fireLen), hOpen);
+
+  // ── Bleu character ──
+  if(!bleuEnteredRocket) {
+    var bAlpha = stage === 2 ? Math.max(0, 1-(lf-110)/14) : 1;
+    ctx.globalAlpha = bAlpha;
+    drawCharacter(bleu.x, bleu.y, bleu.flap, bleu.vy);
+    ctx.globalAlpha = 1;
+  }
+
+  // ── Text overlays ──
+  ctx.textAlign = 'center';
+  if(stage === 0 && lf > 30) {
+    ctx.globalAlpha = Math.min(1,(lf-30)/20);
+    ctx.font = 'bold 18px Courier New'; ctx.fillStyle = '#FFD700';
+    ctx.shadowColor = '#FFD700'; ctx.shadowBlur = 16;
+    ctx.fillText('TO THE MOON! 🚀', W/2, H/2 - 220);
+    ctx.shadowBlur = 0; ctx.globalAlpha=1;
+  }
+  if(stage === 1) {
+    ctx.globalAlpha = Math.min(1,(lf-70)/12);
+    ctx.font = 'bold 13px Courier New'; ctx.fillStyle = '#00D4FF';
+    ctx.shadowColor = '#00D4FF'; ctx.shadowBlur = 10;
+    ctx.fillText('ENTRE NO FOGUETE!', W/2, H*0.82);
+    ctx.shadowBlur = 0; ctx.globalAlpha=1;
+  }
+  if(stage === 2) {
+    var cd = Math.max(0, Math.ceil((140 - lf)/10));
+    if(cd > 0) {
+      ctx.font = 'bold 52px Courier New';
+      ctx.fillStyle = '#ffffff'; ctx.shadowColor='#FFD700'; ctx.shadowBlur=30;
+      ctx.fillText(cd, W/2, H*0.82);
+      ctx.shadowBlur=0;
+    }
+  }
+  if(stage === 3) {
+    ctx.font = 'bold 14px Courier New'; ctx.fillStyle='#ff8800';
+    ctx.shadowColor='#ff6600'; ctx.shadowBlur=14;
+    ctx.fillText('IGNIÇÃO! 🔥', W/2, H*0.82);
+    ctx.shadowBlur=0;
+  }
+  if(stage === 4 && lf < 220) {
+    var la2 = Math.min(1,(lf-185)/15) * Math.max(0, 1-(lf-205)/15);
+    ctx.globalAlpha = la2;
+    ctx.font = 'bold 22px Courier New'; ctx.fillStyle='#FFD700';
+    ctx.shadowColor='#FFD700'; ctx.shadowBlur=22;
+    ctx.fillText('LIFTOFF! 🚀🌙', W/2, H/2);
+    ctx.shadowBlur=0; ctx.globalAlpha=1;
+  }
+
+  // ── Particle effects ──
+  updateParticles();
+}
+
+function lerpColor(hex1, hex2, t) {
+  var r1=parseInt(hex1.slice(1,3),16), g1=parseInt(hex1.slice(3,5),16), b1=parseInt(hex1.slice(5,7),16);
+  var r2=parseInt(hex2.slice(1,3),16), g2=parseInt(hex2.slice(3,5),16), b2=parseInt(hex2.slice(5,7),16);
+  var r=Math.round(r1+(r2-r1)*t), g=Math.round(g1+(g2-g1)*t), b=Math.round(b1+(b2-b1)*t);
+  return 'rgb('+r+','+g+','+b+')';
+}
+var _lastT=0;
+function loop(ts) {
+  requestAnimationFrame(loop);
+  var dt = ts - _lastT;
+  if(dt < 14) return; // cap ~72fps max to save battery/CPU on 90/120Hz screens
+  _lastT = ts;
+  frame++;
+  drawBg();
+  ctx.save();
+  if(screenShake>0){ctx.translate((Math.random()-.5)*screenShake*2,(Math.random()-.5)*screenShake*.7);}
+
+  // ── DAILY MODAL ──
+  if(dailyModal){ drawDailyModal(); return; }
+
+  // ── IDLE ──
+  if(gameState === 'idle'){
+    drawIdleTabs();
+    if(idleTab==='play'){
+      drawCharacter(bleu.x, bleu.y + Math.sin(frame*.045)*8, frame*.22, 0);
+      ctx.textAlign = 'center';
+      ctx.font = 'bold 34px Courier New';
+      var tg = ctx.createLinearGradient(W/2-80, 0, W/2+80, 0);
+      tg.addColorStop(0,'#0052FF'); tg.addColorStop(0.5,'#00D4FF'); tg.addColorStop(1,'#FFD700');
+      ctx.fillStyle = tg; ctx.shadowColor = '#0052FF'; ctx.shadowBlur = 28;
+      ctx.fillText('FLAPY BLEU', W/2, H/2-82); ctx.shadowBlur = 0;
+      ctx.fillStyle = '#FFD700'; ctx.font = 'bold 11px Courier New';
+      ctx.shadowColor='#FFD700'; ctx.shadowBlur=8;
+      ctx.fillText('$BLEU  *  BASE NETWORK  *  TO THE MOON', W/2, H/2-56);
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = '#ffffff88'; ctx.font = '13px Courier New';
+      ctx.fillText('tap / SPACE to fly', W/2, H/2-26);
+      ctx.fillStyle = '#ffffff44'; ctx.font = '10px Courier New';
+      ctx.fillText('dodge the candles  *  ride the charts', W/2, H/2-4);
+      if(highScore > 0){
+        ctx.fillStyle = '#FFD700'; ctx.font = 'bold 13px Courier New';
+        ctx.shadowColor = '#FFD700'; ctx.shadowBlur = 12;
+        ctx.fillText('BEST: ' + highScore, W/2, H/2+46); ctx.shadowBlur = 0;
+      }
+      drawCharSelect();
+      ctx.fillStyle = '#0052FF88'; ctx.font = '10px Courier New'; ctx.textAlign = 'center';
+      ctx.fillText('powered by Base Network', W/2, H-95);
+    } else if(idleTab==='shop'){
+      drawShopTab();
+    } else if(idleTab==='skins'){
+      drawSkinsTab();
+    } else if(idleTab==='leaderboard'){
+      drawLeaderboardTab();
+    }
+    return;
+  }
+
+  // ── PLAYING ──
+  if(gameState === 'playing' && !shopOverlay && !paused){
+    bleu.vy   += 0.38;
+    bleu.y    += bleu.vy;
+    bleu.flap += 0.25;
+
+    var ph  = getPhase();
+    var pi  = getPhaseIdx();
+    var pv  = getPhaseVisual();
+
+    // spawn de pipes
+    var spawnEvery = Math.max(60, 92 - pi * 3);
+    if(frame % spawnEvery === 0){
+      pipes.push(makePipe(W+10));
+    }
+
+    // move pipes
+    var spd = ph.speed;
+    for(var i=0; i<pipes.length; i++){
+      var p = pipes[i];
+      p.x -= spd;
+      if(!p.passed && p.x+p.bodyW < bleu.x){
+        p.passed = true; score++; scorePop = 12; scoreGlow = 14;
+        combo++; comboFlash=22; coinsThisRun++;
+        if(navigator.vibrate) navigator.vibrate(10);
+        // escalating pitch with combo
+        var pitch = Math.min(260 + score*14, 900);
+        beep(pitch, pitch*2, 0.18, 'sine', 0.13);
+        if(combo===3){ beep(pitch*1.5, pitch*3, 0.14, 'sine', 0.08); screenShake=4; }
+        if(combo===5){ beep(880, 1760, 0.22, 'square', 0.08); screenShake=6; spawnScorePopup(bleu.x,bleu.y-55,'🔥 FEVER!'); }
+        if(combo===10){ beep(1047, 2093, 0.28, 'square', 0.1); screenShake=8; spawnScorePopup(bleu.x,bleu.y-55,'💎 x10 ULTRA!'); }
+        spawnScorePopup(bleu.x, bleu.y-25);
+        // milestone bonus
+        if(MILESTONES[milestoneIdx] && score>=MILESTONES[milestoneIdx]){
+          var bonus = MILESTONES[milestoneIdx]*2;
+          coinCount+=bonus; localStorage.setItem('bleuCoins',coinCount);
+          spawnScorePopup(bleu.x, bleu.y-55, '+'+bonus+' 🐉 BÔNUS!');
+          beep(880,1760,0.35,'sine',0.18);
+          screenShake=8;
+          milestoneIdx++;
+          if(navigator.vibrate) navigator.vibrate([50,20,50,20,80]);
+        }
+        // record mid-game flash
+        if(score>highScore && !newRecord) recFlash=55;
+
+        // phase change detection
+        var newPI = getPhaseIdx();
+        if(newPI > lastPhaseIdx) {
+          _bgGradPhase=-1; completedPhase = lastPhaseIdx;
+          lastPhaseIdx = newPI;
+          phaseFlash   = 150;
+          startMusic(newPI);
+          // Safe spawn: clear pipes + center character
+          pipes = []; bleu.y = H/2; bleu.vy = -2;
+          spawnParticles(W/2, H/2, '#FFD700', 30);
+          spawnParticles(W/2, H/2, '#00D4FF', 20);
+          var fs = [440,554,659,880];
+          fs.forEach(function(f,ii){ setTimeout(function(){ beep(f,f*1.5,0.2,'sine',0.18); }, ii*80); });
+          // NFT unlock at phase 10 (score >= 100 in test mode)
+          if(newPI >= 9 && unlockedChars < 2) { // phase 10 reached (score >= 36 in test mode)
+            unlockedChars = 2;
+            localStorage.setItem('bleuChars', '2');
+            nftFlash = 220;
+            spawnParticles(W/2, H/2, '#FF6B20', 40);
+            spawnParticles(W/2, H/2, '#FFD700', 40);
+            [523,659,784,1047,1319].forEach(function(f,ii){
+              setTimeout(function(){ beep(f,f*1.2,0.25,'sine',0.2); }, ii*100);
+            });
+          }
+          // Rocket at every phase change
+          if(!launchTriggered){
+            launchTriggered=true; gameState='launch';
+            launchFrame=0; launchStage=0; rocketY=-350; bleuEnteredRocket=false;
+            stopMusic(); bleu.vy=0;
+          }
+        }
+      }
+    }
+    pipes = pipes.filter(function(p){ return p.x > -70; });
+
+    // ── COINS: spawn ──
+    if(frame % 140 === 70) {
+      var cy0 = 80 + Math.random() * (H - 220);
+      coins.push({ x: W + 14, y: cy0, collected: false, pulse: frame });
+    }
+    // ── COINS: move + collect + draw ──
+    var spd2 = getPhase().speed;
+    for(var ci3 = coins.length - 1; ci3 >= 0; ci3--) {
+      var coin = coins[ci3];
+      coin.x -= spd2;
+      if(coin.x < -20) { coins.splice(ci3, 1); continue; }
+      if(!coin.collected) {
+        var dx3 = bleu.x - coin.x, dy3 = bleu.y - coin.y;
+        if(Math.sqrt(dx3*dx3 + dy3*dy3) < 23) {
+          coin.collected = true;
+          coinCount++; coinsThisRun++;
+          localStorage.setItem('bleuCoins',coinCount);
+          spawnParticles(coin.x, coin.y, '#88ccff', 8);
+          spawnParticles(coin.x, coin.y, '#ffffff', 4);
+          beep(880, 1320, 0.12, 'sine', 0.1);
+          coins.splice(ci3, 1); continue;
+        }
+      }
+      // Bob animation
+      var bob = Math.sin((frame - coin.pulse) * 0.06) * 3;
+      drawCoin(coin.x, coin.y + bob);
+    }
+
+    for(var i=0; i<pipes.length; i++) drawObstacle(pipes[i]);
+    ctx.save();
+    if(scoreGlow>0) scoreGlow--;
+    if(bleuSquish>0){var _sq=bleuSquish/8;ctx.translate(bleu.x,bleu.y);ctx.scale(1+_sq*.2,1-_sq*.18);ctx.translate(-bleu.x,-bleu.y);bleuSquish--;}
+    drawCharacter(bleu.x, bleu.y, bleu.flap, bleu.vy);
+    ctx.restore();
+    updateParticles();
+    updateScorePopups();
+    drawPhaseBanner();
+    drawNFTBanner();
+
+    // HUD — score
+    ctx.textAlign = 'center';
+    var _ps = scorePop>0 ? 1+(scorePop/12)*0.6 : 1;
+    ctx.save(); ctx.translate(W/2,52); ctx.scale(_ps,_ps);
+    ctx.font = 'bold 26px Courier New';
+    ctx.shadowColor = pv.glowColor; ctx.shadowBlur = scorePop>0 ? 14+scorePop*2 : 0;
+    ctx.fillStyle = pv.glowColor;
+    ctx.fillText(score, 0, 0);
+    ctx.restore(); ctx.shadowBlur = 0;
+    if(scorePop>0) scorePop--;
+    // Pause button
+    ctx.fillStyle='#ffffff18'; ctx.strokeStyle='#ffffff33'; ctx.lineWidth=1;
+    ctx.fillRect(W-36,6,26,20); ctx.strokeRect(W-36,6,26,20);
+    ctx.fillStyle='#ffffffaa'; ctx.font='bold 10px Courier New'; ctx.textAlign='left';
+    ctx.fillText(paused?'▶':'II',W-30,20);
+    // HUD — coin counter (top right)
+    drawCoin(W - 38, 34);
+    ctx.shadowColor = '#88ccff'; ctx.shadowBlur = 6;
+    ctx.fillStyle = '#d8f4ff'; ctx.font = 'bold 13px Courier New'; ctx.textAlign = 'left';
+    ctx.fillText(coinCount, W - 24, 39);
+    ctx.shadowBlur = 0;
+    // progress bar — top left, below ticker
+    var progress = (score % 4) / 4;
+    ctx.fillStyle = '#ffffff14';
+    ctx.fillRect(6, 23, 70, 3);
+    var barG = ctx.createLinearGradient(6, 23, 76, 23);
+    barG.addColorStop(0,'#FFD700'); barG.addColorStop(1,'#00D4FF');
+    ctx.fillStyle = barG;
+    ctx.fillRect(6, 23, 70 * progress, 3);
+    // best
+    if(highScore > 0){
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#ffffff44'; ctx.font = '10px Courier New';
+      ctx.fillText('best ' + highScore, W/2, 68);
+    }
+    // combo HUD
+    if(comboFlash > 0){
+      var ca = Math.min(1, comboFlash/12);
+      var cscale = 1 + (comboFlash>18 ? (comboFlash-18)*0.04 : 0);
+      ctx.save();
+      ctx.globalAlpha = ca;
+      ctx.translate(W/2, 84);
+      ctx.scale(cscale, cscale);
+      ctx.textAlign = 'center';
+      if(combo>=5){
+        ctx.fillStyle = '#ff4488'; ctx.font = 'bold 16px Courier New';
+        ctx.shadowColor = '#ff0088'; ctx.shadowBlur = 18;
+      } else if(combo>=3){
+        ctx.fillStyle = '#FFD700'; ctx.font = 'bold 14px Courier New';
+        ctx.shadowColor = '#FFD700'; ctx.shadowBlur = 12;
+      } else {
+        ctx.fillStyle = '#00D4FF'; ctx.font = 'bold 12px Courier New';
+        ctx.shadowBlur = 0;
+      }
+      ctx.fillText((combo>=5?'🔥 ':combo>=3?'⚡ ':'x')+combo+(combo>=5?' FEVER!':combo>=3?' COMBO!':''), 0, 0);
+      ctx.shadowBlur = 0;
+      ctx.restore();
+      comboFlash--;
+    } else { comboFlash=0; }
+    // recFlash — mid-game "NOVO RECORDE!" 
+    if(recFlash > 0){
+      var ra = Math.min(1, recFlash/18) * (recFlash>8?1:recFlash/8);
+      ctx.save();
+      ctx.globalAlpha = ra;
+      ctx.textAlign = 'center';
+      ctx.font = 'bold 13px Courier New';
+      ctx.fillStyle = '#FFD700';
+      ctx.shadowColor = '#FFD700'; ctx.shadowBlur = 20;
+      ctx.fillText('🏆 NOVO RECORDE!', W/2, H/2-70);
+      ctx.shadowBlur = 0;
+      ctx.restore();
+      recFlash--;
+    }
+
+    if(gameState==='playing' && hitTest()){
+      spawnParticles(bleu.x, bleu.y, '#FF1744', 20);
+      spawnParticles(bleu.x, bleu.y, '#FFD700', 10);
+      beep(350, 60, 0.5, 'sawtooth', 0.25);
+      if(score > highScore){
+        highScore = score; newRecord = true;
+        localStorage.setItem('bleuHS', highScore);
+        [523,659,784,1047].forEach(function(f,i){
+          setTimeout(function(){ beep(f,f,0.15,'sine',0.14); }, i*85);
+        });
+      }
+      lastScore=score; localStorage.setItem('bleuLastScore',score); totalScore+=score;
+      deadChestAvail=true; localStorage.setItem('bleuTotal',totalScore); gameState='dead'; screenShake=14; hitFlash=8; stopMusic();
+      if(comboBest<combo) comboBest=combo;
+      combo=0; comboFlash=0; milestoneIdx=0;
+      if(navigator.vibrate) navigator.vibrate([80,30,80]);
+    }
+  }
+
+  // ── LAUNCH SEQUENCE ──
+  if(gameState === 'launch'){
+    ctx.save();
+    if(screenShake>0){ctx.translate((Math.random()-.5)*screenShake*2,(Math.random()-.5)*screenShake*.8);}
+    updateLaunchSequence();
+    drawLaunchSequence();
+    ctx.restore();
+    return;
+  }
+
+  // ── AWARD ──
+  if(gameState === 'award'){
+    for(var i=0;i<pipes.length;i++) drawObstacle(pipes[i]);
+    drawCharacter(bleu.x, bleu.y, bleu.flap, 0);
+    updateParticles();
+    drawAwardScreen();
+  }
+  // ── DEAD ──
+  if(gameState === 'dead'){
+    for(var i=0; i<pipes.length; i++) drawObstacle(pipes[i]);
+    drawCharacter(bleu.x, bleu.y+4, bleu.flap, bleu.vy);
+    updateParticles();
+    ctx.textAlign = 'center';
+    if(newRecord){
+      ctx.fillStyle = '#FFD700'; ctx.font = 'bold 15px Courier New';
+      ctx.shadowColor = '#FFD700'; ctx.shadowBlur = 24;
+      ctx.fillText('NEW RECORD!', W/2, H/2-92);
+      ctx.shadowBlur = 0;
+    }
+    // dark panel
+    ctx.fillStyle = 'rgba(0,5,20,0.72)';
+    ctx.beginPath(); ctx.roundRect(W/2-110,H/2-80,220,200,14); ctx.fill();
+    // REKT title
+    ctx.font = 'bold 32px Courier New';
+    ctx.shadowColor = '#FF1744'; ctx.shadowBlur = 28;
+    ctx.fillStyle = '#FF1744';
+    ctx.fillText('REKT', W/2, H/2-42);
+    ctx.shadowBlur = 0;
+    // score row
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 22px Courier New';
+    ctx.fillText('Score: ' + score, W/2, H/2-8);
+    // combo best
+    if(comboBest >= 2){
+      ctx.fillStyle = comboBest>=5?'#ff4488':comboBest>=3?'#FFD700':'#00D4FF';
+      ctx.font = 'bold 12px Courier New';
+      ctx.fillText('Melhor combo: x' + comboBest, W/2, H/2+12);
+    }
+    // coins this run
+    if(coinsThisRun > 0){
+      ctx.fillStyle = '#FFD700'; ctx.font = '12px Courier New';
+      ctx.shadowColor = '#FFD70066'; ctx.shadowBlur = 8;
+      ctx.fillText('🐉 +' + coinsThisRun + ' moedas', W/2, H/2+28);
+      ctx.shadowBlur = 0;
+    }
+    // best
+    if(newRecord){
+      ctx.fillStyle = '#FFD700'; ctx.font = 'bold 13px Courier New';
+      ctx.shadowColor = '#FFD700'; ctx.shadowBlur = 16;
+      ctx.fillText('🏆 NOVO RECORDE: ' + highScore, W/2, H/2+46);
+      ctx.shadowBlur = 0;
+    } else {
+      ctx.fillStyle = '#FFD70088'; ctx.font = '12px Courier New';
+      ctx.fillText('Best: ' + highScore, W/2, H/2+46);
+    }
+    // free chest button (only if available)
+    if(deadChestAvail) {
+      var cpulse = 0.93 + 0.07*Math.sin(frame*0.18);
+      ctx.save();
+      ctx.translate(W/2, H/2+62);
+      ctx.scale(cpulse, cpulse);
+      ctx.fillStyle = '#FFD70022';
+      ctx.beginPath(); ctx.roundRect(-66,-16,132,32,8); ctx.fill();
+      ctx.strokeStyle = '#FFD700'; ctx.lineWidth=1.5; ctx.stroke();
+      ctx.font='bold 13px Courier New'; ctx.fillStyle='#FFD700';
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText('🎁 BAUZINHO GRÁTIS', 0, 0);
+      ctx.textBaseline='alphabetic';
+      ctx.restore();
+    }
+    // big retry button
+    var pulse = 0.97 + 0.03*Math.sin(frame*0.12);
+    ctx.save();
+    ctx.translate(W/2, H/2+98);
+    ctx.scale(pulse, pulse);
+    ctx.fillStyle = '#0052FF';
+    ctx.beginPath(); ctx.roundRect(-80,-18,160,36,10); ctx.fill();
+    ctx.font = 'bold 15px Courier New';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#fff';
+    ctx.fillText('▶ JOGAR DE NOVO', 0, 0);
+    ctx.textBaseline = 'alphabetic';
+    ctx.restore();
+    // menu button
+    ctx.fillStyle = '#ffffff0a';
+    ctx.beginPath(); ctx.roundRect(W/2-55, H/2+124, 110, 28, 8); ctx.fill();
+    ctx.strokeStyle = '#0052FF44'; ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.font = '12px Courier New'; ctx.fillStyle = '#0052FFcc';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('⌂  MENU', W/2, H/2+138);
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillStyle = '#ffffff22'; ctx.font = '9px Courier New';
+    ctx.fillText('$BLEU never stops', W/2, H/2+162);
+  }
+  ctx.restore();
+  if(screenShake>0)screenShake--;
+  if(shopOverlay){ drawShopOverlay(); }
+  if(paused && gameState==='playing'){ ctx.fillStyle='rgba(0,5,20,.65)'; ctx.fillRect(0,0,W,H); ctx.textAlign='center'; ctx.font='bold 22px Courier New'; ctx.fillStyle='#fff'; ctx.shadowColor='#0052FF'; ctx.shadowBlur=20; ctx.fillText('PAUSADO',W/2,H/2); ctx.shadowBlur=0; ctx.font='11px Courier New'; ctx.fillStyle='#ffffff88'; ctx.fillText('toque ▶ ou tecle P para continuar',W/2,H/2+28); }
+  if(hitFlash>0){ctx.globalAlpha=(hitFlash/8)*.38;ctx.fillStyle='#ff1133';ctx.fillRect(0,0,W,H);ctx.globalAlpha=1;hitFlash--;}
+}
+
+// ─── INPUT ───────────────────────────────────
+function flap() {
+  if(gameState==='idle')         { gameState='playing'; startMusic(getPhaseIdx()); combo=0; comboFlash=0; coinsThisRun=0; milestoneIdx=0; recFlash=0; }
+  else if(gameState==='playing') { bleu.vy=-7.5; bleu.flap=-1; bleuSquish=8; beep(260,520,0.09,'sine',0.16); }
+  else if(gameState==='dead')    { resetGame(); gameState='playing'; }
+}
+
+
+function hitShopCard(cx, cy, yStart, compact) {
+  var cols=3, tw=76, th=compact?82:80, gapX=8, gapY=compact?4:5;
+  var startX=W/2-((cols*(tw+gapX)-gapX)/2);
+  for(var si=1;si<SKINS.length;si++){
+    var idx2=si-1, col=idx2%cols, row=Math.floor(idx2/cols);
+    var sx=startX+col*(tw+gapX)+tw/2, sy=yStart+row*(th+gapY);
+    if(cx>=sx-tw/2&&cx<=sx+tw/2&&cy>=sy&&cy<=sy+th) return si;
+  }
+  return -1;
+}
+function buySkin(si) {
+  var sk=SKINS[si], owned=unlockedSkins.indexOf(si)>=0;
+  if(owned){ activeSkin=si; localStorage.setItem('bleuSkin',''+si); beep(440+si*50,880+si*50,0.1,'sine',0.12); }
+  else if(coinCount>=sk.price){
+    coinCount-=sk.price; localStorage.setItem('bleuCoins',coinCount);
+    unlockedSkins.push(si); localStorage.setItem('bleuSkins',JSON.stringify(unlockedSkins));
+    activeSkin=si; localStorage.setItem('bleuSkin',''+si);
+    beep(523,1047,0.3,'sine',0.15);
+    [659,784,1047].forEach(function(f,ii){setTimeout(function(){beep(f,f,0.12,'sine',0.1);},ii*70);});
+  } else { beep(220,150,0.12,'sawtooth',0.08); hitFlash=3; }
+}
+function handleClick(ex, ey) {
+  var rect = canvas.getBoundingClientRect();
+  var scaleX = W/rect.width, scaleY = H/rect.height;
+  var cx = (ex-rect.left)*scaleX, cy = (ey-rect.top)*scaleY;
+  if(dailyModal){
+    if(cx>=W/2-65&&cx<=W/2+65&&cy>=H/2+78&&cy<=H/2+112){ claimDailyReward(); beep(523,1047,0.2,'sine',0.14); }
+    return;
+  }
+  if(shopOverlay){
+    if(cy>=H-74&&cy<=H-38&&cx>=W/2-80&&cx<=W/2+80){ shopOverlay=false; return; }
+    var si2=hitShopCard(cx,cy,76,true);
+    if(si2>=0){ buySkin(si2); return; }
+    return;
+  }
+
+  // ── AWARD chest click
+  if(gameState === 'award') {
+    if(!chestOpened) {
+      chestClicks++;
+      chestBounce = 12;
+      beep(440+chestClicks*110, 880+chestClicks*110, 0.12, 'sine', 0.12);
+      if(chestClicks >= 3) {
+        chestOpened = true;
+        chestCoins = chestCoinsRand();
+        coinCount += chestCoins;
+        localStorage.setItem('bleuCoins', coinCount);
+        beep(523,1047,0.3,'sine',0.15);
+        [659,784,1047,1319].forEach(function(f,i){
+          setTimeout(function(){beep(f,f,0.15,'sine',0.12);},i*80);
+        });
+      }
+    } else if(chestOpenAnim >= 14) {
+      shopOverlay = true; gameState = 'playing'; startMusic(getPhaseIdx());
+    }
+    return;
+  }
+
+  // ── LAUNCH tap to skip
+  if(gameState === 'launch') { launchFrame = 260; return; }
+
+  // ── DEAD screen buttons
+  if(gameState === 'dead') {
+    // Chest button: W/2-66 to W/2+66, H/2+46 to H/2+78
+    if(deadChestAvail && cx>=W/2-66&&cx<=W/2+66&&cy>=H/2+46&&cy<=H/2+78){
+      deadChestAvail=false;
+      chestType='normal'; gameState='award';
+      chestClicks=0; chestBounce=0; chestOpened=false; chestCoins=0; chestOpenAnim=0; bleu.vy=0;
+      beep(440,880,0.15,'sine',0.14);
+      return;
+    }
+    // Menu button: W/2-55 to W/2+55, H/2+108 to H/2+136
+    if(cx>=W/2-55&&cx<=W/2+55&&cy>=H/2+120&&cy<=H/2+148){
+      resetGame(); idleTab='play'; return;
+    }
+    // Retry
+    flap(); return;
+  }
+
+  // ── IDLE tabs click
+  if(gameState === 'idle') {
+    if(idleTab==='shop'){ var si3=hitShopCard(cx,cy,76,false); if(si3>=0){ buySkin(si3); return; } }
+    var labels=['play','shop','skins','leaderboard'], tw=88, th=38, gap=5;
+    var total=4*(tw+gap)-gap, tx0=W/2-total/2, ty=H-56;
+    for(var ti=0;ti<labels.length;ti++) {
+      var tx=tx0+ti*(tw+gap);
+      if(cx>=tx&&cx<=tx+tw&&cy>=ty&&cy<=ty+th) {
+        idleTab=labels[ti]; beep(440,660,0.08,'sine',0.1); return;
+      }
+    }
+    // Skins tab: click to equip (only owned skins shown)
+    if(idleTab==='skins') {
+      var owned2=unlockedSkins.slice().sort(function(a,b){return a-b;});
+      if(owned2.length===0) owned2=[0];
+      var cols2=3,tw3=78,th3=92,gapX2=8,totalW3=cols2*(tw3+gapX2)-gapX2,startX2=W/2-totalW3/2;
+      for(var ii2=0;ii2<owned2.length;ii2++) {
+        var si2=owned2[ii2];
+        var col2=ii2%cols2,row2=Math.floor(ii2/cols2);
+        var sx2=startX2+col2*(tw3+gapX2)+tw3/2, sy2=H/2-100+row2*(th3+gapX2);
+        if(cx>=sx2-tw3/2&&cx<=sx2+tw3/2&&cy>=sy2&&cy<=sy2+th3) {
+          activeSkin=si2;
+          localStorage.setItem('bleuSkin',''+si2);
+          beep(440+si2*55, 880+si2*55, 0.1,'sine',0.12);
+          return;
+        }
+      }
+    }
+// Character select (legacy, play tab)
+    if(idleTab==='play' && unlockedChars >= 2) {
+      var bx1=W/2-55, bx2=W/2+15, bby=H/2+80, bbw=40, bbh=16;
+      if(cx>=bx1&&cx<=bx1+bbw&&cy>=bby&&cy<=bby+bbh){ activeChar=0; localStorage.setItem('bleuActiveChar','0'); beep(440,880,0.1,'sine',0.12); return; }
+      if(cx>=bx2&&cx<=bx2+bbw&&cy>=bby&&cy<=bby+bbh){ activeChar=1; localStorage.setItem('bleuActiveChar','1'); beep(660,1320,0.1,'sine',0.12); return; }
+    }
+  }
+
+  // Pause button hit (top-right corner, playing state)
+  if(gameState==='playing' && cx>=W-36&&cx<=W-10&&cy>=6&&cy<=26){ paused=!paused; return; }
+  if(paused) return;
+  flap();
+}
+
+canvas.addEventListener('click', function(e){ handleClick(e.clientX, e.clientY); });
+document.addEventListener('keydown', function(e){
+  if(e.code==='Space'){
+    e.preventDefault();
+    if(gameState==='launch'){ launchFrame=260; return; }
+    if(gameState==='award'){ handleClick(canvas.getBoundingClientRect().left + W/2, canvas.getBoundingClientRect().top + H/2); return; }
+    if(paused){ paused=false; return; }
+    if(shopOverlay){ shopOverlay=false; gameState='playing'; startMusic(getPhaseIdx()); return; }
+    flap();
+  }
+  if(e.code==='KeyP' && (gameState==='playing'||paused)){ paused=!paused; }
+});
+canvas.addEventListener('touchstart', function(e){ e.preventDefault(); handleClick(e.touches[0].clientX, e.touches[0].clientY); }, {passive:false});
+
+checkDailyLogin();
+loop();
+</script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
