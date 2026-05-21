@@ -651,6 +651,7 @@ var _gndGrad=null, _gndGradPhase=-1;
 var _heavenMist=null, _dungeonMist=null;
 // ── LIVES + POWER-UPS ──
 var lives=3, invincible=0, starPower=0, stars=[];
+var shield=0, shieldItems=[], shieldBreak=0; // escudo power-up
 // Speed lines para star power
 var speedLines = [];
 (function(){ for(var i=0;i<18;i++) speedLines.push({ y: Math.random()*600, len: 40+Math.random()*80, speed: 6+Math.random()*8, alpha: 0.3+Math.random()*0.5 }); })();
@@ -678,6 +679,7 @@ function resetGame() {
   idleTab = 'play'; scorePopups = []; scoreGlow = 0; chestType = 'normal'; shopOverlay = false; paused = false;
   combo = 0; comboFlash = 0; coinsThisRun = 0; milestoneIdx = 0; recFlash = 0;
   lives = 3; invincible = 0; starPower = 0; stars = [];
+  shield = 0; shieldItems = []; shieldBreak = 0;
 }
 resetGame();
 
@@ -2638,6 +2640,33 @@ function drawStarItem(x, y) {
   ctx.restore();
 }
 
+// ─── SHIELD POWER-UP ─────────────────────────
+function drawShieldItem(x, y) {
+  var pulse = 1 + 0.14 * Math.sin(frame * 0.10);
+  var r = 14 * pulse;
+  ctx.save(); ctx.translate(x, y);
+  // Halo externo verde
+  ctx.globalAlpha = 0.16 + 0.10 * Math.sin(frame * 0.15);
+  ctx.fillStyle = '#00FF88';
+  ctx.beginPath(); ctx.arc(0, 0, r * 1.6, 0, Math.PI*2); ctx.fill();
+  ctx.globalAlpha = 1;
+  // Corpo do escudo
+  ctx.fillStyle = '#00CC66';
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(0, -r);
+  ctx.bezierCurveTo( r, -r,  r,  0,  0,  r);
+  ctx.bezierCurveTo(-r,  0, -r, -r,  0, -r);
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+  // Ícone ✦ no centro
+  ctx.fillStyle = '#001a0f';
+  ctx.font = 'bold ' + Math.round(r * 0.75) + 'px Arial';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('✦', 0, 1);
+  ctx.restore();
+}
+
 // ─── LIVES + STAR POWER HUD ──────────────────
 function drawLivesHUD() {
   ctx.textAlign='left'; ctx.font='bold 13px Arial';
@@ -2651,9 +2680,25 @@ function drawLivesHUD() {
   if(starPower>0){
     var bx=8, bw2=52;
     ctx.fillStyle='#33330088'; ctx.fillRect(bx,37,bw2+22,9);
-    ctx.fillStyle='#FFD700'; ctx.fillRect(bx,38,(starPower/300)*(bw2),7);
-    ctx.fillStyle='#FFD700'; ctx.font='bold 9px Courier New';
+    ctx.fillStyle='#00D4FF'; ctx.fillRect(bx,38,(starPower/300)*(bw2),7);
+    ctx.fillStyle='#00D4FF'; ctx.font='bold 9px Courier New';
     ctx.fillText('⭐ STAR', bx+bw2+2, 45);
+  }
+  // Shield indicator
+  if(shield>0){
+    var pulse2 = 0.85 + 0.15*Math.sin(frame*0.18);
+    ctx.globalAlpha = pulse2;
+    ctx.fillStyle='#00FF88'; ctx.font='bold 18px Arial';
+    ctx.textAlign='left'; ctx.textBaseline='middle';
+    ctx.fillText('🛡️', 8, starPower>0 ? 58 : 44);
+    ctx.globalAlpha=1; ctx.textBaseline='alphabetic';
+    // flash vermelho ao quebrar
+    if(shieldBreak>0){
+      ctx.globalAlpha=shieldBreak/10*0.5;
+      ctx.fillStyle='#FF1744';
+      ctx.fillRect(0,0,W,H);
+      ctx.globalAlpha=1;
+    }
   }
 }
 
@@ -2918,29 +2963,55 @@ function loop(ts) {
       }
     }
     if(starPower>0){ starPower--;
-      // ── Speed lines ──
+      // ── Speed lines — desvanece nos últimos 60f e reseta ao acabar ──
+      var slFade = starPower < 60 ? starPower/60 : 1;
       ctx.lineCap='round';
       for(var sl=0;sl<speedLines.length;sl++){
         var line=speedLines[sl];
         line.y += (Math.random()-0.5)*1.2;
-        line.x = (line.x||W) - line.speed * 2.8;
+        if(line.x===undefined) line.x = W+10;
+        line.x -= line.speed * 2.8;
         if(line.x < -line.len) line.x = W + 10;
-        var fade = starPower < 60 ? starPower/60 : 1; // desvanece no final
-        ctx.globalAlpha = line.alpha * fade;
+        ctx.globalAlpha = line.alpha * slFade;
         ctx.strokeStyle = sl%3===0 ? '#00D4FF' : sl%3===1 ? '#ffffff' : '#0052FF';
         ctx.lineWidth = 1.5;
         ctx.beginPath(); ctx.moveTo(line.x+line.len, line.y); ctx.lineTo(line.x, line.y); ctx.stroke();
       }
       ctx.globalAlpha=1; ctx.lineCap='butt';
       // Aura neon azul ao redor do personagem
-      ctx.globalAlpha=0.18+0.1*Math.sin(frame*0.3);
+      ctx.globalAlpha=(0.18+0.1*Math.sin(frame*0.3))*slFade;
       ctx.fillStyle='#00D4FF';
       ctx.beginPath(); ctx.arc(bleu.x,bleu.y,30,0,Math.PI*2); ctx.fill();
       ctx.globalAlpha=1;
-      // Quando acabar, volta música da fase
-      if(starPower===0) stopStarMusic();
+      // Quando acabar: reset x das linhas e volta música
+      if(starPower===0){
+        for(var sl2=0;sl2<speedLines.length;sl2++) delete speedLines[sl2].x;
+        stopStarMusic();
+      }
     }
     if(invincible>0) invincible--;
+    if(shieldBreak>0) shieldBreak--;
+
+    // ─── SHIELD spawn + move + coleta ────────
+    if(frame % 280 === 140 && Math.random() < 0.28 && shield===0 && starPower===0) {
+      var shy = lastGapCenter + (Math.random()-0.5)*50;
+      shy = Math.max(80, Math.min(H-110, shy));
+      shieldItems.push({x: W+18, y: shy});
+    }
+    for(var shi=shieldItems.length-1; shi>=0; shi--){
+      shieldItems[shi].x -= spd;
+      if(shieldItems[shi].x < -20){ shieldItems.splice(shi,1); continue; }
+      drawShieldItem(shieldItems[shi].x, shieldItems[shi].y);
+      var shDx=shieldItems[shi].x-bleu.x, shDy=shieldItems[shi].y-bleu.y;
+      if(Math.sqrt(shDx*shDx+shDy*shDy)<26){
+        shield=1; shieldItems.splice(shi,1);
+        spawnParticles(bleu.x,bleu.y,'#00FF88',10);
+        spawnParticles(bleu.x,bleu.y,'#ffffff',6);
+        beep(440,880,0.12,'sine',0.18);
+        beep(660,1320,0.10,'sine',0.16);
+        if(navigator.vibrate) navigator.vibrate([20,10,40]);
+      }
+    }
 
     // move pipes
     for(var i=0; i<pipes.length; i++){
@@ -2977,7 +3048,7 @@ function loop(ts) {
           lastPhaseIdx = newPI;
           phaseFlash   = 150;
           // clear screen and center gap so player has safe passage on transition
-          pipes = []; stars = [];
+          pipes = []; stars = []; shieldItems = [];
           lastGapCenter = H / 2;
           startMusic(newPI);
           spawnParticles(W/2, H/2, '#FFD700', 30);
@@ -3122,6 +3193,16 @@ function loop(ts) {
     // Canos só importam quando não está protegido
     var _hitPipes  = starPower===0 && invincible===0 && hitTestPipes();
     if(gameState==='playing' && (_hitBounds || _hitPipes)){
+      // Escudo absorve 1 batida (exceto chão/teto — chão sempre mata)
+      if(shield>0 && !_hitBounds){
+        shield=0; shieldBreak=10; invincible=80;
+        spawnParticles(bleu.x,bleu.y,'#00FF88',12);
+        spawnParticles(bleu.x,bleu.y,'#ffffff',8);
+        screenShake=5;
+        beep(180,90,0.4,'sawtooth',0.2);
+        if(navigator.vibrate) navigator.vibrate([40,20,40]);
+        // não cai no resto — continue loop
+      } else {
       spawnParticles(bleu.x, bleu.y, '#FF1744', 10);
       if(navigator.vibrate) navigator.vibrate(60);
       if(lives > 1) {
@@ -3154,6 +3235,7 @@ function loop(ts) {
         combo=0; comboFlash=0; milestoneIdx=0;
         if(navigator.vibrate) navigator.vibrate([80,30,80]);
       }
+      } // fecha else do shield
     }
   }
 
