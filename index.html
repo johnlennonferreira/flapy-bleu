@@ -3044,14 +3044,13 @@ function loop(ts) {
       spawnParticles(bleu.x, bleu.y, '#FF1744', 10);
       if(navigator.vibrate) navigator.vibrate(60);
       if(lives > 1) {
-        // Perde uma vida — invencível por 2s
+        // Perde uma vida — pausa e espera o jogador tocar para continuar
         lives--;
-        invincible = 130;
         screenShake = 8; hitFlash = 6;
-        bleu.vy = -5; // pequeno salto para não morrer de novo
         combo = 0; comboFlash = 0;
         beep(220, 100, 0.3, 'sawtooth', 0.22);
-        spawnScorePopup(bleu.x, bleu.y-40, '💔 -1 VIDA');
+        if(navigator.vibrate) navigator.vibrate([60,20,60]);
+        gameState = 'hurt'; // para o jogo até o jogador tocar
       } else {
         // Sem vidas — morte real
         lives = 0;
@@ -3072,6 +3071,33 @@ function loop(ts) {
     }
   }
 
+  // ── AWARD ──
+  // ── HURT — perdeu uma vida, aguarda toque ──
+  if(gameState === 'hurt'){
+    for(var i=0;i<pipes.length;i++) drawObstacle(pipes[i]);
+    drawCharacter(bleu.x, bleu.y, bleu.flap, 0);
+    updateParticles();
+    // painel escurecido
+    ctx.fillStyle='rgba(0,0,0,0.55)'; ctx.fillRect(0,0,W,H);
+    // coração partido
+    ctx.textAlign='center'; ctx.font='bold 44px Arial';
+    ctx.fillText('💔', W/2, H/2-50);
+    // texto
+    ctx.font='bold 18px Courier New'; ctx.fillStyle='#FF4466';
+    ctx.fillText('VOCÊ PERDEU UMA VIDA!', W/2, H/2+2);
+    ctx.font='bold 13px Courier New'; ctx.fillStyle='#ffffff99';
+    ctx.fillText('vidas restantes: '+lives, W/2, H/2+26);
+    // botão continuar pulsando
+    var _hp = 1 + 0.06*Math.sin(frame*0.12);
+    ctx.save(); ctx.translate(W/2, H/2+72); ctx.scale(_hp,_hp);
+    ctx.fillStyle='#0052FF'; ctx.strokeStyle='#00D4FF'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.roundRect(-80,-18,160,36,10); ctx.fill(); ctx.stroke();
+    ctx.fillStyle='#fff'; ctx.font='bold 14px Courier New'; ctx.textBaseline='middle';
+    ctx.fillText('▶  CONTINUAR', 0, 0); ctx.textBaseline='alphabetic';
+    ctx.restore();
+    // corações no HUD também
+    drawLivesHUD();
+  }
   // ── AWARD ──
   if(gameState === 'award'){
     for(var i=0;i<pipes.length;i++) drawObstacle(pipes[i]);
@@ -3162,6 +3188,7 @@ function loop(ts) {
 function flap() {
   if(gameState==='idle')         { gameState='playing'; startMusic(getPhaseIdx()); combo=0; comboFlash=0; coinsThisRun=0; milestoneIdx=0; recFlash=0; }
   else if(gameState==='playing') { bleu.vy=-7.5; bleu.flap=-1; bleuSquish=8; beep(260,520,0.09,'sine',0.16); }
+  else if(gameState==='hurt')    { gameState='playing'; invincible=140; bleu.vy=-5; beep(440,880,0.1,'sine',0.15); }
   else if(gameState==='dead')    { resetGame(); gameState='playing'; }
 }
 
@@ -3201,6 +3228,9 @@ function handleClick(ex, ey) {
     if(si2>=0){ buySkin(si2); return; }
     return;
   }
+
+  // ── HURT — qualquer toque retoma
+  if(gameState === 'hurt') { flap(); return; }
 
   // ── AWARD chest click
   if(gameState === 'award') {
