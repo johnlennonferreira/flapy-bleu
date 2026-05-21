@@ -620,6 +620,7 @@ var totalScore=parseInt(localStorage.getItem('bleuTotal')||'0');
 var shopOverlay=false, paused=false;
 var _bgGrad=null, _bgGradPhase=-1;
 var _gndGrad=null, _gndGradPhase=-1;
+var _heavenMist=null;
 var combo=0, comboFlash=0, comboBest=0, recFlash=0, coinsThisRun=0, milestoneIdx=0;
 var lastScore=parseInt(localStorage.getItem('bleuLastScore')||'0');
 const MILESTONES=[5,10,25,50,100];
@@ -1479,186 +1480,95 @@ function drawMountainObstacle(p) {
 
 // ─── AoT UGLY GIANTS BACKGROUND (phase 4) ─────
 function drawTitanFaceBg() {
-  // Draw 2 giant AoT-style ugly titan faces visible at sides/bottom
-  function drawGiant(fcx, fcy, scale) {
+  // Single titan face — flat colors, no gradients, no shadowBlur
+  function drawGiant(fcx, fcy, scale, alpha) {
     var fR = 140 * scale;
-    // Flesh — exposed muscle, dark red/pink (AoT titans have no skin)
-    var hg = ctx.createRadialGradient(fcx - fR*0.3, fcy - fR*0.4, fR*0.1, fcx, fcy, fR);
-    hg.addColorStop(0, '#d06050cc'); hg.addColorStop(0.5, '#8a2828aa'); hg.addColorStop(1, '#2a080888');
-    ctx.fillStyle = hg;
+    ctx.globalAlpha = alpha;
+    // Flesh — flat dark red
+    ctx.fillStyle = '#7a2020';
     ctx.beginPath(); ctx.arc(fcx, fcy, fR, 0, Math.PI*2); ctx.fill();
-
-    // Heavy brow ridge
-    ctx.fillStyle = '#3a180888';
-    ctx.beginPath(); ctx.ellipse(fcx, fcy - fR*0.55, fR*0.7, fR*0.18, 0, 0, Math.PI*2); ctx.fill();
-
-    // ── BULGING EYES — wide open, staring ──
+    // Darker overlay on lower half
+    ctx.fillStyle = '#2a0808';
+    ctx.beginPath(); ctx.ellipse(fcx, fcy+fR*0.35, fR, fR*0.7, 0, 0, Math.PI*2); ctx.fill();
+    // Brow ridge
+    ctx.fillStyle = '#3a1808';
+    ctx.beginPath(); ctx.ellipse(fcx, fcy-fR*0.55, fR*0.7, fR*0.18, 0, 0, Math.PI*2); ctx.fill();
+    // Eyes — flat fills only, no veins, no shadowBlur
     function titanEye(ex, ey, r) {
-      // Huge dark socket
-      ctx.fillStyle = '#150500ee';
-      ctx.beginPath(); ctx.ellipse(ex, ey, r*1.6, r*1.1, 0, 0, Math.PI*2); ctx.fill();
-      // Huge white sclera — bulging out
-      ctx.fillStyle = '#eeeedddd';
-      ctx.beginPath(); ctx.ellipse(ex, ey, r*1.2, r*0.9, 0, 0, Math.PI*2); ctx.fill();
-      // Tiny off-center iris for crazy look
-      var iris_ox = (Math.sin(frame*0.012 + ex) * r * 0.2)|0;
-      ctx.fillStyle = '#cc2200ee';
-      ctx.beginPath(); ctx.ellipse(ex + iris_ox, ey, r*0.55, r*0.55, 0, 0, Math.PI*2); ctx.fill();
-      // Black slit pupil
-      ctx.fillStyle = '#000000ff';
-      ctx.beginPath(); ctx.ellipse(ex + iris_ox, ey, r*0.2, r*0.4, 0, 0, Math.PI*2); ctx.fill();
-      // Bloodshot veins
-      ctx.strokeStyle = '#ff220033'; ctx.lineWidth = 1;
-      for(var v = 0; v < 5; v++) {
-        var va = v * Math.PI*2/5 + 0.4;
-        ctx.beginPath();
-        ctx.moveTo(ex + Math.cos(va)*r*0.7, ey + Math.sin(va)*r*0.5);
-        ctx.quadraticCurveTo(ex + Math.cos(va+0.5)*r*1.0, ey + Math.sin(va+0.3)*r*0.7,
-                             ex + Math.cos(va)*r*1.1, ey + Math.sin(va)*r*0.8);
-        ctx.stroke();
-      }
-      // Glowing red eye light
-      ctx.shadowColor = '#ff2200'; ctx.shadowBlur = 20;
-      ctx.strokeStyle = '#ff330066'; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.ellipse(ex, ey, r*1.3, r*0.95, 0, 0, Math.PI*2); ctx.stroke();
-      ctx.shadowBlur = 0;
+      ctx.fillStyle = '#150500';
+      ctx.beginPath(); ctx.ellipse(ex,ey,r*1.6,r*1.1,0,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#ddddcc';
+      ctx.beginPath(); ctx.ellipse(ex,ey,r*1.2,r*0.9,0,0,Math.PI*2); ctx.fill();
+      var iox = (Math.sin(frame*0.012+ex)*r*0.2)|0;
+      ctx.fillStyle = '#cc2200';
+      ctx.beginPath(); ctx.ellipse(ex+iox,ey,r*0.55,r*0.55,0,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#000000';
+      ctx.beginPath(); ctx.ellipse(ex+iox,ey,r*0.2,r*0.4,0,0,Math.PI*2); ctx.fill();
     }
-
-    titanEye(fcx - fR*0.38, fcy - fR*0.38, fR*0.22);
-    titanEye(fcx + fR*0.38, fcy - fR*0.38, fR*0.22);
-
-    // Huge gaping mouth with teeth
-    ctx.fillStyle = '#110000ee';
+    titanEye(fcx-fR*0.38, fcy-fR*0.38, fR*0.22);
+    titanEye(fcx+fR*0.38, fcy-fR*0.38, fR*0.22);
+    // Mouth
+    ctx.fillStyle = '#110000';
+    ctx.beginPath(); ctx.ellipse(fcx,fcy+fR*0.22,fR*0.5,fR*0.28,0,0,Math.PI*2); ctx.fill();
+    // Teeth — batch fill (all same color, no individual paths)
+    ctx.fillStyle = '#ccc8a8';
+    var teethY = fcy+fR*0.07, tw0 = fR*0.09;
     ctx.beginPath();
-    ctx.ellipse(fcx, fcy + fR*0.22, fR*0.5, fR*0.28, 0, 0, Math.PI*2);
+    for(var ti=-3;ti<=3;ti++){
+      var tw2=tw0-Math.abs(ti)*fR*0.008;
+      ctx.rect(fcx+ti*fR*0.14-tw2/2, teethY, tw2, fR*0.19);
+    }
     ctx.fill();
-    // Teeth — irregular, large
-    ctx.fillStyle = '#ddd8c0dd';
-    var teethY = fcy + fR*0.07;
-    for(var ti = -3; ti <= 3; ti++) {
-      var tw = fR * 0.1 - Math.abs(ti)*fR*0.01;
-      ctx.beginPath();
-      ctx.moveTo(fcx + ti*fR*0.14 - tw/2, teethY);
-      ctx.lineTo(fcx + ti*fR*0.14 + tw/2, teethY);
-      ctx.lineTo(fcx + ti*fR*0.14 + tw/3, teethY + fR*0.2);
-      ctx.lineTo(fcx + ti*fR*0.14 - tw/3, teethY + fR*0.2);
-      ctx.closePath(); ctx.fill();
-    }
-    // Steam wisps rising from head
-    ctx.strokeStyle = '#ff441806'; ctx.lineWidth = 2;
-    for(var sw = -2; sw <= 2; sw++) {
-      var steamX = fcx + sw * fR*0.28;
-      var steamY = fcy - fR + (frame * 1.2 + sw*30) % 60;
-      ctx.globalAlpha = 0.3;
-      ctx.beginPath();
-      ctx.moveTo(steamX, steamY);
-      ctx.quadraticCurveTo(steamX + 8*Math.sin(frame*0.03+sw), steamY - 30, steamX + 4, steamY - 70);
-      ctx.stroke();
-    }
     ctx.globalAlpha = 1;
   }
-
-  // Left giant — partial face visible at left edge
-  drawGiant(W*0.18, H*0.72, 1.0);
-  // Right giant — partial face at right edge
-  drawGiant(W*0.82, H*0.68, 0.85);
-  // Far background giant (center, smaller, barely visible)
-  ctx.globalAlpha = 0.35;
-  drawGiant(W*0.5, H*1.1, 1.3);
-  ctx.globalAlpha = 1;
-
-  // Divine golden rays still visible through the horror
-  drawHeavenRays();
+  // One main giant, partially visible at bottom
+  drawGiant(W*0.5, H*0.88, 1.1, 0.75);
 }
 
 // ─── DRAW ELECTRIFIED CHAIN OBSTACLE (phase 4) ──
 function drawTitanHand(p) {
   var cx = p.x + p.bodyW/2;
-  var cSteel = '#446688', cDark = '#223344', cLight = '#88bbdd', cRust = '#334455';
-  var eColor1 = '#00ccff', eColor2 = '#ffffff', eColor3 = '#88eeff';
-  var pulse = 0.5 + 0.5 * Math.sin(frame * 0.22);
+  var cSteel = '#446688', cDark = '#223344';
 
   function drawChain(y1, y2) {
-    var linkH = 20, linkW = p.bodyW - 4;
-    var nLinks = Math.ceil((y2-y1) / linkH);
-    for(var li = 0; li < nLinks; li++) {
-      var ly = y1 + li * linkH;
-      var isHoriz = li % 2 === 0;
-      // Link body
-      var lg = ctx.createLinearGradient(p.x, 0, p.x + p.bodyW, 0);
-      lg.addColorStop(0, cDark); lg.addColorStop(0.4, cLight); lg.addColorStop(0.7, cSteel); lg.addColorStop(1, cDark);
-      ctx.fillStyle = lg;
-      if(isHoriz) {
-        // Horizontal link — wider, flatter
-        ctx.fillRect(p.x + 2, ly, linkW, Math.min(linkH - 2, y2 - ly));
-        ctx.strokeStyle = cDark; ctx.lineWidth = 1;
-        ctx.strokeRect(p.x + 2, ly, linkW, Math.min(linkH - 2, y2 - ly));
-        // Center hole
-        ctx.fillStyle = cDark;
-        ctx.fillRect(cx - 6, ly + 3, 12, Math.min(linkH - 8, y2 - ly - 4));
-      } else {
-        // Vertical link — narrower, taller
-        ctx.fillRect(p.x + 6, ly, linkW - 8, Math.min(linkH - 2, y2 - ly));
-        ctx.strokeStyle = cDark; ctx.lineWidth = 1;
-        ctx.strokeRect(p.x + 6, ly, linkW - 8, Math.min(linkH - 2, y2 - ly));
-        ctx.fillStyle = cDark;
-        ctx.fillRect(cx - 4, ly + 3, 8, Math.min(linkH - 8, y2 - ly - 4));
-      }
-      // Rust spots
-      ctx.fillStyle = cRust + '44';
-      ctx.fillRect(p.x + 4, ly + 2, 5, 4);
+    if(y2 <= y1) return;
+    var linkH = 24, linkW = p.bodyW - 4;
+    // All horizontal links — flat steel color
+    ctx.fillStyle = cSteel;
+    for(var ly=y1,li=0; ly<y2; ly+=linkH,li++){
+      var lh = Math.min(linkH-2, y2-ly);
+      if(lh<=0) break;
+      if(li%2===0) ctx.fillRect(p.x+2, ly, linkW, lh);
+      else         ctx.fillRect(p.x+6, ly, linkW-8, lh);
     }
-
-    // Electric sparks along chain
-    ctx.shadowColor = eColor1; ctx.shadowBlur = 16 * pulse;
-    ctx.strokeStyle = eColor1; ctx.lineWidth = 1.5;
-    for(var es = 0; es < 4; es++) {
-      var esy = y1 + ((frame*3 + es*40) % (y2-y1));
-      var esx = p.x + 6 + (es%2)*12;
-      ctx.beginPath();
-      ctx.moveTo(esx, esy);
-      ctx.lineTo(esx + 10*Math.sin(frame*0.3+es), esy + 8);
-      ctx.lineTo(esx - 5, esy + 14);
-      ctx.lineTo(esx + 8, esy + 20);
-      ctx.stroke();
+    // Dark holes — batch
+    ctx.fillStyle = cDark;
+    for(var ly=y1,li=0; ly<y2; ly+=linkH,li++){
+      var lh = Math.min(linkH-8, y2-ly-4);
+      if(lh<=0) break;
+      if(li%2===0) ctx.fillRect(cx-6, ly+3, 12, lh);
+      else         ctx.fillRect(cx-4, ly+3, 8,  lh);
     }
-    // Central lightning core
-    ctx.strokeStyle = eColor2; ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(cx, y1);
-    for(var ls = 1; ls < 8; ls++) {
-      var lsy = y1 + (y2-y1)*ls/8;
-      var lsx = cx + (ls%2===0 ? 1:-1) * (4 + 3*Math.sin(frame*0.4+ls));
-      ctx.lineTo(lsx, lsy);
+    // Lightning zigzag — single path, no shadowBlur
+    ctx.strokeStyle = '#44ddff99'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(cx, y1);
+    for(var ls=1;ls<7;ls++){
+      var lsy=y1+(y2-y1)*ls/7;
+      ctx.lineTo(cx+(ls%2===0?5:-5), lsy);
     }
-    ctx.lineTo(cx, y2);
-    ctx.stroke();
-    ctx.shadowBlur = 0;
-
-    // Outer glow
-    ctx.shadowColor = eColor1; ctx.shadowBlur = 8 * pulse;
-    ctx.strokeStyle = eColor3 + '88'; ctx.lineWidth = p.bodyW;
-    ctx.globalAlpha = 0.06 * pulse;
-    ctx.beginPath(); ctx.moveTo(cx, y1); ctx.lineTo(cx, y2); ctx.stroke();
-    ctx.globalAlpha = 1; ctx.shadowBlur = 0;
+    ctx.lineTo(cx, y2); ctx.stroke();
   }
 
   drawChain(0, p.topH);
   drawChain(p.botY, H-80);
 
-  // Anchor bolts at gap edges
-  function anchorBolt(ay) {
-    ctx.fillStyle = '#aabbcc';
-    ctx.beginPath(); ctx.arc(cx, ay, 8, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle = cDark;
-    ctx.beginPath(); ctx.arc(cx, ay, 5, 0, Math.PI*2); ctx.fill();
-    ctx.shadowColor = eColor1; ctx.shadowBlur = 14*pulse;
-    ctx.fillStyle = eColor1;
-    ctx.beginPath(); ctx.arc(cx, ay, 3, 0, Math.PI*2); ctx.fill();
-    ctx.shadowBlur = 0;
-  }
-  anchorBolt(p.topH);
-  anchorBolt(p.botY);
+  // Anchor bolts — flat colors, no shadowBlur
+  ctx.fillStyle = '#aabbcc';
+  ctx.beginPath(); ctx.arc(cx,p.topH,8,0,Math.PI*2); ctx.arc(cx,p.botY,8,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle = cDark;
+  ctx.beginPath(); ctx.arc(cx,p.topH,5,0,Math.PI*2); ctx.arc(cx,p.botY,5,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#44ddff';
+  ctx.beginPath(); ctx.arc(cx,p.topH,3,0,Math.PI*2); ctx.arc(cx,p.botY,3,0,Math.PI*2); ctx.fill();
 }
 
 // ─── DRAW BASE PIPE OBSTACLE (phase 1) — blue Mario pipes + BASE vertical ──
@@ -2554,45 +2464,37 @@ function drawSpacePlanetsBg() {
 }
 
 function drawHeavenRays() {
-  // Divine golden rays from top center
-  ctx.save();
-  for(var r = 0; r < 10; r++) {
-    var angle = (r * Math.PI / 5) + frame * 0.003;
-    var ray = ctx.createLinearGradient(W/2, 0, W/2 + Math.cos(angle)*300, Math.sin(angle)*300);
-    ray.addColorStop(0, '#FFD70044'); ray.addColorStop(1, '#FFD70000');
-    ctx.fillStyle = ray;
-    ctx.beginPath();
-    ctx.moveTo(W/2, 0);
-    ctx.lineTo(W/2 + Math.cos(angle-0.08)*320, Math.sin(angle-0.08)*320);
-    ctx.lineTo(W/2 + Math.cos(angle+0.08)*320, Math.sin(angle+0.08)*320);
-    ctx.closePath(); ctx.fill();
+  // 5 flat rays — single path, no gradient per ray
+  ctx.fillStyle = '#FFD70020';
+  ctx.beginPath();
+  for(var r=0;r<5;r++){
+    var angle = (r*Math.PI/2.5) + frame*0.003;
+    ctx.moveTo(W/2, 22);
+    ctx.lineTo(W/2+Math.cos(angle-0.07)*330, 22+Math.sin(angle-0.07)*330);
+    ctx.lineTo(W/2+Math.cos(angle+0.07)*330, 22+Math.sin(angle+0.07)*330);
+    ctx.closePath();
   }
-  ctx.restore();
+  ctx.fill();
 }
 
 function drawHeavenPillars() {
-  // Stone pillars in background (medieval)
-  var pillarData = [{x:15,w:28},{x:355,w:28},{x:80,w:20},{x:290,w:20}];
-  for(var pi = 0; pi < pillarData.length; pi++) {
-    var pd = pillarData[pi];
-    var pg = ctx.createLinearGradient(pd.x, 0, pd.x+pd.w, 0);
-    pg.addColorStop(0,'#3a3520'); pg.addColorStop(0.4,'#6a6040'); pg.addColorStop(1,'#2a2518');
-    ctx.fillStyle = pg;
-    ctx.fillRect(pd.x, 30, pd.w, H-110);
-    // capital (top decoration)
-    ctx.fillStyle = '#8a7a50';
-    ctx.fillRect(pd.x-4, 28, pd.w+8, 10);
-    // column fluting lines
-    ctx.strokeStyle = '#2a250880'; ctx.lineWidth = 1;
-    for(var fl = 0; fl < 3; fl++) {
-      var fx = pd.x + (fl+1)*(pd.w/4);
-      ctx.beginPath(); ctx.moveTo(fx, 38); ctx.lineTo(fx, H-82); ctx.stroke();
-    }
-    // golden glow
-    ctx.shadowColor = '#FFD70033'; ctx.shadowBlur = 12;
-    ctx.strokeStyle = '#FFD70055'; ctx.lineWidth = 1;
-    ctx.strokeRect(pd.x, 30, pd.w, H-110);
-    ctx.shadowBlur = 0;
+  // 2 stone pillars — flat color, no gradients, no shadowBlur
+  var pillarData = [{x:15,w:26},{x:357,w:26}];
+  ctx.fillStyle = '#4a4030';
+  for(var pi=0;pi<pillarData.length;pi++){
+    var pd=pillarData[pi];
+    ctx.fillRect(pd.x,30,pd.w,H-110);
+  }
+  ctx.fillStyle = '#7a6a40';
+  for(var pi=0;pi<pillarData.length;pi++){
+    var pd=pillarData[pi];
+    ctx.fillRect(pd.x-4,28,pd.w+8,10);
+  }
+  // Single center line per pillar (one stroke call each)
+  ctx.strokeStyle = '#2a250860'; ctx.lineWidth = 1;
+  for(var pi=0;pi<pillarData.length;pi++){
+    var pd=pillarData[pi];
+    ctx.beginPath(); ctx.moveTo(pd.x+pd.w/2,38); ctx.lineTo(pd.x+pd.w/2,H-82); ctx.stroke();
   }
 }
 
@@ -2672,14 +2574,12 @@ function drawBg() {
     drawDrizzle();
 
   } else if(pi === 4) {
-    // PHASE 5 — HEAVEN'S GATE: titan face + divine rays + pillars
-    drawTitanFaceBg();
-    drawHeavenRays();
+    // PHASE 5 — HEAVEN'S GATE: titan face + pillars + faint rays
     drawHeavenPillars();
-    drawClouds(0.18);
-    var mist = ctx.createLinearGradient(0, H-200, 0, H-80);
-    mist.addColorStop(0,'transparent'); mist.addColorStop(1,'#FFD70028');
-    ctx.fillStyle = mist; ctx.fillRect(0, H-200, W, 120);
+    drawHeavenRays();
+    drawTitanFaceBg();
+    if(!_heavenMist){_heavenMist=ctx.createLinearGradient(0,H-200,0,H-80);_heavenMist.addColorStop(0,'transparent');_heavenMist.addColorStop(1,'#FFD70028');}
+    ctx.fillStyle=_heavenMist; ctx.fillRect(0,H-200,W,120);
 
   } else if(pi === 5) {
     // PHASE 6 — DUNGEON CASTLE: ghosts + chains + stone atmosphere
