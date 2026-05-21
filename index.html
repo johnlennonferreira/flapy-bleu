@@ -620,7 +620,7 @@ var totalScore=parseInt(localStorage.getItem('bleuTotal')||'0');
 var shopOverlay=false, paused=false;
 var _bgGrad=null, _bgGradPhase=-1;
 var _gndGrad=null, _gndGradPhase=-1;
-var _heavenMist=null;
+var _heavenMist=null, _dungeonMist=null;
 var combo=0, comboFlash=0, comboBest=0, recFlash=0, coinsThisRun=0, milestoneIdx=0;
 var lastScore=parseInt(localStorage.getItem('bleuLastScore')||'0');
 const MILESTONES=[5,10,25,50,100];
@@ -1617,104 +1617,70 @@ function drawBasePipeObstacle(p) {
 // ─── DRAW CASTLE OBSTACLE (phase 5) — stone walls + spike battlements ──
 function drawCastleObstacle(p) {
   var stD = '#1e1628', stM = '#2e2040', stL = '#403058', mortar = '#120e1c';
-  var spkC = '#707090', spkD = '#303040', spkH = '#aaaacc88';
+  var spkC = '#707090';
   var bw = p.bodyW;
 
+  // All brick lines in ONE stroke call per section
   function drawBricks(x, y, w, h) {
-    ctx.fillStyle = stM;
-    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = stM; ctx.fillRect(x, y, w, h);
     ctx.strokeStyle = mortar; ctx.lineWidth = 0.8;
-    var bH = 10;
-    for(var r = 0; r * bH < h; r++) {
-      var rowY = y + r * bH;
-      var offX = r % 2 === 0 ? 0 : 9;
-      ctx.beginPath(); ctx.moveTo(x, rowY); ctx.lineTo(x+w, rowY); ctx.stroke();
-      for(var bx4 = x + offX; bx4 < x + w; bx4 += 18) {
-        ctx.beginPath(); ctx.moveTo(bx4, rowY); ctx.lineTo(bx4, Math.min(rowY+bH, y+h)); ctx.stroke();
+    ctx.beginPath();
+    var bH = 14; // bigger bricks = fewer lines
+    for(var r=0; r*bH<h; r++){
+      var rowY=y+r*bH, offX=r%2===0?0:10;
+      ctx.moveTo(x,rowY); ctx.lineTo(x+w,rowY);
+      for(var bx4=x+offX; bx4<x+w; bx4+=20){
+        ctx.moveTo(bx4,rowY); ctx.lineTo(bx4,Math.min(rowY+bH,y+h));
       }
     }
-    // Side shadow edges
-    ctx.fillStyle = stD + 'cc';
-    ctx.fillRect(x, y, 3, h);
-    ctx.fillRect(x+w-3, y, 3, h);
+    ctx.stroke(); // single call for ALL lines
+    ctx.fillStyle=stD+'aa';
+    ctx.fillRect(x,y,3,h); ctx.fillRect(x+w-3,y,3,h);
   }
 
+  // Chains → simple flat bars (no ellipses, no shadowBlur)
+  function drawSideBars(y1, y2) {
+    if(y2<=y1) return;
+    ctx.fillStyle='#3a2a4a';
+    ctx.fillRect(p.x+3,y1,6,y2-y1);
+    ctx.fillRect(p.x+bw-9,y1,6,y2-y1);
+    // Horizontal link marks — batch
+    ctx.fillStyle='#7755aa55';
+    ctx.beginPath();
+    for(var ly=y1+6; ly<y2; ly+=14){
+      ctx.rect(p.x+2,ly,8,3); ctx.rect(p.x+bw-10,ly,8,3);
+    }
+    ctx.fill();
+  }
+
+  // Spikes — batch fills (merlons + spikes in 2 path calls)
   function drawSpikeBattlement(x, gapEdgeY, dir) {
-    // dir: -1 top obstacle (down), 1 bottom obstacle (up)
-    // Merlons (teeth)
-    var mW = 9, gap3 = 5, mH = 13;
-    for(var mi = 0; mi < 3; mi++) {
-      var mx = x + 2 + mi * (mW + gap3);
-      ctx.fillStyle = stL;
-      ctx.fillRect(mx, gapEdgeY, mW, dir * mH);
-      ctx.strokeStyle = mortar; ctx.lineWidth = 0.8;
-      ctx.strokeRect(mx, gapEdgeY, mW, dir * mH);
+    var mW=9, mH=13;
+    ctx.fillStyle=stL;
+    ctx.beginPath();
+    for(var mi=0;mi<3;mi++) ctx.rect(x+2+mi*14, gapEdgeY, mW, dir*mH);
+    ctx.fill();
+    ctx.fillStyle=spkC;
+    ctx.beginPath();
+    for(var si=0;si<4;si++){
+      var sx=x+3+si*(bw/4), sLen=20+(si%2)*7;
+      ctx.moveTo(sx-3,gapEdgeY); ctx.lineTo(sx,gapEdgeY+dir*sLen); ctx.lineTo(sx+3,gapEdgeY); ctx.closePath();
     }
-    // Metal spikes pointing into gap
-    for(var si = 0; si < 4; si++) {
-      var sx = x + 3 + si * (bw / 4);
-      var sLen = 20 + (si % 2) * 7;
-      ctx.fillStyle = spkC;
-      ctx.beginPath();
-      ctx.moveTo(sx - 3, gapEdgeY);
-      ctx.lineTo(sx, gapEdgeY + dir * sLen);
-      ctx.lineTo(sx + 3, gapEdgeY);
-      ctx.closePath(); ctx.fill();
-      ctx.strokeStyle = spkD; ctx.lineWidth = 0.8; ctx.stroke();
-      ctx.fillStyle = spkH;
-      ctx.beginPath();
-      ctx.moveTo(sx - 1, gapEdgeY);
-      ctx.lineTo(sx, gapEdgeY + dir * sLen * 0.55);
-      ctx.lineTo(sx + 1, gapEdgeY);
-      ctx.closePath(); ctx.fill();
-    }
-  }
-
-  function drawPillarChains(y1, y2) {
-    var linkH = 10, lRx = 6.5, lRy = 3.2;
-    ctx.lineWidth = 2.2;
-    ctx.shadowColor = '#aa66cc'; ctx.shadowBlur = 5;
-    // Run two chain strips down left and right edges
-    var sides = [p.x + 6, p.x + bw - 6];
-    for (var si2 = 0; si2 < 2; si2++) {
-      var lcx = sides[si2];
-      var nLinks = Math.floor((y2 - y1) / linkH);
-      for (var li = 0; li < nLinks; li++) {
-        var lcy = y1 + li * linkH + linkH / 2;
-        var horiz = li % 2 === 0;
-        // Darker fill so links look solid
-        ctx.fillStyle = horiz ? '#3a2a4a' : '#2c1e3a';
-        ctx.strokeStyle = horiz ? '#7755aa' : '#554488';
-        ctx.beginPath();
-        ctx.ellipse(lcx, lcy, horiz ? lRx : lRy, horiz ? lRy : lRx, 0, 0, Math.PI*2);
-        ctx.fill(); ctx.stroke();
-        // Highlight on top of each link
-        ctx.fillStyle = '#aa88cc44';
-        ctx.beginPath();
-        ctx.ellipse(lcx - (horiz ? 1.5 : 0.5), lcy - 1, horiz ? lRx*0.55 : lRy*0.55, horiz ? lRy*0.5 : lRx*0.5, 0, 0, Math.PI*2);
-        ctx.fill();
-      }
-    }
-    ctx.shadowBlur = 0;
+    ctx.fill();
   }
 
   // TOP obstacle
   drawBricks(p.x, 0, bw, p.topH);
-  drawPillarChains(2, p.topH - 14);
+  drawSideBars(2, p.topH-14);
   drawSpikeBattlement(p.x, p.topH, -1);
-  ctx.shadowColor = '#9966cc'; ctx.shadowBlur = 8;
-  ctx.strokeStyle = '#9966cc88'; ctx.lineWidth = 1.5;
+  ctx.strokeStyle='#9966cc66'; ctx.lineWidth=1.5;
   ctx.strokeRect(p.x, 0, bw, p.topH);
-  ctx.shadowBlur = 0;
 
   // BOTTOM obstacle
   drawBricks(p.x, p.botY, bw, H-80-p.botY);
-  drawPillarChains(p.botY + 14, H-80-2);
+  drawSideBars(p.botY+14, H-82);
   drawSpikeBattlement(p.x, p.botY, 1);
-  ctx.shadowColor = '#9966cc'; ctx.shadowBlur = 8;
-  ctx.strokeStyle = '#9966cc88'; ctx.lineWidth = 1.5;
   ctx.strokeRect(p.x, p.botY, bw, H-80-p.botY);
-  ctx.shadowBlur = 0;
 }
 
 // ─── DRAW LASER OBSTACLE (phase 6) — energy beam ──
@@ -2203,37 +2169,39 @@ function drawSunnyBlueSkyBg() {
 }
 
 function drawGhostDungeonBg() {
-  // Chains — 3 only, single path each (no per-link arcs)
-  for(var ch=0;ch<3;ch++){
-    var chx=50+ch*150, chLen=60+(ch%2)*20;
-    ctx.strokeStyle='#44336677'; ctx.lineWidth=2;
+  // Chains — 2, batched into single path each
+  ctx.strokeStyle='#44336677'; ctx.lineWidth=2;
+  for(var ch=0;ch<2;ch++){
+    var chx=70+ch*220, chLen=70+(ch%2)*20;
     ctx.beginPath(); ctx.moveTo(chx,22);
     for(var cl=8;cl<chLen;cl+=8) ctx.lineTo(chx+(cl/8%2===0?-3:3),22+cl);
     ctx.stroke();
   }
-  // Floating ghosts (3, no shadowBlur)
-  var ghosts=[{ox:50,y:120},{ox:210,y:180},{ox:340,y:100}];
+  // Floating ghosts (2) — no fillText, no per-eye separate path
+  var ghosts=[{ox:60,y:115},{ox:270,y:170}];
   for(var gi=0;gi<ghosts.length;gi++){
     var gx=((ghosts[gi].ox-frame*.18+gi*40)%(W+100)+W+100)%(W+100)-50;
     var gy=ghosts[gi].y+Math.sin(frame*.018+gi*1.3)*12;
-    ctx.globalAlpha=0.22+(gi%2)*.07;
+    ctx.globalAlpha=0.25+(gi%2)*.08;
+    // Body — single path
     ctx.fillStyle='#ffffff';
     ctx.beginPath();
     ctx.arc(gx,gy,18,Math.PI,0);
     ctx.lineTo(gx+18,gy+22);
-    ctx.quadraticCurveTo(gx+10,gy+14,gx,gy+22);
-    ctx.quadraticCurveTo(gx-10,gy+14,gx-18,gy+22);
+    ctx.quadraticCurveTo(gx+9,gy+14,gx,gy+22);
+    ctx.quadraticCurveTo(gx-9,gy+14,gx-18,gy+22);
     ctx.closePath(); ctx.fill();
+    // Both eyes in one path
     ctx.fillStyle='#220044';
-    ctx.beginPath(); ctx.ellipse(gx-6,gy-2,3,4,0,0,Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.ellipse(gx+6,gy-2,3,4,0,0,Math.PI*2); ctx.fill();
-    ctx.fillStyle='#44ccff'; ctx.font='bold 12px Courier New'; ctx.textAlign='center';
-    ctx.fillText('Ƀ',gx,gy+14);
+    ctx.beginPath();
+    ctx.ellipse(gx-6,gy-2,3,4,0,0,Math.PI*2);
+    ctx.ellipse(gx+6,gy-2,3,4,0,0,Math.PI*2);
+    ctx.fill();
     ctx.globalAlpha=1;
   }
-  var pmist=ctx.createLinearGradient(0,H-200,0,H-80);
-  pmist.addColorStop(0,'transparent'); pmist.addColorStop(1,'#33116622');
-  ctx.fillStyle=pmist; ctx.fillRect(0,H-200,W,120);
+  // Mist — cached
+  if(!_dungeonMist){_dungeonMist=ctx.createLinearGradient(0,H-200,0,H-80);_dungeonMist.addColorStop(0,'transparent');_dungeonMist.addColorStop(1,'#33116622');}
+  ctx.fillStyle=_dungeonMist; ctx.fillRect(0,H-200,W,120);
 }
 
 function drawAsteroids() {
