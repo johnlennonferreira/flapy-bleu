@@ -2755,7 +2755,7 @@ function updateParticles() {
 }
 
 // ─── COLISÃO ─────────────────────────────────
-function hitTest() {
+function hitTestPipes() {
   var r = 14;
   for(var i=0; i<pipes.length; i++){
     var p = pipes[i];
@@ -2764,7 +2764,10 @@ function hitTest() {
       if(bleu.y+r > p.botY) return true;
     }
   }
-  return bleu.y+r > H-80 || bleu.y-r < 22;
+  return false;
+}
+function hitTest() {
+  return hitTestPipes() || bleu.y+14 > H-80 || bleu.y-14 < 22;
 }
 
 // ─── LOOP PRINCIPAL ──────────────────────────
@@ -3040,7 +3043,11 @@ function loop(ts) {
       recFlash--;
     }
 
-    if(gameState==='playing' && hitTest() && starPower===0 && invincible===0){
+    // Bounds (chão/teto) matam sempre — mesmo com invencível/star power
+    var _hitBounds = bleu.y+14 > H-80 || bleu.y-14 < 22;
+    // Canos só importam quando não está protegido
+    var _hitPipes  = starPower===0 && invincible===0 && hitTestPipes();
+    if(gameState==='playing' && (_hitBounds || _hitPipes)){
       spawnParticles(bleu.x, bleu.y, '#FF1744', 10);
       if(navigator.vibrate) navigator.vibrate(60);
       if(lives > 1) {
