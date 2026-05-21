@@ -87,7 +87,7 @@ const PHASES = [
   { speed: 2.4, gapMin:125, gapMax:148, label:'PHASE 9'  }, // respiro — alivia tensão
   { speed: 2.8, gapMin:100, gapMax:116, label:'PHASE 10' }, // hardcore — poucos chegam
 ];
-function getPhaseIdx() { return Math.min(9, Math.floor(score / 4)); }
+function getPhaseIdx() { return Math.min(9, Math.floor(score / 15)); }
 function getPhase()    { return PHASES[getPhaseIdx()]; }
 
 // ─── PHASE VISUALS ────────────────────────────────
@@ -178,99 +178,193 @@ function _tickMusic() {
 
 // ─── AWARD / CHEST ──────────────────────────────────────────
 function chestCoinsRand() {
-  return Math.floor(10 + 90 * Math.pow(Math.random(), 1.8));
+  var base = chestType==='rare' ? 60 : chestType==='gold' ? 35 : 15;
+  return Math.floor(base + base * Math.pow(Math.random(), 1.4));
 }
-function drawTreasureChest(cx, cy, opened, openAnim) {
-  ctx.save(); ctx.translate(cx, cy);
-  var bw=90, bh=52, lidH=26;
-  ctx.globalAlpha=.3; ctx.fillStyle='#000';
-  ctx.beginPath(); ctx.ellipse(2,bh+7,bw/2-4,9,0,0,Math.PI*2); ctx.fill();
+
+function drawTreasureChest(cx, cy) {
+  var bw=96, bh=56, lidH=28;
+  var col = chestType==='rare' ? '#cc44ff' : chestType==='gold' ? '#FFD700' : '#C8960C';
+
+  // Shake contínuo — aumenta com cliques
+  var shakeAmp = chestClicks===1 ? 2.5 : chestClicks===2 ? 6 : 0;
+  var sx = shakeAmp ? (Math.random()-.5)*shakeAmp*2 : 0;
+  var sy = shakeAmp ? (Math.random()-.5)*shakeAmp : 0;
+
+  // Bounce no toque
+  var bOff = chestBounce>0 ? -Math.abs(Math.sin(chestBounce/12*Math.PI))*(14+chestClicks*8) : 0;
+  if(chestBounce>0) chestBounce--;
+
+  ctx.save(); ctx.translate(cx+sx, cy+bOff+sy);
+
+  // Aura de luz (sem shadowBlur — camadas de alpha)
+  if(chestClicks>0 && !chestOpened){
+    var gc = chestClicks===2 ? '#FFD700' : '#FF8800';
+    var gPulse = 0.15 + 0.10*Math.sin(frame*0.35);
+    ctx.globalAlpha = gPulse*2.2; ctx.fillStyle=gc;
+    ctx.beginPath(); ctx.ellipse(0,bh*.4,bw*.85,bh*.7,0,0,Math.PI*2); ctx.fill();
+    ctx.globalAlpha = gPulse; ctx.fillStyle='#fff';
+    ctx.beginPath(); ctx.ellipse(0,bh*.4,bw*.4,bh*.35,0,0,Math.PI*2); ctx.fill();
+    ctx.globalAlpha=1;
+  }
+
+  // Sombra
+  ctx.globalAlpha=.22; ctx.fillStyle='#000';
+  ctx.beginPath(); ctx.ellipse(2,bh+6,bw/2-4,8,0,0,Math.PI*2); ctx.fill();
   ctx.globalAlpha=1;
-  var bg=ctx.createLinearGradient(0,0,0,bh);
-  bg.addColorStop(0,'#8B5A2B'); bg.addColorStop(1,'#4a2c10');
-  ctx.fillStyle=bg; ctx.strokeStyle='#2a1a08'; ctx.lineWidth=2;
+
+  // Corpo
+  ctx.fillStyle='#6B3A1F'; ctx.strokeStyle='#2a1a08'; ctx.lineWidth=2;
   ctx.fillRect(-bw/2,0,bw,bh); ctx.strokeRect(-bw/2,0,bw,bh);
   ctx.strokeStyle='#3a2010'; ctx.lineWidth=1;
-  [-1,0,1].forEach(function(xi){ ctx.beginPath(); ctx.moveTo(xi*bw/3,0); ctx.lineTo(xi*bw/3,bh); ctx.stroke(); });
-  ctx.fillStyle='#C8960C'; ctx.fillRect(-bw/2,bh*.43,bw,6);
-  ctx.save();
-  ctx.translate(-bw/2, 0);
-  ctx.rotate(opened ? -Math.PI*.78*Math.min(1,openAnim/14) : 0);
-  var lg=ctx.createLinearGradient(0,-lidH,0,0);
-  lg.addColorStop(0,'#a06030'); lg.addColorStop(1,'#7a4a20');
-  ctx.fillStyle=lg; ctx.strokeStyle='#2a1a08'; ctx.lineWidth=2;
-  ctx.fillRect(0,-lidH,bw,lidH); ctx.strokeRect(0,-lidH,bw,lidH);
-  ctx.fillStyle='#b07030';
-  ctx.beginPath(); ctx.ellipse(bw/2,-lidH,bw/2,10,0,Math.PI,0); ctx.fill();
-  ctx.strokeStyle='#2a1a08'; ctx.lineWidth=2;
-  ctx.beginPath(); ctx.ellipse(bw/2,-lidH,bw/2,10,0,Math.PI,0); ctx.stroke();
-  ctx.fillStyle='#C8960C'; ctx.fillRect(0,-lidH*.55,bw,5);
-  ctx.restore();
-  if (opened && openAnim>3) {
-    var gp=Math.min(1,(openAnim-3)/8);
-    ctx.globalAlpha=gp*.7;
-    var ig=ctx.createRadialGradient(0,bh*.4,2,0,bh*.4,bw*.5);
-    ig.addColorStop(0,'#FFE040'); ig.addColorStop(1,'rgba(255,200,0,0)');
-    ctx.fillStyle=ig; ctx.fillRect(-bw/2+3,3,bw-6,bh-6);
+  [-1,0,1].forEach(function(xi){
+    ctx.beginPath(); ctx.moveTo(xi*bw/3,0); ctx.lineTo(xi*bw/3,bh); ctx.stroke();
+  });
+  ctx.fillStyle=col; ctx.fillRect(-bw/2,bh*.43,bw,6);
+
+  // RACHADURAS — aparecem progressivamente
+  if(chestClicks>=1 && !chestOpened){
+    // rachadura 1
+    ctx.strokeStyle='#1a0800'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(-12,-1); ctx.lineTo(-5,14); ctx.lineTo(-20,28); ctx.stroke();
+    // luz vazando pela rachadura
+    var lk1 = 0.45+0.25*Math.sin(frame*0.5);
+    ctx.globalAlpha=lk1; ctx.strokeStyle='#FF9900'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(-12,-1); ctx.lineTo(-5,14); ctx.lineTo(-20,28); ctx.stroke();
     ctx.globalAlpha=1;
-    if (openAnim>7) {
-      var nc=Math.min(openAnim-7,8);
-      for (var ci=0;ci<nc;ci++) {
-        var ca=(ci/8)*Math.PI*1.6+.2;
-        ctx.beginPath(); ctx.arc(Math.cos(ca-Math.PI/2)*22,bh*.4+Math.sin(ca)*12,5,0,Math.PI*2);
-        ctx.fillStyle='#FFD700'; ctx.shadowColor='#FFD700'; ctx.shadowBlur=10; ctx.fill();
+  }
+  if(chestClicks>=2 && !chestOpened){
+    // rachadura 2 — mais larga e dramática
+    ctx.strokeStyle='#1a0800'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(22,-1); ctx.lineTo(14,16); ctx.lineTo(28,32); ctx.lineTo(18,bh); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-bw/2+6,bh*.28); ctx.lineTo(-bw/2+22,bh*.52); ctx.stroke();
+    // luz intensa
+    var lk2 = 0.6+0.3*Math.sin(frame*0.6);
+    ctx.globalAlpha=lk2; ctx.strokeStyle='#FFE040'; ctx.lineWidth=3;
+    ctx.beginPath(); ctx.moveTo(22,-1); ctx.lineTo(14,16); ctx.lineTo(28,32); ctx.stroke();
+    ctx.globalAlpha=lk2*0.5; ctx.fillStyle='#FFE040';
+    ctx.beginPath(); ctx.ellipse(14,16,8,4,0.5,0,Math.PI*2); ctx.fill();
+    ctx.globalAlpha=1;
+  }
+
+  // Tampa
+  ctx.save(); ctx.translate(-bw/2, 0);
+  var lidAng = chestOpened ? -Math.PI*.85*Math.min(1,chestOpenAnim/10) : 0;
+  ctx.rotate(lidAng);
+  ctx.fillStyle='#7a4a20'; ctx.strokeStyle='#2a1a08'; ctx.lineWidth=2;
+  ctx.fillRect(0,-lidH,bw,lidH); ctx.strokeRect(0,-lidH,bw,lidH);
+  ctx.fillStyle='#8a5030';
+  ctx.beginPath(); ctx.ellipse(bw/2,-lidH,bw/2,11,0,Math.PI,0); ctx.fill();
+  ctx.strokeStyle='#2a1a08'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.ellipse(bw/2,-lidH,bw/2,11,0,Math.PI,0); ctx.stroke();
+  ctx.fillStyle=col; ctx.fillRect(0,-lidH*.55,bw,5);
+  ctx.restore();
+
+  // Interior luminoso ao abrir
+  if(chestOpened && chestOpenAnim>2){
+    var gp=Math.min(1,(chestOpenAnim-2)/5);
+    ctx.globalAlpha=gp*.9; ctx.fillStyle='#FFE040';
+    ctx.fillRect(-bw/2+4,4,bw-8,bh-8);
+    ctx.globalAlpha=1;
+    // Moedas voando
+    if(chestOpenAnim>5){
+      var nc=Math.min(chestOpenAnim-5,14);
+      for(var ci=0;ci<nc;ci++){
+        var ca=(ci/14)*Math.PI*2;
+        var cr=(chestOpenAnim-5)*4;
+        var cx2=Math.cos(ca)*cr*(0.5+0.5*(ci%3)/3);
+        var cy2=Math.sin(ca)*cr*0.45-(chestOpenAnim-5)*2.2;
+        ctx.fillStyle=ci%2===0?col:'#fff8cc';
+        ctx.beginPath(); ctx.ellipse(cx2,cy2,7,5,ca,0,Math.PI*2); ctx.fill();
       }
-      ctx.shadowBlur=0;
     }
   }
-  var la=(opened&&openAnim>3)?Math.max(0,1-(openAnim-3)/4):1;
-  if (la>0) {
+
+  // Cadeado (some ao abrir)
+  var la=(chestOpened&&chestOpenAnim>2)?Math.max(0,1-(chestOpenAnim-2)/3):1;
+  if(la>0){
     ctx.globalAlpha=la;
-    ctx.fillStyle='#C8960C'; ctx.strokeStyle='#7a5a00'; ctx.lineWidth=1.5;
-    ctx.fillRect(-11,bh*.4-10,22,18); ctx.strokeRect(-11,bh*.4-10,22,18);
-    ctx.fillStyle='#4a2c10';
-    ctx.beginPath(); ctx.arc(0,bh*.4-4,4,0,Math.PI*2); ctx.fill();
-    ctx.fillRect(-2.5,bh*.4-4,5,8);
+    ctx.fillStyle=col; ctx.strokeStyle='#7a5a00'; ctx.lineWidth=1.5;
+    ctx.fillRect(-12,bh*.4-11,24,20); ctx.strokeRect(-12,bh*.4-11,24,20);
+    ctx.fillStyle='#2a1008';
+    ctx.beginPath(); ctx.arc(0,bh*.4-4,5,0,Math.PI*2); ctx.fill();
+    ctx.fillRect(-3,bh*.4-4,6,9);
     ctx.globalAlpha=1;
   }
-  ctx.strokeStyle='#C8960C'; ctx.lineWidth=2.5;
+
+  // Borda dourada
+  ctx.strokeStyle=col; ctx.lineWidth=2.5;
   ctx.strokeRect(-bw/2+1,1,bw-2,bh-2);
+
   ctx.restore();
 }
+
 function drawAwardScreen() {
-  ctx.fillStyle='rgba(0,5,20,.84)'; ctx.fillRect(0,0,W,H);
-  var cx=W/2, cy=H/2+10;
-  ctx.textAlign='center';
-  ctx.font='bold 17px Courier New';
-  var tg=ctx.createLinearGradient(cx-80,0,cx+80,0);
-  tg.addColorStop(0,'#FFD700'); tg.addColorStop(1,'#00D4FF');
-  ctx.fillStyle=tg; ctx.shadowColor='#FFD700'; ctx.shadowBlur=18;
-  var aTitle=chestType==='rare'?'⭐ FASE ÉPICA COMPLETA! ⭐':'PHASE '+(completedPhase+1)+' COMPLETE!';
-  ctx.fillText(aTitle, cx, cy-140);
-  ctx.shadowBlur=0;
-  var bOff=chestBounce>0?-Math.abs(Math.sin(chestBounce/12*Math.PI))*22:0;
-  if(chestBounce>0) chestBounce--;
-  drawTreasureChest(cx, cy-28+bOff, chestOpened, chestOpenAnim);
-  if(chestOpened && chestOpenAnim<20) chestOpenAnim++;
-  if (!chestOpened) {
-    for(var di=0;di<3;di++) {
-      ctx.beginPath(); ctx.arc(cx-20+di*20,cy+48,5,0,Math.PI*2);
-      ctx.fillStyle=di<chestClicks?'#FFD700':'#ffffff22';
-      ctx.shadowColor=di<chestClicks?'#FFD700':'transparent'; ctx.shadowBlur=8;
-      ctx.fill(); ctx.shadowBlur=0;
-    }
-    ctx.font='12px Courier New'; ctx.fillStyle='#ffffff66';
-    ctx.fillText('clique o baú para abrir', cx, cy+68);
+  // Fundo escuro
+  ctx.fillStyle='rgba(0,5,20,.88)'; ctx.fillRect(0,0,W,H);
+
+  // Flash de abertura (primeiros frames após abrir)
+  if(chestOpened && chestOpenAnim<=6){
+    ctx.globalAlpha=(6-chestOpenAnim)/6*0.7;
+    ctx.fillStyle='#FFE040'; ctx.fillRect(0,0,W,H);
+    ctx.globalAlpha=1;
   }
-  if (chestOpened && chestOpenAnim>=14) {
-    ctx.font='bold 30px Courier New'; ctx.fillStyle='#FFD700';
-    ctx.shadowColor='#FFD700'; ctx.shadowBlur=24;
-    ctx.fillText('+'+chestCoins, cx, cy+60);
-    ctx.shadowBlur=0;
+
+  var cx=W/2, cy=H/2+20;
+  ctx.textAlign='center';
+
+  // Título da fase
+  var aTitle = chestType==='rare' ? '⭐ FASE ÉPICA!' : chestType==='gold' ? '🔥 FASE DOURADA!' : 'FASE '+(completedPhase+1)+' COMPLETA!';
+  var titleCol = chestType==='rare' ? '#cc44ff' : chestType==='gold' ? '#FFD700' : '#00D4FF';
+  // Glow via alpha duplo (sem shadowBlur)
+  ctx.globalAlpha=0.3; ctx.fillStyle=titleCol;
+  ctx.font='bold 22px Courier New'; ctx.fillText(aTitle,cx+2,cy-150+2);
+  ctx.globalAlpha=1; ctx.fillStyle=titleCol;
+  ctx.fillText(aTitle, cx, cy-150);
+
+  // Instrução pulsante antes de abrir
+  if(!chestOpened){
+    // Barra de tensão — 3 segmentos
+    var barW=120, bx=cx-barW/2, segW=(barW-4)/3;
+    ctx.fillStyle='#ffffff11'; ctx.fillRect(bx,cy+68,barW,10);
+    for(var si=0;si<3;si++){
+      var segCol = si===0?'#FF4400': si===1?'#FFD700':'#00FF88';
+      ctx.fillStyle = si<chestClicks ? segCol : '#ffffff15';
+      if(si<chestClicks){
+        var pulse=1+0.08*Math.sin(frame*0.4+si);
+        ctx.globalAlpha=pulse;
+      }
+      ctx.fillRect(bx+si*(segW+2), cy+68, segW, 10);
+      ctx.globalAlpha=1;
+    }
+    // Texto escalado pela tensão
+    var msgs = ['toque para despertar...', 'MAIS FORTE! está saindo!', '🔥 UMA VEZ MAIS! 🔥'];
+    var msgCol = chestClicks===0?'#ffffff55': chestClicks===1?'#FF8800':'#FFD700';
+    ctx.fillStyle=msgCol; ctx.font='bold '+(11+chestClicks*1.5)+'px Courier New';
+    ctx.fillText(msgs[chestClicks]||msgs[2], cx, cy+90);
+  }
+
+  // Baú
+  drawTreasureChest(cx, cy-40);
+  if(chestOpened && chestOpenAnim<22) chestOpenAnim++;
+
+  // Resultado
+  if(chestOpened && chestOpenAnim>=12){
+    var col2 = chestType==='rare'?'#cc44ff': chestType==='gold'?'#FFD700':'#00D4FF';
+    // +moedas grande
+    ctx.globalAlpha=0.25; ctx.fillStyle=col2;
+    ctx.font='bold 42px Courier New'; ctx.fillText('+'+chestCoins,cx+2,cy+82+2);
+    ctx.globalAlpha=1; ctx.fillStyle=col2;
+    ctx.fillText('+'+chestCoins, cx, cy+82);
     ctx.font='13px Courier New'; ctx.fillStyle='#88ccff';
-    ctx.fillText('moedas do dragão 🐉', cx, cy+82);
-    ctx.font='11px Courier New'; ctx.fillStyle='#ffffff55';
-    ctx.fillText('toque para continuar', cx, cy+108);
+    ctx.fillText('moedas do dragão 🐉', cx, cy+104);
+    // botão continuar pulsante
+    var p2=0.97+0.03*Math.sin(frame*0.14);
+    ctx.save(); ctx.translate(cx,cy+136); ctx.scale(p2,p2);
+    ctx.fillStyle='#0052FF'; ctx.beginPath(); ctx.roundRect(-80,-18,160,36,10); ctx.fill();
+    ctx.fillStyle='#fff'; ctx.font='bold 14px Courier New';
+    ctx.textBaseline='middle'; ctx.fillText('▶ CONTINUAR',0,0);
+    ctx.textBaseline='alphabetic'; ctx.restore();
   }
 }
 
@@ -3138,7 +3232,7 @@ function loop(ts) {
               setTimeout(function(){ beep(f,f*1.2,0.25,'sine',0.2); }, ii*100);
             });
           }
-          if(newPI%2===0||newPI===9){ chestType=(newPI===9)?'rare':'normal'; gameState='award'; chestClicks=0;chestBounce=0;chestOpened=false;chestCoins=0;chestOpenAnim=0;bleu.vy=0; }
+          { chestType=(newPI===9)?'rare':(newPI>=6)?'gold':'normal'; gameState='award'; chestClicks=0;chestBounce=0;chestOpened=false;chestCoins=0;chestOpenAnim=0;bleu.vy=0; }
         }
       }
     }
@@ -3513,19 +3607,25 @@ function handleClick(ex, ey) {
   if(gameState === 'award') {
     if(!chestOpened) {
       chestClicks++;
-      chestBounce = 12;
-      beep(440+chestClicks*110, 880+chestClicks*110, 0.12, 'sine', 0.12);
+      // bounce e som escalados por clique
+      chestBounce = 10 + chestClicks * 8;
+      var freq = 200 + chestClicks * 180;
+      beep(freq, freq*2, 0.18+chestClicks*0.06, 'sawtooth', 0.18);
+      if(navigator.vibrate) navigator.vibrate(30+chestClicks*40);
       if(chestClicks >= 3) {
         chestOpened = true;
         chestCoins = chestCoinsRand();
         coinCount += chestCoins;
         localStorage.setItem('bleuCoins', coinCount);
-        beep(523,1047,0.3,'sine',0.15);
-        [659,784,1047,1319].forEach(function(f,i){
-          setTimeout(function(){beep(f,f,0.15,'sine',0.12);},i*80);
+        // explosão sonora
+        [523,659,784,1047,1319].forEach(function(f,i){
+          setTimeout(function(){ beep(f,f*1.5,0.18,'sine',0.15); },i*70);
         });
+        spawnParticles(W/2, H/2, '#FFD700', 18);
+        spawnParticles(W/2, H/2, '#ffffff', 10);
+        if(navigator.vibrate) navigator.vibrate([60,20,60,20,100]);
       }
-    } else if(chestOpenAnim >= 14) {
+    } else if(chestOpenAnim >= 18) {
       shopOverlay = true; gameState = 'playing'; startMusic(getPhaseIdx());
     }
     return;
