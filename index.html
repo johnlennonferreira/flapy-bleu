@@ -3169,8 +3169,8 @@ function loop(ts) {
     }
     if(invincible>0) invincible--;
     if(shieldBreak>0) shieldBreak--;
-    // Star power: quica no chao e teto em vez de morrer
-    if(starPower>0){
+    // Estrela E invencibilidade: quica nos limites em vez de cair fora da tela
+    if(starPower>0 || invincible>0){
       if(bleu.y+14 > H-80){ bleu.y = H-80-14; bleu.vy = -Math.abs(bleu.vy)*0.6; }
       if(bleu.y-14 < 22)  { bleu.y = 22+14;   bleu.vy =  Math.abs(bleu.vy)*0.6; }
     }
