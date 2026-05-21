@@ -2993,7 +2993,7 @@ function loop(ts) {
     // ── Física congelada durante transição de fase ──
     if(phasePaused){
       // desbloqueia quando animação entra no fade-out (phaseFlash < 80) ou player toca
-      if(phaseFlash < 80) phasePaused = false;
+      if(phaseFlash < 80){ phasePaused = false; phaseFlash = 0; }
     } else {
       bleu.vy   += 0.38;
       bleu.y    += bleu.vy;
