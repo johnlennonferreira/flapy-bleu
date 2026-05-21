@@ -2804,39 +2804,94 @@ function drawBg() {
   ctx.fillText(pv.name, W-10, H-62);
 }
 
-// ─── BANNER DE FASE — topo compacto ──────────
+// ─── BANNER DE FASE — animação dramática ──────
 function drawPhaseBanner() {
   if(phaseFlash <= 0) return;
   phaseFlash--;
-  var ph    = getPhase();
-  var pv    = getPhaseVisual();
-  var alpha = phaseFlash > 90 ? 1 : phaseFlash / 90;
+  var ph = getPhase();
+  var pv = getPhaseVisual();
+  var t  = phaseFlash; // 190→0
+
+  // Fases da animação:
+  // 190-160: flash branco + slide entrada (30f)
+  // 160-60:  exibição plena (100f)
+  // 60-0:    fade out (60f)
+
+  var fadeIn  = t > 160 ? (190-t)/30 : 1;          // 0→1 nos primeiros 30f
+  var fadeOut = t < 60  ? t/60        : 1;          // 1→0 nos últimos 60f
+  var alpha   = fadeIn * fadeOut;
+  if(alpha <= 0) return;
+
+  // Slide vertical: entra do topo nos primeiros 30f
+  var slideY = t > 160 ? -(1-(190-t)/30)*60 : 0;
+
   ctx.save();
+  ctx.translate(0, slideY);
+
+  // Flash branco rápido nos primeiros 15f
+  if(t > 175){
+    ctx.globalAlpha = ((t-175)/15) * 0.55;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  // Overlay escuro central (sem criar gradiente — só fillRect)
+  ctx.globalAlpha = alpha * 0.78;
+  ctx.fillStyle = '#000510';
+  ctx.beginPath(); ctx.roundRect(0, H/2-82, W, 164, 0); ctx.fill();
+
+  // Linha colorida superior e inferior (substituem shadowBlur)
   ctx.globalAlpha = alpha;
-  // Slim bar just below the ticker (ticker is 20px tall)
-  ctx.fillStyle = '#000000ee';
-  ctx.fillRect(0, 21, W, 24);
-  // Glow border bottom
-  ctx.shadowColor = pv.glowColor; ctx.shadowBlur = 8;
   ctx.fillStyle = pv.glowColor;
-  ctx.fillRect(0, 44, W, 1);
-  ctx.shadowBlur = 0;
-  // Left: phase label
-  ctx.textAlign = 'left';
-  ctx.fillStyle = '#FFD700'; ctx.font = 'bold 10px Courier New';
-  ctx.shadowColor = '#FFD700'; ctx.shadowBlur = 6;
-  ctx.fillText(ph.label, 8, 37);
-  ctx.shadowBlur = 0;
-  // Center: scene name with glow
+  ctx.fillRect(0, H/2-82, W, 3);
+  ctx.fillRect(0, H/2+79, W, 3);
+
+  // Barra de cor fina no centro
+  ctx.globalAlpha = alpha * 0.3;
+  ctx.fillStyle = pv.glowColor;
+  ctx.fillRect(0, H/2-82, W, 164);
+  ctx.globalAlpha = alpha;
+
+  // "NOVA FASE" pequeno acima
   ctx.textAlign = 'center';
-  ctx.fillStyle = pv.glowColor; ctx.font = 'bold 10px Courier New';
-  ctx.shadowColor = pv.glowColor; ctx.shadowBlur = 10;
-  ctx.fillText(pv.name, W/2, 37);
-  ctx.shadowBlur = 0;
-  // Right: speed
-  ctx.textAlign = 'right';
-  ctx.fillStyle = '#ffffff88'; ctx.font = '9px Courier New';
-  ctx.fillText('spd ' + ph.speed.toFixed(1) + 'x', W-8, 37);
+  ctx.fillStyle = '#ffffff66';
+  ctx.font = 'bold 11px Courier New';
+  ctx.fillText('✦  NOVA FASE  ✦', W/2, H/2-52);
+
+  // Label da fase (PHASE 3) — grande
+  ctx.fillStyle = '#FFD700';
+  ctx.font = 'bold 15px Courier New';
+  ctx.fillText(ph.label, W/2, H/2-32);
+
+  // Nome da fase — destaque máximo
+  ctx.fillStyle = pv.glowColor;
+  ctx.font = 'bold 28px Arial';
+  // Camada de brilho falso (sem shadowBlur): texto levemente maior + alpha baixo
+  ctx.globalAlpha = alpha * 0.25;
+  ctx.font = 'bold 32px Arial';
+  ctx.fillText(pv.name, W/2, H/2+8);
+  ctx.globalAlpha = alpha;
+  ctx.font = 'bold 28px Arial';
+  ctx.fillText(pv.name, W/2, H/2+8);
+
+  // Velocidade + barra de progresso de fase
+  ctx.fillStyle = '#ffffff88';
+  ctx.font = '11px Courier New';
+  ctx.fillText('velocidade  ' + ph.speed.toFixed(1) + 'x', W/2, H/2+32);
+
+  // Barra de progresso (fase atual / total)
+  var pi = getPhaseIdx();
+  var barW = 160, barH = 4, barX = W/2 - barW/2, barY = H/2+48;
+  ctx.fillStyle = '#ffffff22';
+  ctx.fillRect(barX, barY, barW, barH);
+  ctx.fillStyle = pv.glowColor;
+  ctx.fillRect(barX, barY, barW * ((pi+1)/PHASES.length), barH);
+
+  // Nível em texto abaixo da barra
+  ctx.fillStyle = '#ffffff44';
+  ctx.font = '9px Courier New';
+  ctx.fillText((pi+1) + ' / ' + PHASES.length + ' fases', W/2, H/2+64);
+
   ctx.restore();
 }
 
@@ -3050,7 +3105,7 @@ function loop(ts) {
         if(newPI > lastPhaseIdx) {
           _bgGradPhase=-1; completedPhase = lastPhaseIdx;
           lastPhaseIdx = newPI;
-          phaseFlash   = 150;
+          phaseFlash   = 190;
           if(newPI > runPhase) runPhase = newPI;
           // clear screen and center gap so player has safe passage on transition
           pipes = []; stars = []; shieldItems = [];
