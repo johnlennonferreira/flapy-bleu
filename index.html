@@ -138,14 +138,29 @@ const PHASE_MUSIC = [
   { n:[185,0,207,246,220,185,0,174, 0,207,0,185,174,0,185,0], d:215, w:'sine',     v:.045 },
   { n:[523,659,784,880,1047,880,784,659, 523,0,659,784,880,1047,880,0], d:105, w:'sine', v:.06 }
 ];
+// Música da estrela — estilo Mario star, rápida e frenética
+var STAR_MUSIC = { n:[659,523,659,784, 784,880,784,659, 523,659,784,880, 1047,880,784,659], d:72, w:'square', v:0.045 };
+var _starMusicActive = false, _starSavedPhase = -1;
+function startStarMusic() {
+  _starSavedPhase = _mPhase;
+  clearTimeout(_mTimeout); _mTimeout = null;
+  _starMusicActive = true; _mPos = 0; _tickMusic();
+}
+function stopStarMusic() {
+  _starMusicActive = false;
+  clearTimeout(_mTimeout); _mTimeout = null;
+  var p = _starSavedPhase; _starSavedPhase = -1;
+  if (p >= 0) { _mPhase = p; _mPos = 0; _tickMusic(); }
+}
 function startMusic(pi) {
-  if (_mPhase === pi) return;
+  if (_mPhase === pi && !_starMusicActive) return;
+  _starMusicActive = false;
   stopMusic(); _mPhase = pi; _mPos = 0; _tickMusic();
 }
-function stopMusic() { clearTimeout(_mTimeout); _mTimeout = null; _mPhase = -1; }
+function stopMusic() { clearTimeout(_mTimeout); _mTimeout = null; _mPhase = -1; _starMusicActive = false; }
 function _tickMusic() {
-  if (_mPhase < 0 || muted) return;
-  var pm = PHASE_MUSIC[_mPhase], f = pm.n[_mPos % pm.n.length];
+  if ((_mPhase < 0 && !_starMusicActive) || muted) return;
+  var pm = _starMusicActive ? STAR_MUSIC : PHASE_MUSIC[_mPhase], f = pm.n[_mPos % pm.n.length];
   if (f > 0) {
     var a = getAC();
     if (a) try {
@@ -2880,18 +2895,20 @@ function loop(ts) {
       if(Math.sqrt(sdx*sdx+sdy*sdy) < 26) {
         starPower = 300;
         stars.splice(si,1);
-        spawnParticles(bleu.x,bleu.y,'#FFD700',12);
+        spawnParticles(bleu.x,bleu.y,'#00D4FF',12);
         spawnParticles(bleu.x,bleu.y,'#ffffff',8);
-        [880,1100,1320].forEach(function(f,ii){setTimeout(function(){beep(f,f*1.5,0.15,'sine',0.18);},ii*80);});
+        startStarMusic();
         if(navigator.vibrate) navigator.vibrate([30,20,60]);
       }
     }
     if(starPower>0){ starPower--;
-      // Star aura around player (no shadowBlur)
+      // Aura neon azul ao redor do personagem
       ctx.globalAlpha=0.18+0.1*Math.sin(frame*0.3);
-      ctx.fillStyle='#FFD700';
+      ctx.fillStyle='#00D4FF';
       ctx.beginPath(); ctx.arc(bleu.x,bleu.y,30,0,Math.PI*2); ctx.fill();
       ctx.globalAlpha=1;
+      // Quando acabar, volta música da fase
+      if(starPower===0) stopStarMusic();
     }
     if(invincible>0) invincible--;
 
