@@ -116,9 +116,9 @@ const PHASE_VISUALS = [
   // 7 — CELESTIAL DESERT (vine thorns + colossal ruins)
   { name:'CELESTIAL DESERT', bg:['#1a0800','#321200'], groundColor:'#280f04', groundLine:'#ffaa44',
     glowColor:'#ff8833', candleUp:'#ff8833', candleDown:'#cc4400', trend:0, type:'vine' },
-  // 8 — THE LIMBO (grotesque growths + monsters)
-  { name:'THE LIMBO', bg:['#040408','#080510'], groundColor:'#030307', groundLine:'#7722aa',
-    glowColor:'#bb44ee', candleUp:'#aa22cc', candleDown:'#224400', trend:0, type:'limbo' },
+  // 8 — VOLCANO (lava + eruption)
+  { name:'VOLCANO 🌋', bg:['#1a0200','#3a0800'], groundColor:'#2a0400', groundLine:'#ff4400',
+    glowColor:'#ff6600', candleUp:'#ff4400', candleDown:'#cc2200', trend:0, type:'volcano' },
   // 9 — COINBASE PLANET (rockets + money + fireworks)
   { name:'COINBASE PLANET', bg:['#44aaee','#77ccff'], groundColor:'#2a8a20', groundLine:'#FFD700',
     glowColor:'#FFD700', candleUp:'#0052FF', candleDown:'#FF6B00', trend:0, type:'rocket' },
@@ -621,6 +621,8 @@ var shopOverlay=false, paused=false;
 var _bgGrad=null, _bgGradPhase=-1;
 var _gndGrad=null, _gndGradPhase=-1;
 var _heavenMist=null, _dungeonMist=null;
+// ── LIVES + POWER-UPS ──
+var lives=3, invincible=0, starPower=0, stars=[];
 var combo=0, comboFlash=0, comboBest=0, recFlash=0, coinsThisRun=0, milestoneIdx=0;
 var lastScore=parseInt(localStorage.getItem('bleuLastScore')||'0');
 const MILESTONES=[5,10,25,50,100];
@@ -644,6 +646,7 @@ function resetGame() {
   screenShake = 0; scorePop = 0; hitFlash = 0; bleuSquish = 0;
   idleTab = 'play'; scorePopups = []; scoreGlow = 0; chestType = 'normal'; shopOverlay = false; paused = false;
   combo = 0; comboFlash = 0; coinsThisRun = 0; milestoneIdx = 0; recFlash = 0;
+  lives = 3; invincible = 0; starPower = 0; stars = [];
 }
 resetGame();
 
@@ -2011,7 +2014,7 @@ function drawObstacle(p) {
   } else if(pi === 7) {
     drawVineObstacle(p);
   } else if(pi === 8) {
-    drawGrotesqueObstacle(p);
+    drawLavaObstacle(p);
   } else if(pi === 9) {
     drawRocketObstacle(p);
   }
@@ -2491,6 +2494,113 @@ function drawBaseHexPattern() {
   }
 }
 
+// ─── VOLCANO BACKGROUND ──────────────────────
+function drawVolcanoBg() {
+  // Volcano silhouettes (background mountains)
+  ctx.fillStyle = '#1a0200';
+  ctx.beginPath(); ctx.moveTo(-10,H-80); ctx.lineTo(80,H-300); ctx.lineTo(180,H-80); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(210,H-80); ctx.lineTo(310,H-270); ctx.lineTo(420,H-80); ctx.closePath(); ctx.fill();
+  // Crater glow
+  ctx.fillStyle = '#ff330020';
+  ctx.beginPath(); ctx.ellipse(80,H-300,28,10,0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(310,H-270,22,9,0,0,Math.PI*2); ctx.fill();
+  // Lava glow at ground level
+  ctx.fillStyle = '#ff440015'; ctx.fillRect(0,H-105,W,25);
+  // Lava bubbles on ground (3, animated)
+  var bpos=[70,190,330];
+  for(var bi=0;bi<3;bi++){
+    var ph2=(frame*0.05+bi*2.1)%(Math.PI*2);
+    var br=5+Math.sin(ph2)*3, by2=H-86-Math.abs(Math.sin(ph2))*16;
+    ctx.globalAlpha=0.55-Math.abs(Math.sin(ph2))*0.25;
+    ctx.fillStyle='#ff6600';
+    ctx.beginPath(); ctx.arc(bpos[bi],by2,br,0,Math.PI*2); ctx.fill();
+  }
+  ctx.globalAlpha=1;
+  // Ash/ember falling (batch, 14 dots)
+  ctx.fillStyle='#ff8833'; ctx.globalAlpha=0.35;
+  ctx.beginPath();
+  for(var ai=0;ai<14;ai++){
+    var ax=(ai*127+frame*(0.5+ai%3*0.2))%W;
+    var ay=(ai*83+frame*(1.0+ai%4*0.25))%(H-100)+22;
+    ctx.rect(ax,ay,2,2);
+  }
+  ctx.fill(); ctx.globalAlpha=1;
+}
+
+// ─── LAVA OBSTACLE (volcano phase) ───────────
+function drawLavaObstacle(p) {
+  var cx=p.x+p.bodyW/2;
+  var rock='#2a0600', lava='#ff4400', lavaBrt='#ff8833';
+  // Top body
+  ctx.fillStyle=rock; ctx.fillRect(p.x,0,p.bodyW,p.topH);
+  // Cracks — single path
+  ctx.strokeStyle='#ff220028'; ctx.lineWidth=1;
+  ctx.beginPath();
+  ctx.moveTo(p.x+10,0); ctx.lineTo(p.x+16,p.topH*0.7);
+  ctx.moveTo(p.x+28,0); ctx.lineTo(p.x+22,p.topH*0.85);
+  ctx.moveTo(p.x+36,p.topH*0.3); ctx.lineTo(p.x+40,p.topH);
+  ctx.stroke();
+  // Lava edge top
+  ctx.fillStyle=lava; ctx.fillRect(p.x,p.topH-3,p.bodyW,4);
+  ctx.fillStyle=lavaBrt; ctx.fillRect(p.x,p.topH-1,p.bodyW,2);
+  // Drips from top (batch)
+  ctx.fillStyle=lava; ctx.beginPath();
+  for(var di=0;di<3;di++){ var dx=p.x+8+di*13,dl=7+(di%2)*5; ctx.moveTo(dx-3,p.topH); ctx.lineTo(dx,p.topH+dl); ctx.lineTo(dx+3,p.topH); ctx.closePath(); }
+  ctx.fill();
+  // Bottom body
+  ctx.fillStyle=rock; ctx.fillRect(p.x,p.botY,p.bodyW,H-80-p.botY);
+  // Cracks bottom
+  ctx.strokeStyle='#ff220028'; ctx.lineWidth=1;
+  ctx.beginPath();
+  ctx.moveTo(p.x+8,p.botY); ctx.lineTo(p.x+15,p.botY+60);
+  ctx.moveTo(p.x+30,p.botY+20); ctx.lineTo(p.x+25,p.botY+80);
+  ctx.stroke();
+  // Lava edge bottom
+  ctx.fillStyle=lava; ctx.fillRect(p.x,p.botY-1,p.bodyW,4);
+  ctx.fillStyle=lavaBrt; ctx.fillRect(p.x,p.botY,p.bodyW,2);
+  // Drips from bottom (upward, batch)
+  ctx.fillStyle=lava; ctx.beginPath();
+  for(var di=0;di<3;di++){ var dx=p.x+8+di*13,dl=7+(di%2)*5; ctx.moveTo(dx-3,p.botY); ctx.lineTo(dx,p.botY-dl); ctx.lineTo(dx+3,p.botY); ctx.closePath(); }
+  ctx.fill();
+}
+
+// ─── STAR POWER-UP ───────────────────────────
+function drawStarItem(x, y) {
+  var pulse=1+0.15*Math.sin(frame*0.12);
+  var r=14*pulse;
+  ctx.save(); ctx.translate(x,y); ctx.rotate(frame*0.04);
+  ctx.fillStyle='#FFD700';
+  ctx.beginPath();
+  for(var i=0;i<5;i++){
+    var a=(i*4*Math.PI/5)-Math.PI/2, ai2=a+2*Math.PI/5;
+    if(i===0) ctx.moveTo(Math.cos(a)*r,Math.sin(a)*r);
+    else ctx.lineTo(Math.cos(a)*r,Math.sin(a)*r);
+    ctx.lineTo(Math.cos(ai2)*r*0.42,Math.sin(ai2)*r*0.42);
+  }
+  ctx.closePath(); ctx.fill();
+  ctx.fillStyle='#ffffff99'; ctx.beginPath(); ctx.arc(0,0,r*0.28,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+
+// ─── LIVES + STAR POWER HUD ──────────────────
+function drawLivesHUD() {
+  ctx.textAlign='left'; ctx.font='bold 13px Arial';
+  for(var li=0;li<3;li++){
+    ctx.globalAlpha = li<lives ? 1 : 0.2;
+    ctx.fillStyle='#FF1744';
+    ctx.fillText('♥', 8+li*17, 34);
+  }
+  ctx.globalAlpha=1;
+  // Star power bar
+  if(starPower>0){
+    var bx=8, bw2=52;
+    ctx.fillStyle='#33330088'; ctx.fillRect(bx,37,bw2+22,9);
+    ctx.fillStyle='#FFD700'; ctx.fillRect(bx,38,(starPower/300)*(bw2),7);
+    ctx.fillStyle='#FFD700'; ctx.font='bold 9px Courier New';
+    ctx.fillText('⭐ STAR', bx+bw2+2, 45);
+  }
+}
+
 // ─── MAIN BACKGROUND DRAW ────────────────────
 function drawBg() {
   var pv = getPhaseVisual();
@@ -2570,8 +2680,8 @@ function drawBg() {
     drawPoisonDrops();
 
   } else if(pi === 8) {
-    // PHASE 9 — THE LIMBO: monsters + flickering darkness
-    drawLimboBg();
+    // PHASE 9 — VOLCANO: lava + eruption
+    drawVolcanoBg();
 
   } else if(pi === 9) {
     // PHASE 10 — COINBASE PLANET: sunny + money + fireworks
@@ -2725,6 +2835,35 @@ function loop(ts) {
       pipes.push(makePipe(W+10));
     }
 
+    // ─── STAR POWER-UP spawn ─────────────────
+    if(frame % 210 === 40 && Math.random() < 0.38 && starPower === 0) {
+      var sy2 = 120 + Math.random() * (H - 80 - 240);
+      stars.push({x: W+18, y: sy2});
+    }
+    // Move stars + collect
+    for(var si=stars.length-1; si>=0; si--) {
+      stars[si].x -= spd;
+      if(stars[si].x < -20) { stars.splice(si,1); continue; }
+      drawStarItem(stars[si].x, stars[si].y);
+      var sdx=stars[si].x-bleu.x, sdy=stars[si].y-bleu.y;
+      if(Math.sqrt(sdx*sdx+sdy*sdy) < 26) {
+        starPower = 300;
+        stars.splice(si,1);
+        spawnParticles(bleu.x,bleu.y,'#FFD700',12);
+        spawnParticles(bleu.x,bleu.y,'#ffffff',8);
+        [880,1100,1320].forEach(function(f,ii){setTimeout(function(){beep(f,f*1.5,0.15,'sine',0.18);},ii*80);});
+        if(navigator.vibrate) navigator.vibrate([30,20,60]);
+      }
+    }
+    if(starPower>0){ starPower--;
+      // Star aura around player (no shadowBlur)
+      ctx.globalAlpha=0.18+0.1*Math.sin(frame*0.3);
+      ctx.fillStyle='#FFD700';
+      ctx.beginPath(); ctx.arc(bleu.x,bleu.y,30,0,Math.PI*2); ctx.fill();
+      ctx.globalAlpha=1;
+    }
+    if(invincible>0) invincible--;
+
     // move pipes
     var spd = ph.speed;
     for(var i=0; i<pipes.length; i++){
@@ -2761,7 +2900,7 @@ function loop(ts) {
           lastPhaseIdx = newPI;
           phaseFlash   = 150;
           // clear screen and center gap so player has safe passage on transition
-          pipes = [];
+          pipes = []; stars = [];
           lastGapCenter = H / 2;
           startMusic(newPI);
           spawnParticles(W/2, H/2, '#FFD700', 30);
@@ -2817,7 +2956,9 @@ function loop(ts) {
     ctx.save();
     if(scoreGlow>0) scoreGlow--;
     if(bleuSquish>0){var _sq=bleuSquish/8;ctx.translate(bleu.x,bleu.y);ctx.scale(1+_sq*.2,1-_sq*.18);ctx.translate(-bleu.x,-bleu.y);bleuSquish--;}
-    drawCharacter(bleu.x, bleu.y, bleu.flap, bleu.vy);
+    // blink when invincible (every 6f) or star power (every 8f)
+    var _blink = (invincible>0 && Math.floor(invincible/6)%2===0) || (starPower>0 && Math.floor(frame/8)%2===0);
+    if(!_blink) drawCharacter(bleu.x, bleu.y, bleu.flap, bleu.vy);
     ctx.restore();
     updateParticles();
     updateScorePopups();
@@ -2852,6 +2993,8 @@ function loop(ts) {
     barG.addColorStop(0,'#FFD700'); barG.addColorStop(1,'#00D4FF');
     ctx.fillStyle = barG;
     ctx.fillRect(6, 23, 70 * progress, 3);
+    // lives + star power HUD
+    drawLivesHUD();
     // best
     if(highScore > 0){
       ctx.textAlign = 'center';
@@ -2897,21 +3040,35 @@ function loop(ts) {
       recFlash--;
     }
 
-    if(gameState==='playing' && hitTest()){
-      spawnParticles(bleu.x, bleu.y, '#FF1744', 20);
-      spawnParticles(bleu.x, bleu.y, '#FFD700', 10);
-      beep(350, 60, 0.5, 'sawtooth', 0.25);
-      if(score > highScore){
-        highScore = score; newRecord = true;
-        localStorage.setItem('bleuHS', highScore);
-        [523,659,784,1047].forEach(function(f,i){
-          setTimeout(function(){ beep(f,f,0.15,'sine',0.14); }, i*85);
-        });
+    if(gameState==='playing' && hitTest() && starPower===0 && invincible===0){
+      spawnParticles(bleu.x, bleu.y, '#FF1744', 10);
+      if(navigator.vibrate) navigator.vibrate(60);
+      if(lives > 1) {
+        // Perde uma vida — invencível por 2s
+        lives--;
+        invincible = 130;
+        screenShake = 8; hitFlash = 6;
+        bleu.vy = -5; // pequeno salto para não morrer de novo
+        combo = 0; comboFlash = 0;
+        beep(220, 100, 0.3, 'sawtooth', 0.22);
+        spawnScorePopup(bleu.x, bleu.y-40, '💔 -1 VIDA');
+      } else {
+        // Sem vidas — morte real
+        lives = 0;
+        spawnParticles(bleu.x, bleu.y, '#FFD700', 10);
+        beep(350, 60, 0.5, 'sawtooth', 0.25);
+        if(score > highScore){
+          highScore = score; newRecord = true;
+          localStorage.setItem('bleuHS', highScore);
+          [523,659,784,1047].forEach(function(f,i){
+            setTimeout(function(){ beep(f,f,0.15,'sine',0.14); }, i*85);
+          });
+        }
+        lastScore=score; localStorage.setItem('bleuLastScore',lastScore); totalScore+=score; localStorage.setItem('bleuTotal',totalScore); gameState='dead'; screenShake=14; hitFlash=8; stopMusic();
+        if(comboBest<combo) comboBest=combo;
+        combo=0; comboFlash=0; milestoneIdx=0;
+        if(navigator.vibrate) navigator.vibrate([80,30,80]);
       }
-      lastScore=score; localStorage.setItem('bleuLastScore',lastScore); totalScore+=score; localStorage.setItem('bleuTotal',totalScore); gameState='dead'; screenShake=14; hitFlash=8; stopMusic();
-      if(comboBest<combo) comboBest=combo;
-      combo=0; comboFlash=0; milestoneIdx=0;
-      if(navigator.vibrate) navigator.vibrate([80,30,80]);
     }
   }
 
