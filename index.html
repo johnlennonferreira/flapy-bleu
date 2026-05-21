@@ -2839,6 +2839,7 @@ function loop(ts) {
     }
 
     // ─── STAR POWER-UP spawn ─────────────────
+    var spd = ph.speed; // declara aqui para o bloco de estrelas poder usar
     if(frame % 210 === 40 && Math.random() < 0.38 && starPower === 0) {
       var sy2 = 120 + Math.random() * (H - 80 - 240);
       stars.push({x: W+18, y: sy2});
@@ -2868,7 +2869,6 @@ function loop(ts) {
     if(invincible>0) invincible--;
 
     // move pipes
-    var spd = ph.speed;
     for(var i=0; i<pipes.length; i++){
       var p = pipes[i];
       p.x -= spd;
