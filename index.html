@@ -2806,7 +2806,8 @@ function drawBg() {
 
 // ─── BANNER DE FASE — animação dramática ──────
 function drawPhaseBanner() {
-  if(phaseFlash <= 0) { phasePaused = false; return; }
+  // banner só existe enquanto o jogo estiver congelado
+  if(!phasePaused || phaseFlash <= 0) { phaseFlash = 0; return; }
   phaseFlash--;
   var ph = getPhase();
   var pv = getPhaseVisual();
