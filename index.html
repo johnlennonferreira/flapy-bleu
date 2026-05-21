@@ -2754,6 +2754,9 @@ function loop(ts) {
           _bgGradPhase=-1; completedPhase = lastPhaseIdx;
           lastPhaseIdx = newPI;
           phaseFlash   = 150;
+          // clear screen and center gap so player has safe passage on transition
+          pipes = [];
+          lastGapCenter = H / 2;
           startMusic(newPI);
           spawnParticles(W/2, H/2, '#FFD700', 30);
           spawnParticles(W/2, H/2, '#00D4FF', 20);
