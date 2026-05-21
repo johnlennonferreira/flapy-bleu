@@ -3153,6 +3153,11 @@ function loop(ts) {
     }
     if(invincible>0) invincible--;
     if(shieldBreak>0) shieldBreak--;
+    // Star power: quica no chao e teto em vez de morrer
+    if(starPower>0){
+      if(bleu.y+14 > H-80){ bleu.y = H-80-14; bleu.vy = -Math.abs(bleu.vy)*0.6; }
+      if(bleu.y-14 < 22)  { bleu.y = 22+14;   bleu.vy =  Math.abs(bleu.vy)*0.6; }
+    }
 
     // ─── SHIELD spawn + move + coleta ────────
     if(frame % 280 === 140 && Math.random() < 0.28 && shield===0 && starPower===0) {
@@ -3355,7 +3360,7 @@ function loop(ts) {
     }
 
     // Bounds (chão/teto) matam sempre — mesmo com invencível/star power
-    var _hitBounds = !phasePaused && (bleu.y+14 > H-80 || bleu.y-14 < 22);
+    var _hitBounds = !phasePaused && starPower===0 && (bleu.y+14 > H-80 || bleu.y-14 < 22);
     // Canos só importam quando não está protegido
     var _hitPipes  = !phasePaused && starPower===0 && invincible===0 && hitTestPipes();
     if(gameState==='playing' && (_hitBounds || _hitPipes)){
