@@ -620,7 +620,7 @@ var totalScore=parseInt(localStorage.getItem('bleuTotal')||'0');
 var shopOverlay=false, paused=false;
 var _bgGrad=null, _bgGradPhase=-1;
 var combo=0, comboFlash=0, comboBest=0, recFlash=0, coinsThisRun=0, milestoneIdx=0;
-var lastScore=0;
+var lastScore=parseInt(localStorage.getItem('bleuLastScore')||'0');
 const MILESTONES=[5,10,25,50,100];
 var activeSkin=parseInt(localStorage.getItem('bleuSkin')||'0');
 var unlockedSkins=JSON.parse(localStorage.getItem('bleuSkins')||'[0]');
@@ -3064,7 +3064,7 @@ function loop(ts) {
           setTimeout(function(){ beep(f,f,0.15,'sine',0.14); }, i*85);
         });
       }
-      lastScore=score; totalScore+=score; localStorage.setItem('bleuTotal',totalScore); gameState='dead'; screenShake=14; hitFlash=8; stopMusic();
+      lastScore=score; localStorage.setItem('bleuLastScore',lastScore); totalScore+=score; localStorage.setItem('bleuTotal',totalScore); gameState='dead'; screenShake=14; hitFlash=8; stopMusic();
       if(comboBest<combo) comboBest=combo;
       combo=0; comboFlash=0; milestoneIdx=0;
       if(navigator.vibrate) navigator.vibrate([80,30,80]);
