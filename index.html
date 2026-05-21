@@ -76,16 +76,16 @@ function beep(f1, f2, dur, type, vol) {
 
 // ─── FASES (10 fases, muda a cada 10 pontos para teste) ─────
 const PHASES = [
-  { speed: 2.2, gapMin:162, gapMax:195, label:'PHASE 1'  }, // mais fácil — gap largo
-  { speed: 2.3, gapMin:156, gapMax:186, label:'PHASE 2'  },
-  { speed: 2.4, gapMin:150, gapMax:178, label:'PHASE 3'  },
-  { speed: 2.5, gapMin:146, gapMax:172, label:'PHASE 4'  },
-  { speed: 2.6, gapMin:142, gapMax:166, label:'PHASE 5'  },
-  { speed: 2.7, gapMin:138, gapMax:162, label:'PHASE 6'  },
-  { speed: 2.8, gapMin:135, gapMax:158, label:'PHASE 7'  },
-  { speed: 2.9, gapMin:132, gapMax:154, label:'PHASE 8'  },
-  { speed: 2.8, gapMin:148, gapMax:188, label:'PHASE 9'  }, // respiro antes do fim
-  { speed: 3.0, gapMin:128, gapMax:150, label:'PHASE 10' }, // mais difícil
+  { speed: 2.0, gapMin:148, gapMax:168, label:'PHASE 1'  }, // aprende — confortável
+  { speed: 2.1, gapMin:140, gapMax:160, label:'PHASE 2'  }, // fecha levemente
+  { speed: 2.2, gapMin:132, gapMax:150, label:'PHASE 3'  }, // desafio real começa
+  { speed: 2.3, gapMin:126, gapMax:144, label:'PHASE 4'  }, // close calls frequentes
+  { speed: 2.4, gapMin:120, gapMax:138, label:'PHASE 5'  }, // tensão alta
+  { speed: 2.5, gapMin:115, gapMax:133, label:'PHASE 6'  }, // território Flappy Bird
+  { speed: 2.6, gapMin:110, gapMax:128, label:'PHASE 7'  }, // difícil de verdade
+  { speed: 2.6, gapMin:108, gapMax:124, label:'PHASE 8'  }, // muito difícil
+  { speed: 2.4, gapMin:125, gapMax:148, label:'PHASE 9'  }, // respiro — alivia tensão
+  { speed: 2.8, gapMin:100, gapMax:116, label:'PHASE 10' }, // hardcore — poucos chegam
 ];
 function getPhaseIdx() { return Math.min(9, Math.floor(score / 4)); }
 function getPhase()    { return PHASES[getPhaseIdx()]; }
@@ -1064,9 +1064,12 @@ function makePipe(x) {
   const ph  = getPhase();
   // Random gap size within phase range — varies pipe to pipe
   const gap = ph.gapMin + Math.random() * (ph.gapMax - ph.gapMin);
-  // Large jitter so heights vary a lot: some very high, some very low
-  const jitter = (Math.random() - 0.5) * 130;
-  let center   = lastGapCenter + pv.trend + jitter;
+  // Jitter grande: cria variedade vertical real (alto, baixo, meio)
+  // Não segue o anterior — escolha independente para maximizar surpresa
+  const range  = H - 80 - 115 - gap; // espaço total disponível
+  const center0 = 115 + gap/2 + Math.random() * range;
+  const jitter = (Math.random() - 0.5) * 80; // leve suavização sobre o anterior
+  let center   = center0 * 0.65 + (lastGapCenter + jitter) * 0.35;
   const minC   = 115 + gap/2;
   const maxC   = H - 80 - gap/2 - 15;
   center       = Math.max(minC, Math.min(maxC, center));
@@ -2716,8 +2719,8 @@ function loop(ts) {
     var pi  = getPhaseIdx();
     var pv  = getPhaseVisual();
 
-    // spawn de pipes
-    var spawnEvery = Math.max(60, 92 - pi * 3);
+    // spawn de pipes — progressivamente mais frequente
+    var spawnEvery = Math.max(52, 86 - pi * 3);
     if(frame % spawnEvery === 0){
       pipes.push(makePipe(W+10));
     }
