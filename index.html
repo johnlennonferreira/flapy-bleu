@@ -3380,13 +3380,13 @@ function loop(ts) {
     }
 
     // Bounds (chão/teto) matam sempre — mesmo com invencível/star power
-    var _hitBounds = !phasePaused && starPower===0 && (bleu.y+14 > H-80 || bleu.y-14 < 22);
+    var _hitBounds = !phasePaused && starPower===0 && invincible===0 && (bleu.y+14 > H-80 || bleu.y-14 < 22);
     // Canos só importam quando não está protegido
     var _hitPipes  = !phasePaused && starPower===0 && invincible===0 && hitTestPipes();
     if(gameState==='playing' && (_hitBounds || _hitPipes)){
       // Escudo absorve QUALQUER batida — nunca perde escudo E vida ao mesmo tempo
       if(shield>0){
-        shield=0; shieldBreak=10; invincible=80;
+        shield=0; shieldBreak=10; invincible=140;
         if(_hitBounds){ bleu.y=H/2; bleu.vy=-3; } // tira do limite
         spawnParticles(bleu.x,bleu.y,'#00FF88',12);
         spawnParticles(bleu.x,bleu.y,'#ffffff',8);
