@@ -2566,19 +2566,44 @@ function drawLavaObstacle(p) {
 
 // ─── STAR POWER-UP ───────────────────────────
 function drawStarItem(x, y) {
-  var pulse=1+0.15*Math.sin(frame*0.12);
-  var r=14*pulse;
-  ctx.save(); ctx.translate(x,y); ctx.rotate(frame*0.04);
-  ctx.fillStyle='#FFD700';
+  var pulse = 1 + 0.18 * Math.sin(frame * 0.12);
+  var r = 15 * pulse;
+  ctx.save(); ctx.translate(x, y); ctx.rotate(frame * 0.04);
+
+  // Halo neon externo (sem shadowBlur — usar camadas de alpha)
+  ctx.globalAlpha = 0.18 + 0.10 * Math.sin(frame * 0.18);
+  ctx.fillStyle = '#00D4FF';
+  ctx.beginPath(); ctx.arc(0, 0, r * 1.7, 0, Math.PI * 2); ctx.fill();
+  ctx.globalAlpha = 0.30 + 0.12 * Math.sin(frame * 0.18);
+  ctx.fillStyle = '#0088FF';
+  ctx.beginPath(); ctx.arc(0, 0, r * 1.25, 0, Math.PI * 2); ctx.fill();
+  ctx.globalAlpha = 1;
+
+  // Estrela azul neon
+  ctx.fillStyle = '#00D4FF';
   ctx.beginPath();
-  for(var i=0;i<5;i++){
-    var a=(i*4*Math.PI/5)-Math.PI/2, ai2=a+2*Math.PI/5;
-    if(i===0) ctx.moveTo(Math.cos(a)*r,Math.sin(a)*r);
-    else ctx.lineTo(Math.cos(a)*r,Math.sin(a)*r);
-    ctx.lineTo(Math.cos(ai2)*r*0.42,Math.sin(ai2)*r*0.42);
+  for (var i = 0; i < 5; i++) {
+    var a = (i * 4 * Math.PI / 5) - Math.PI / 2;
+    var ai2 = a + 2 * Math.PI / 5;
+    if (i === 0) ctx.moveTo(Math.cos(a) * r, Math.sin(a) * r);
+    else         ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+    ctx.lineTo(Math.cos(ai2) * r * 0.42, Math.sin(ai2) * r * 0.42);
   }
   ctx.closePath(); ctx.fill();
-  ctx.fillStyle='#ffffff99'; ctx.beginPath(); ctx.arc(0,0,r*0.28,0,Math.PI*2); ctx.fill();
+
+  // Contorno neon brilhante
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  // "B" de Base no centro
+  ctx.rotate(-(frame * 0.04)); // cancela rotação para o texto ficar reto
+  ctx.fillStyle = '#001833';
+  ctx.font = 'bold ' + Math.round(r * 0.82) + 'px Arial';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('B', 0, 1);
+
   ctx.restore();
 }
 
@@ -2841,7 +2866,9 @@ function loop(ts) {
     // ─── STAR POWER-UP spawn ─────────────────
     var spd = ph.speed; // declara aqui para o bloco de estrelas poder usar
     if(frame % 210 === 40 && Math.random() < 0.38 && starPower === 0) {
-      var sy2 = 120 + Math.random() * (H - 80 - 240);
+      // Spawn no centro do último gap (± jitter) para garantir que é alcançável
+      var sy2 = lastGapCenter + (Math.random() - 0.5) * 40;
+      sy2 = Math.max(80, Math.min(H - 110, sy2));
       stars.push({x: W+18, y: sy2});
     }
     // Move stars + collect
