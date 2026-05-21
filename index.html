@@ -638,6 +638,9 @@ var _gndGrad=null, _gndGradPhase=-1;
 var _heavenMist=null, _dungeonMist=null;
 // ── LIVES + POWER-UPS ──
 var lives=3, invincible=0, starPower=0, stars=[];
+// Speed lines para star power
+var speedLines = [];
+(function(){ for(var i=0;i<18;i++) speedLines.push({ y: Math.random()*600, len: 40+Math.random()*80, speed: 6+Math.random()*8, alpha: 0.3+Math.random()*0.5 }); })();
 var combo=0, comboFlash=0, comboBest=0, recFlash=0, coinsThisRun=0, milestoneIdx=0;
 var lastScore=parseInt(localStorage.getItem('bleuLastScore')||'0');
 const MILESTONES=[5,10,25,50,100];
@@ -2902,6 +2905,20 @@ function loop(ts) {
       }
     }
     if(starPower>0){ starPower--;
+      // ── Speed lines ──
+      ctx.lineCap='round';
+      for(var sl=0;sl<speedLines.length;sl++){
+        var line=speedLines[sl];
+        line.y += (Math.random()-0.5)*1.2;
+        line.x = (line.x||W) - line.speed * 2.8;
+        if(line.x < -line.len) line.x = W + 10;
+        var fade = starPower < 60 ? starPower/60 : 1; // desvanece no final
+        ctx.globalAlpha = line.alpha * fade;
+        ctx.strokeStyle = sl%3===0 ? '#00D4FF' : sl%3===1 ? '#ffffff' : '#0052FF';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(line.x+line.len, line.y); ctx.lineTo(line.x, line.y); ctx.stroke();
+      }
+      ctx.globalAlpha=1; ctx.lineCap='butt';
       // Aura neon azul ao redor do personagem
       ctx.globalAlpha=0.18+0.1*Math.sin(frame*0.3);
       ctx.fillStyle='#00D4FF';
