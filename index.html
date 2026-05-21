@@ -346,25 +346,57 @@ function drawAwardScreen() {
 
   // Baú
   drawTreasureChest(cx, cy-40);
-  if(chestOpened && chestOpenAnim<22) chestOpenAnim++;
+  if(chestOpened && chestOpenAnim<40) chestOpenAnim++;
 
-  // Resultado
-  if(chestOpened && chestOpenAnim>=12){
-    var col2 = chestType==='rare'?'#cc44ff': chestType==='gold'?'#FFD700':'#00D4FF';
-    // +moedas grande
-    ctx.globalAlpha=0.25; ctx.fillStyle=col2;
-    ctx.font='bold 42px Courier New'; ctx.fillText('+'+chestCoins,cx+2,cy+82+2);
+  // Prêmio — entra com scale após abertura
+  if(chestOpened && chestOpenAnim>=14){
+    var col2   = chestType==='rare'?'#cc44ff': chestType==='gold'?'#FFD700':'#00D4FF';
+    var prize  = chestType==='rare'?'🔮':'🐉';
+    var entryT = Math.min(1,(chestOpenAnim-14)/8); // 0→1 em 8 frames
+    var sc     = 0.4 + 0.6*entryT;                // escala de entrada
+    var prizeY = cy+70;
+
+    ctx.save(); ctx.translate(cx, prizeY); ctx.scale(sc, sc);
+
+    // Painel do prêmio
+    ctx.fillStyle='#00000066';
+    ctx.beginPath(); ctx.roundRect(-100,-36,200,100,12); ctx.fill();
+    ctx.strokeStyle=col2+'88'; ctx.lineWidth=2;
+    ctx.stroke();
+
+    // "VOCÊ GANHOU!"
+    ctx.fillStyle='#ffffff99'; ctx.font='bold 11px Courier New';
+    ctx.textAlign='center'; ctx.fillText('VOCÊ GANHOU!', 0, -18);
+
+    // Número de moedas — destaque máximo
+    ctx.globalAlpha=0.2; ctx.fillStyle=col2;
+    ctx.font='bold 48px Arial'; ctx.fillText('+'+chestCoins, 2, 34);
     ctx.globalAlpha=1; ctx.fillStyle=col2;
-    ctx.fillText('+'+chestCoins, cx, cy+82);
-    ctx.font='13px Courier New'; ctx.fillStyle='#88ccff';
-    ctx.fillText('moedas do dragão 🐉', cx, cy+104);
-    // botão continuar pulsante
-    var p2=0.97+0.03*Math.sin(frame*0.14);
-    ctx.save(); ctx.translate(cx,cy+136); ctx.scale(p2,p2);
-    ctx.fillStyle='#0052FF'; ctx.beginPath(); ctx.roundRect(-80,-18,160,36,10); ctx.fill();
-    ctx.fillStyle='#fff'; ctx.font='bold 14px Courier New';
-    ctx.textBaseline='middle'; ctx.fillText('▶ CONTINUAR',0,0);
-    ctx.textBaseline='alphabetic'; ctx.restore();
+    ctx.font='bold 48px Arial'; ctx.fillText('+'+chestCoins, 0, 32);
+
+    ctx.restore();
+
+    // Legenda fora do scale
+    ctx.globalAlpha=entryT;
+    ctx.fillStyle='#ffffff88'; ctx.font='12px Courier New'; ctx.textAlign='center';
+    ctx.fillText(prize+' moedas do dragão', cx, prizeY+80);
+    ctx.fillStyle=coinCount>0?'#FFD700':'#ffffff55';
+    ctx.font='11px Courier New';
+    ctx.fillText('total: '+coinCount+' moedas', cx, prizeY+96);
+    ctx.globalAlpha=1;
+
+    // Botão CONTINUAR — aparece depois do prêmio estar visível
+    if(chestOpenAnim>=26){
+      var p2=0.97+0.03*Math.sin(frame*0.14);
+      ctx.save(); ctx.translate(cx, prizeY+128); ctx.scale(p2,p2);
+      ctx.fillStyle='#0052FF';
+      ctx.beginPath(); ctx.roundRect(-85,-19,170,38,10); ctx.fill();
+      ctx.strokeStyle='#00D4FF55'; ctx.lineWidth=1.5; ctx.stroke();
+      ctx.fillStyle='#fff'; ctx.font='bold 14px Courier New';
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText('▶  CONTINUAR', 0, 0);
+      ctx.textBaseline='alphabetic'; ctx.restore();
+    }
   }
 }
 
@@ -3364,15 +3396,15 @@ function loop(ts) {
     // Canos só importam quando não está protegido
     var _hitPipes  = !phasePaused && starPower===0 && invincible===0 && hitTestPipes();
     if(gameState==='playing' && (_hitBounds || _hitPipes)){
-      // Escudo absorve 1 batida (exceto chão/teto — chão sempre mata)
-      if(shield>0 && !_hitBounds){
+      // Escudo absorve QUALQUER batida — nunca perde escudo E vida ao mesmo tempo
+      if(shield>0){
         shield=0; shieldBreak=10; invincible=80;
+        if(_hitBounds){ bleu.y=H/2; bleu.vy=-3; } // tira do limite
         spawnParticles(bleu.x,bleu.y,'#00FF88',12);
         spawnParticles(bleu.x,bleu.y,'#ffffff',8);
         screenShake=5;
         beep(180,90,0.4,'sawtooth',0.2);
         if(navigator.vibrate) navigator.vibrate([40,20,40]);
-        // não cai no resto — continue loop
       } else {
       spawnParticles(bleu.x, bleu.y, '#FF1744', 10);
       if(navigator.vibrate) navigator.vibrate(60);
@@ -3630,7 +3662,7 @@ function handleClick(ex, ey) {
         spawnParticles(W/2, H/2, '#ffffff', 10);
         if(navigator.vibrate) navigator.vibrate([60,20,60,20,100]);
       }
-    } else if(chestOpenAnim >= 18) {
+    } else if(chestOpenAnim >= 26) {
       shopOverlay = true; gameState = 'playing'; startMusic(getPhaseIdx());
     }
     return;
