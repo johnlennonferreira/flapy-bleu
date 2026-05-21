@@ -613,9 +613,22 @@ function updateScorePopups() {
     p.y+=p.vy; p.x+=(Math.random()-.5)*.4; p.life--;
   }
 }
-// ─── HIGHSCORE ───────────────────────────────
+// ─── HIGHSCORE + TOP 5 ───────────────────────
 let highScore = parseInt(localStorage.getItem('bleuHS') || '0');
 let newRecord = false;
+// Top 5 recordes
+function loadTop5() {
+  try { return JSON.parse(localStorage.getItem('bleuTop5') || '[]'); } catch(e){ return []; }
+}
+function saveTop5(s) {
+  var t = loadTop5();
+  t.push(s);
+  t.sort(function(a,b){ return b-a; });
+  t = t.slice(0,5);
+  localStorage.setItem('bleuTop5', JSON.stringify(t));
+  return t;
+}
+var top5 = loadTop5();
 
 // ─── NFT CHARACTER SYSTEM ────────────────────
 var unlockedChars = parseInt(localStorage.getItem('bleuChars') || '1'); // 1=Bleu only, 2=Brett unlocked
@@ -2882,7 +2895,7 @@ function loop(ts) {
     }
 
     // ─── STAR POWER-UP spawn ─────────────────
-    var spd = ph.speed; // declara aqui para o bloco de estrelas poder usar
+    var spd = ph.speed * (starPower > 0 ? 1.55 : 1); // boost durante star power
     if(frame % 210 === 40 && Math.random() < 0.38 && starPower === 0) {
       // Spawn no centro do último gap (± jitter) para garantir que é alcançável
       var sy2 = lastGapCenter + (Math.random() - 0.5) * 40;
@@ -3134,7 +3147,9 @@ function loop(ts) {
             setTimeout(function(){ beep(f,f,0.15,'sine',0.14); }, i*85);
           });
         }
-        lastScore=score; localStorage.setItem('bleuLastScore',lastScore); totalScore+=score; localStorage.setItem('bleuTotal',totalScore); gameState='dead'; screenShake=14; hitFlash=8; stopMusic();
+        lastScore=score; localStorage.setItem('bleuLastScore',lastScore); totalScore+=score; localStorage.setItem('bleuTotal',totalScore);
+        if(score>0) top5=saveTop5(score);
+        gameState='dead'; screenShake=14; hitFlash=8; stopMusic();
         if(comboBest<combo) comboBest=combo;
         combo=0; comboFlash=0; milestoneIdx=0;
         if(navigator.vibrate) navigator.vibrate([80,30,80]);
@@ -3213,20 +3228,27 @@ function loop(ts) {
       ctx.fillText('🐉 +' + coinsThisRun + ' moedas', W/2, H/2+28);
       ctx.shadowBlur = 0;
     }
-    // best
+    // ── Top 5 ──
     if(newRecord){
-      ctx.fillStyle = '#FFD700'; ctx.font = 'bold 13px Courier New';
-      ctx.shadowColor = '#FFD700'; ctx.shadowBlur = 16;
-      ctx.fillText('🏆 NOVO RECORDE: ' + highScore, W/2, H/2+46);
-      ctx.shadowBlur = 0;
-    } else {
-      ctx.fillStyle = '#FFD70088'; ctx.font = '12px Courier New';
-      ctx.fillText('Best: ' + highScore, W/2, H/2+46);
+      ctx.fillStyle='#FFD700'; ctx.font='bold 13px Courier New';
+      ctx.shadowColor='#FFD700'; ctx.shadowBlur=16;
+      ctx.fillText('🏆 NOVO RECORDE: '+highScore, W/2, H/2+42);
+      ctx.shadowBlur=0;
     }
+    var medals=['🥇','🥈','🥉','④','⑤'];
+    var t5=loadTop5();
+    ctx.font='bold 11px Courier New'; ctx.textAlign='center';
+    for(var ti=0;ti<Math.min(t5.length,5);ti++){
+      var isMe=(t5[ti]===score && ti===0 && newRecord);
+      ctx.fillStyle = ti===0?'#FFD700': ti===1?'#C0C0C0': ti===2?'#cd7f32':'#ffffff66';
+      ctx.globalAlpha = isMe ? 1 : (ti===0?0.95:0.7-ti*0.08);
+      ctx.fillText(medals[ti]+' '+t5[ti], W/2, H/2+56+ti*14);
+    }
+    ctx.globalAlpha=1;
     // big retry button
     var pulse = 0.97 + 0.03*Math.sin(frame*0.12);
     ctx.save();
-    ctx.translate(W/2, H/2+84);
+    ctx.translate(W/2, H/2+140);
     ctx.scale(pulse, pulse);
     ctx.fillStyle = '#0052FF';
     ctx.beginPath(); ctx.roundRect(-80,-18,160,36,10); ctx.fill();
@@ -3238,15 +3260,15 @@ function loop(ts) {
     ctx.restore();
     // menu button
     ctx.fillStyle = '#ffffff0a';
-    ctx.beginPath(); ctx.roundRect(W/2-55, H/2+108, 110, 28, 8); ctx.fill();
+    ctx.beginPath(); ctx.roundRect(W/2-55, H/2+164, 110, 28, 8); ctx.fill();
     ctx.strokeStyle = '#0052FF44'; ctx.lineWidth = 1;
     ctx.stroke();
     ctx.font = '12px Courier New'; ctx.fillStyle = '#0052FFcc';
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText('⌂  MENU', W/2, H/2+122);
+    ctx.fillText('⌂  MENU', W/2, H/2+178);
     ctx.textBaseline = 'alphabetic';
     ctx.fillStyle = '#ffffff22'; ctx.font = '9px Courier New';
-    ctx.fillText('$BLEU never stops', W/2, H/2+150);
+    ctx.fillText('$BLEU never stops', W/2, H/2+202);
   }
   ctx.restore();
   if(screenShake>0)screenShake--;
@@ -3327,8 +3349,8 @@ function handleClick(ex, ey) {
 
   // ── DEAD screen buttons
   if(gameState === 'dead') {
-    // Menu button: W/2-55 to W/2+55, H/2+108 to H/2+136
-    if(cx>=W/2-55&&cx<=W/2+55&&cy>=H/2+108&&cy<=H/2+136){
+    // Menu button: W/2-55 to W/2+55, H/2+164 to H/2+192
+    if(cx>=W/2-55&&cx<=W/2+55&&cy>=H/2+164&&cy<=H/2+192){
       resetGame(); idleTab='play'; return;
     }
     // Retry — anywhere else on dead screen
