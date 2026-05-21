@@ -262,17 +262,25 @@ function drawAwardScreen() {
 // ─── IDLE TABS ───────────────────────────────────────────────
 function drawIdleTabs() {
   var labels=['JOGAR','LOJA','SKINS','RANK'], keys=['play','shop','skins','leaderboard'];
-  var tw=70, th=26, gap=6, total=labels.length*(tw+gap)-gap;
-  var tx0=W/2-total/2, ty=H-72;
-  ctx.font='bold 9px Courier New'; ctx.textAlign='center';
+  var icons=['▶','🛒','🎨','🏆'];
+  var tw=82, th=44, gap=5, total=labels.length*(tw+gap)-gap;
+  var tx0=W/2-total/2, ty=H-58;
+  ctx.textAlign='center';
   for(var ti=0;ti<labels.length;ti++) {
     var tx=tx0+ti*(tw+gap), act=idleTab===keys[ti];
-    ctx.fillStyle=act?'#0052FF':'#0052FF1a';
-    ctx.strokeStyle=act?'#0052FF':'#0052FF55'; ctx.lineWidth=1.5;
-    ctx.fillRect(tx,ty,tw,th); ctx.strokeRect(tx,ty,tw,th);
-    ctx.fillStyle=act?'#fff':'#0052FF88';
-    ctx.shadowColor=act?'#00D4FF':'transparent'; ctx.shadowBlur=act?8:0;
-    ctx.fillText(labels[ti],tx+tw/2,ty+17); ctx.shadowBlur=0;
+    // fundo do card
+    ctx.fillStyle=act?'#0052FF':'#ffffff18';
+    ctx.strokeStyle=act?'#00D4FF':'#ffffff44'; ctx.lineWidth=act?2:1;
+    ctx.beginPath(); ctx.roundRect(tx,ty,tw,th,8); ctx.fill(); ctx.stroke();
+    // icone
+    ctx.font=act?'16px Courier New':'14px Courier New';
+    ctx.fillStyle=act?'#fff':'#ffffffbb';
+    ctx.fillText(icons[ti], tx+tw/2, ty+16);
+    // label
+    ctx.font=act?'bold 10px Courier New':'bold 9px Courier New';
+    ctx.fillStyle=act?'#fff':'#ffffffaa';
+    ctx.shadowColor=act?'#00D4FF':'transparent'; ctx.shadowBlur=act?10:0;
+    ctx.fillText(labels[ti], tx+tw/2, ty+32); ctx.shadowBlur=0;
   }
 }
 function drawShopCards(yStart, compact) {
@@ -3228,8 +3236,8 @@ function handleClick(ex, ey) {
   // ── IDLE tabs click
   if(gameState === 'idle') {
     if(idleTab==='shop'){ var si3=hitShopCard(cx,cy,76,false); if(si3>=0){ buySkin(si3); return; } }
-    var labels=['play','shop','skins','leaderboard'], tw=70, th=26, gap=6;
-    var total=4*(tw+gap)-gap, tx0=W/2-total/2, ty=H-72;
+    var labels=['play','shop','skins','leaderboard'], tw=82, th=44, gap=5;
+    var total=4*(tw+gap)-gap, tx0=W/2-total/2, ty=H-58;
     for(var ti=0;ti<labels.length;ti++) {
       var tx=tx0+ti*(tw+gap);
       if(cx>=tx&&cx<=tx+tw&&cy>=ty&&cy<=ty+th) {
