@@ -2806,7 +2806,11 @@ function drawBg() {
 
 // ─── BANNER DE FASE — animação dramática ──────
 function drawPhaseBanner() {
-  if(phaseFlash <= 0) return;
+  if(phaseFlash <= 0) {
+    // animação acabou — retoma o jogo automaticamente
+    if(gameState === 'phaseTransition') gameState = 'playing';
+    return;
+  }
   phaseFlash--;
   var ph = getPhase();
   var pv = getPhaseVisual();
@@ -2982,6 +2986,17 @@ function loop(ts) {
     return;
   }
 
+  // ── PHASE TRANSITION — congela física, mostra animação ──
+  if(gameState === 'phaseTransition'){
+    drawBg(); drawGround();
+    drawCharacter(bleu.x, bleu.y, bleu.flap, 0);
+    updateParticles();
+    drawPhaseBanner();
+    drawLivesHUD();
+    frame++;
+    return;
+  }
+
   // ── PLAYING ──
   if(gameState === 'playing' && !shopOverlay && !paused){
     bleu.vy   += 0.38;
@@ -3107,6 +3122,10 @@ function loop(ts) {
           lastPhaseIdx = newPI;
           phaseFlash   = 190;
           if(newPI > runPhase) runPhase = newPI;
+          // para o jogo durante a animação de transição
+          gameState = 'phaseTransition';
+          bleu.vy = 0; // zera queda
+          bleu.y  = H / 2; // centro seguro
           // clear screen and center gap so player has safe passage on transition
           pipes = []; stars = []; shieldItems = [];
           lastGapCenter = H / 2;
@@ -3450,8 +3469,9 @@ function loop(ts) {
 function flap() {
   if(gameState==='idle')         { gameState='playing'; startMusic(getPhaseIdx()); combo=0; comboFlash=0; coinsThisRun=0; milestoneIdx=0; recFlash=0; }
   else if(gameState==='playing') { bleu.vy=-7.5; bleu.flap=-1; bleuSquish=8; beep(260,520,0.09,'sine',0.16); }
-  else if(gameState==='hurt')    { gameState='playing'; invincible=140; bleu.vy=-5; beep(440,880,0.1,'sine',0.15); }
-  else if(gameState==='dead')    { resetGame(); gameState='playing'; }
+  else if(gameState==='hurt')           { gameState='playing'; invincible=140; bleu.vy=-5; beep(440,880,0.1,'sine',0.15); }
+  else if(gameState==='phaseTransition'){ gameState='playing'; phaseFlash=0; bleu.vy=-4; bleuSquish=6; } // toque pula a animação
+  else if(gameState==='dead')           { resetGame(); gameState='playing'; }
 }
 
 
