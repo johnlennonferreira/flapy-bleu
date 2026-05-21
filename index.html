@@ -631,13 +631,62 @@ function drawLeaderboardTab() {
   }
   ctx.textAlign='center';
 
-  // Global placeholder
-  ctx.fillStyle='#ffffff06'; ctx.strokeStyle='#0052FF22'; ctx.lineWidth=1;
-  ctx.fillRect(W/2-112,H/2+98,224,46); ctx.strokeRect(W/2-112,H/2+98,224,46);
-  ctx.font='10px Courier New'; ctx.fillStyle='#FFD70066';
-  ctx.fillText('🌐 RANKING GLOBAL', W/2, H/2+116);
-  ctx.font='9px Courier New'; ctx.fillStyle='#ffffff33';
-  ctx.fillText('em breve — conecte sua wallet', W/2, H/2+132);
+  // ── Wallet Section ──
+  var wy = H/2+104;
+  ctx.font='bold 9px Courier New'; ctx.fillStyle='#00D4FF88';
+  ctx.fillText('━━━  💎 WALLET BASE  ━━━', W/2, wy-2);
+
+  if(walletAddress){
+    // Conectado — exibe endereço e melhores scores desta wallet
+    ctx.fillStyle='#00FF8818'; ctx.strokeStyle='#00FF8855'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.roundRect(W/2-112,wy+4,224,30,8); ctx.fill(); ctx.stroke();
+    ctx.font='bold 10px Courier New'; ctx.fillStyle='#00FF88';
+    ctx.fillText('✓  '+walletShort, W/2, wy+23);
+
+    // Botão desconectar (pequeno, discreto)
+    ctx.fillStyle='#ffffff0a'; ctx.strokeStyle='#ffffff22'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.roundRect(W/2-30,wy+38,60,16,5); ctx.fill(); ctx.stroke();
+    ctx.font='7px Courier New'; ctx.fillStyle='#ffffff44';
+    ctx.fillText('desconectar', W/2, wy+49);
+
+    // Melhores scores desta wallet
+    var myScores = walletScores.filter(function(e){
+      return e.addr && e.addr.toLowerCase()===walletAddress.toLowerCase();
+    });
+    myScores.sort(function(a,b){return b.score-a.score;});
+    if(myScores.length>0){
+      ctx.font='bold 9px Courier New'; ctx.fillStyle='#FFD700aa';
+      ctx.fillText('SEUS MELHORES SCORES', W/2, wy+70);
+      var wMedals=['🥇','🥈','🥉'];
+      var wCols=['#FFD700','#C0C0C0','#cd7f32'];
+      for(var wi2=0;wi2<Math.min(myScores.length,3);wi2++){
+        ctx.font='bold 10px Courier New'; ctx.fillStyle=wCols[wi2];
+        var pName=PHASE_VISUALS[myScores[wi2].phase||0]?PHASE_VISUALS[myScores[wi2].phase||0].name:'—';
+        ctx.fillText(wMedals[wi2]+'  '+myScores[wi2].score+'  pts  ·  '+pName, W/2, wy+84+wi2*14);
+      }
+      ctx.font='9px Courier New'; ctx.fillStyle='#ffffff22';
+      ctx.fillText(myScores.length+' jogada'+(myScores.length!==1?'s':'')+' salvas', W/2, wy+128);
+    } else {
+      ctx.font='10px Courier New'; ctx.fillStyle='#ffffff33';
+      ctx.fillText('jogue e seus scores serão salvos!', W/2, wy+74);
+    }
+  } else {
+    // Botão CONECTAR — pulsando
+    var wbp = 0.97+0.03*Math.sin(frame*0.1);
+    ctx.save(); ctx.translate(W/2, wy+22); ctx.scale(wbp,wbp);
+    ctx.fillStyle='#0052FF';
+    ctx.beginPath(); ctx.roundRect(-110,-18,220,36,10); ctx.fill();
+    ctx.strokeStyle='#00D4FF55'; ctx.lineWidth=1.5; ctx.stroke();
+    ctx.fillStyle='#fff'; ctx.font='bold 12px Courier New';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('💎  CONECTAR CARTEIRA', 0, 0);
+    ctx.textBaseline='alphabetic'; ctx.restore();
+
+    ctx.font='9px Courier New'; ctx.fillStyle='#ffffff33';
+    ctx.fillText('Coinbase Wallet  ·  Base Network', W/2, wy+52);
+    ctx.font='8px Courier New'; ctx.fillStyle='#0052FF66';
+    ctx.fillText('salve seus scores · ranking global em breve', W/2, wy+66);
+  }
 }
 
 // ─── DAILY LOGIN ────────────────────────────────────────────────────
@@ -782,6 +831,49 @@ const MILESTONES=[5,10,25,50,100];
 var activeSkin=parseInt(localStorage.getItem('bleuSkin')||'0');
 var unlockedSkins=JSON.parse(localStorage.getItem('bleuSkins')||'[0]');
 var chestType='normal';
+
+// ─── WALLET ──────────────────────────────────────────────────
+var walletAddress    = localStorage.getItem('bleuWallet') || null;
+var walletShort      = walletAddress ? walletAddress.slice(0,6)+'...'+walletAddress.slice(-4) : null;
+var walletConnecting = false;
+var walletScores     = JSON.parse(localStorage.getItem('bleuWalletScores')||'[]');
+
+function connectWallet() {
+  if(walletConnecting) return;
+  if(!window.ethereum) {
+    // Mobile sem extensão — abre Coinbase Wallet DApp Browser
+    var url = encodeURIComponent('https://flapy-bleu.vercel.app');
+    window.open('https://go.cb-w.com/dapp?cb_url='+url, '_blank');
+    return;
+  }
+  walletConnecting = true;
+  window.ethereum.request({method:'eth_requestAccounts'}).then(function(accounts){
+    walletConnecting = false;
+    if(accounts && accounts.length>0){
+      walletAddress = accounts[0];
+      walletShort   = walletAddress.slice(0,6)+'...'+walletAddress.slice(-4);
+      localStorage.setItem('bleuWallet', walletAddress);
+      beep(523,1047,0.22,'sine',0.15);
+      [659,784,1047].forEach(function(f,i){setTimeout(function(){beep(f,f*1.5,0.12,'sine',0.12);},i*80);});
+      if(navigator.vibrate) navigator.vibrate([30,20,60]);
+    }
+  }).catch(function(){ walletConnecting = false; });
+}
+
+function disconnectWallet() {
+  walletAddress = null; walletShort = null;
+  localStorage.removeItem('bleuWallet');
+  beep(330,200,0.12,'sawtooth',0.08);
+}
+
+function submitWalletScore(s) {
+  if(!walletAddress || !s) return;
+  var entry = {addr:walletAddress, short:walletShort, score:s, phase:runPhase, ts:Date.now()};
+  walletScores.push(entry);
+  walletScores.sort(function(a,b){return b.score-a.score;});
+  if(walletScores.length>100) walletScores=walletScores.slice(0,100);
+  localStorage.setItem('bleuWalletScores', JSON.stringify(walletScores));
+}
 
 function resetGame() {
   bleu          = { x:90, y:H/2, vy:0, flap:0 };
@@ -3083,6 +3175,14 @@ function loop(ts) {
       drawCharSelect();
       ctx.fillStyle = '#0052FF88'; ctx.font = '10px Courier New'; ctx.textAlign = 'center';
       ctx.fillText('powered by Base Network', W/2, H-95);
+      // Wallet status no idle
+      if(walletAddress){
+        ctx.fillStyle='#00FF8877'; ctx.font='bold 9px Courier New';
+        ctx.fillText('💎 '+walletShort, W/2, H-78);
+      } else {
+        ctx.fillStyle='#0052FF66'; ctx.font='9px Courier New';
+        ctx.fillText('💎 RANK → conectar wallet', W/2, H-78);
+      }
     } else if(idleTab==='shop'){
       drawShopTab();
     } else if(idleTab==='skins'){
@@ -3423,6 +3523,7 @@ function loop(ts) {
         if(score>0) top5=saveTop5(score);
         if(runPhase > bestPhaseEver){ bestPhaseEver=runPhase; localStorage.setItem('bleuBestPhase', bestPhaseEver); }
         gameState='dead'; screenShake=14; hitFlash=8; stopMusic();
+        if(score>0) submitWalletScore(score); // salva score com wallet (se conectada)
         if(comboBest<combo) comboBest=combo;
         combo=0; comboFlash=0; milestoneIdx=0;
         if(navigator.vibrate) navigator.vibrate([80,30,80]);
@@ -3568,6 +3669,16 @@ function loop(ts) {
     ctx.textBaseline='alphabetic';
     ctx.fillStyle='#ffffff18'; ctx.font='9px Courier New';
     ctx.fillText('$BLEU never stops', W/2, H/2+238);
+
+    // ── Wallet indicator na tela de morte ──
+    if(walletAddress){
+      ctx.fillStyle='#00FF8866'; ctx.font='9px Courier New';
+      ctx.fillText('💎 '+walletShort+' · score salvo', W/2, H/2+256);
+    } else {
+      // Botão sutil para conectar
+      ctx.fillStyle='#0052FF99'; ctx.font='bold 9px Courier New';
+      ctx.fillText('💎 conectar wallet → ranking global', W/2, H/2+256);
+    }
     if(shareFlash>0) shareFlash--;
   }
   ctx.restore();
@@ -3670,6 +3781,11 @@ function handleClick(ex, ey) {
     if(cx>=W/2-50&&cx<=W/2+50&&cy>=H/2+202&&cy<=H/2+228){
       resetGame(); idleTab='play'; return;
     }
+    // Wallet line: H/2+248 a H/2+264 — conectar se não tiver wallet
+    if(cx>=W/2-160&&cx<=W/2+160&&cy>=H/2+248&&cy<=H/2+264){
+      if(!walletAddress) connectWallet();
+      return;
+    }
     // Retry — anywhere else (incluindo botão JOGAR DE NOVO)
     flap(); return;
   }
@@ -3677,6 +3793,17 @@ function handleClick(ex, ey) {
   // ── IDLE tabs click
   if(gameState === 'idle') {
     if(idleTab==='shop'){ var si3=hitShopCard(cx,cy,76,false); if(si3>=0){ buySkin(si3); return; } }
+    // Leaderboard tab: botão wallet
+    if(idleTab==='leaderboard'){
+      var wy3=H/2+104;
+      if(!walletAddress){
+        // CONECTAR CARTEIRA: wy3+4 a wy3+40
+        if(cx>=W/2-110&&cx<=W/2+110&&cy>=wy3+4&&cy<=wy3+40){ connectWallet(); return; }
+      } else {
+        // DESCONECTAR: wy3+38 a wy3+54
+        if(cx>=W/2-30&&cx<=W/2+30&&cy>=wy3+38&&cy<=wy3+54){ disconnectWallet(); return; }
+      }
+    }
     var labels=['play','shop','skins','leaderboard'], tw=82, th=44, gap=5;
     var total=4*(tw+gap)-gap, tx0=W/2-total/2, ty=H-58;
     for(var ti=0;ti<labels.length;ti++) {
