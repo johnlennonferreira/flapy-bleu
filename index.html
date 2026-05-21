@@ -222,28 +222,41 @@ function drawTreasureChest(cx, cy) {
   });
   ctx.fillStyle=col; ctx.fillRect(-bw/2,bh*.43,bw,6);
 
-  // RACHADURAS — aparecem progressivamente
+  // RACHADURAS — clique 1: fissura inicial; clique 2: rede densa de rachaduras
   if(chestClicks>=1 && !chestOpened){
-    // rachadura 1
+    var lk1=0.45+0.25*Math.sin(frame*0.5);
     ctx.strokeStyle='#1a0800'; ctx.lineWidth=1.5;
-    ctx.beginPath(); ctx.moveTo(-12,-1); ctx.lineTo(-5,14); ctx.lineTo(-20,28); ctx.stroke();
-    // luz vazando pela rachadura
-    var lk1 = 0.45+0.25*Math.sin(frame*0.5);
+    ctx.beginPath(); ctx.moveTo(-12,-1); ctx.lineTo(-4,13); ctx.lineTo(-22,30); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-4,13); ctx.lineTo(6,22); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(30,5); ctx.lineTo(22,18); ctx.lineTo(34,28); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-bw/2+4,bh*.6); ctx.lineTo(-bw/2+16,bh*.75); ctx.stroke();
     ctx.globalAlpha=lk1; ctx.strokeStyle='#FF9900'; ctx.lineWidth=2;
-    ctx.beginPath(); ctx.moveTo(-12,-1); ctx.lineTo(-5,14); ctx.lineTo(-20,28); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-12,-1); ctx.lineTo(-4,13); ctx.lineTo(-22,30); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(30,5); ctx.lineTo(22,18); ctx.stroke();
     ctx.globalAlpha=1;
   }
   if(chestClicks>=2 && !chestOpened){
-    // rachadura 2 — mais larga e dramática
+    var lk2=0.65+0.3*Math.sin(frame*0.6);
     ctx.strokeStyle='#1a0800'; ctx.lineWidth=2;
-    ctx.beginPath(); ctx.moveTo(22,-1); ctx.lineTo(14,16); ctx.lineTo(28,32); ctx.lineTo(18,bh); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(-bw/2+6,bh*.28); ctx.lineTo(-bw/2+22,bh*.52); ctx.stroke();
-    // luz intensa
-    var lk2 = 0.6+0.3*Math.sin(frame*0.6);
+    // rachadura central grande
+    ctx.beginPath(); ctx.moveTo(8,-1); ctx.lineTo(0,20); ctx.lineTo(10,bh); ctx.stroke();
+    // laterais
+    ctx.beginPath(); ctx.moveTo(-bw/2+2,bh*.2); ctx.lineTo(-bw/2+18,bh*.4); ctx.lineTo(-bw/2+8,bh*.65); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(bw/2-4,bh*.15); ctx.lineTo(bw/2-20,bh*.38); ctx.lineTo(bw/2-6,bh*.7); ctx.stroke();
+    // micro-fissuras no corpo
+    ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(-30,bh*.3); ctx.lineTo(-18,bh*.42); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(20,bh*.5); ctx.lineTo(35,bh*.6); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-8,bh*.7); ctx.lineTo(4,bh*.82); ctx.stroke();
+    // luz dourada intensa pelos vãos
     ctx.globalAlpha=lk2; ctx.strokeStyle='#FFE040'; ctx.lineWidth=3;
-    ctx.beginPath(); ctx.moveTo(22,-1); ctx.lineTo(14,16); ctx.lineTo(28,32); ctx.stroke();
-    ctx.globalAlpha=lk2*0.5; ctx.fillStyle='#FFE040';
-    ctx.beginPath(); ctx.ellipse(14,16,8,4,0.5,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(8,-1); ctx.lineTo(0,20); ctx.lineTo(10,bh); ctx.stroke();
+    ctx.globalAlpha=lk2*0.5; ctx.strokeStyle='#FF9900'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(-bw/2+2,bh*.2); ctx.lineTo(-bw/2+18,bh*.4); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(bw/2-4,bh*.15); ctx.lineTo(bw/2-20,bh*.38); ctx.stroke();
+    // brilho de luz saindo pelas fissuras
+    ctx.globalAlpha=lk2*0.35; ctx.fillStyle='#FFE040';
+    ctx.beginPath(); ctx.ellipse(0,20,10,5,0.3,0,Math.PI*2); ctx.fill();
     ctx.globalAlpha=1;
   }
 
@@ -322,27 +335,6 @@ function drawAwardScreen() {
   ctx.globalAlpha=1; ctx.fillStyle=titleCol;
   ctx.fillText(aTitle, cx, cy-150);
 
-  // Instrução pulsante antes de abrir
-  if(!chestOpened){
-    // Barra de tensão — 3 segmentos
-    var barW=120, bx=cx-barW/2, segW=(barW-4)/3;
-    ctx.fillStyle='#ffffff11'; ctx.fillRect(bx,cy+68,barW,10);
-    for(var si=0;si<3;si++){
-      var segCol = si===0?'#FF4400': si===1?'#FFD700':'#00FF88';
-      ctx.fillStyle = si<chestClicks ? segCol : '#ffffff15';
-      if(si<chestClicks){
-        var pulse=1+0.08*Math.sin(frame*0.4+si);
-        ctx.globalAlpha=pulse;
-      }
-      ctx.fillRect(bx+si*(segW+2), cy+68, segW, 10);
-      ctx.globalAlpha=1;
-    }
-    // Texto escalado pela tensão
-    var msgs = ['toque para despertar...', 'MAIS FORTE! está saindo!', '🔥 UMA VEZ MAIS! 🔥'];
-    var msgCol = chestClicks===0?'#ffffff55': chestClicks===1?'#FF8800':'#FFD700';
-    ctx.fillStyle=msgCol; ctx.font='bold '+(11+chestClicks*1.5)+'px Courier New';
-    ctx.fillText(msgs[chestClicks]||msgs[2], cx, cy+90);
-  }
 
   // Baú
   drawTreasureChest(cx, cy-40);
@@ -2806,21 +2798,13 @@ function drawLivesHUD() {
     ctx.fillText('♥', 8+li*17, 34);
   }
   ctx.globalAlpha=1;
-  // Star power bar
-  if(starPower>0){
-    var bx=8, bw2=52;
-    ctx.fillStyle='#33330088'; ctx.fillRect(bx,37,bw2+22,9);
-    ctx.fillStyle='#00D4FF'; ctx.fillRect(bx,38,(starPower/300)*(bw2),7);
-    ctx.fillStyle='#00D4FF'; ctx.font='bold 9px Courier New';
-    ctx.fillText('⭐ STAR', bx+bw2+2, 45);
-  }
   // Shield indicator
   if(shield>0){
     var pulse2 = 0.85 + 0.15*Math.sin(frame*0.18);
     ctx.globalAlpha = pulse2;
     ctx.fillStyle='#00FF88'; ctx.font='bold 18px Arial';
     ctx.textAlign='left'; ctx.textBaseline='middle';
-    ctx.fillText('🛡️', 8, starPower>0 ? 58 : 44);
+    ctx.fillText('🛡️', 8, 44);
     ctx.globalAlpha=1; ctx.textBaseline='alphabetic';
     // flash vermelho ao quebrar
     if(shieldBreak>0){
@@ -3135,8 +3119,8 @@ function loop(ts) {
 
     // ─── STAR POWER-UP spawn ─────────────────
     var spd = phasePaused ? 0 : ph.speed * (starPower > 0 ? 1.55 : 1); // 0 congela tudo durante transição
-    if(frame % 210 === 40 && Math.random() < 0.38 && starPower === 0) {
-      // Spawn no centro do último gap (± jitter) para garantir que é alcançável
+    // Estrela: rara, só aparece sem escudo na tela e sem sobreposição
+    if(frame % 420 === 60 && Math.random() < 0.12 && starPower === 0 && shieldItems.length === 0) {
       var sy2 = lastGapCenter + (Math.random() - 0.5) * 40;
       sy2 = Math.max(80, Math.min(H - 110, sy2));
       stars.push({x: W+18, y: sy2});
@@ -3192,7 +3176,8 @@ function loop(ts) {
     }
 
     // ─── SHIELD spawn + move + coleta ────────
-    if(frame % 280 === 140 && Math.random() < 0.28 && shield===0 && starPower===0) {
+    // Escudo: só aparece sem estrela na tela e sem sobreposição
+    if(frame % 280 === 140 && Math.random() < 0.28 && shield===0 && starPower===0 && stars.length===0) {
       var shy = lastGapCenter + (Math.random()-0.5)*50;
       shy = Math.max(80, Math.min(H-110, shy));
       shieldItems.push({x: W+18, y: shy});
@@ -3220,9 +3205,12 @@ function loop(ts) {
         p.passed = true; score++; scorePop = 12; scoreGlow = 14;
         combo++; comboFlash=22; coinsThisRun++;
         if(navigator.vibrate) navigator.vibrate(10);
+        // som de moeda: ping metálico curto
+        beep(1400, 1800, 0.07, 'sine', 0.06);
+        setTimeout(function(){ beep(1800, 1400, 0.05, 'sine', 0.04); }, 40);
         // escalating pitch with combo
         var pitch = Math.min(260 + score*14, 900);
-        beep(pitch, pitch*2, 0.18, 'sine', 0.13);
+        beep(pitch, pitch*2, 0.12, 'sine', 0.10);
         if(combo===3){ beep(pitch*1.5, pitch*3, 0.14, 'sine', 0.08); screenShake=4; }
         if(combo===5){ beep(880, 1760, 0.22, 'square', 0.08); screenShake=6; spawnScorePopup(bleu.x,bleu.y-55,'🔥 FEVER!'); }
         if(combo===10){ beep(1047, 2093, 0.28, 'square', 0.1); screenShake=8; spawnScorePopup(bleu.x,bleu.y-55,'💎 x10 ULTRA!'); }
