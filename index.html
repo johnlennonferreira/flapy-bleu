@@ -3057,6 +3057,9 @@ function loop(ts) {
         combo = 0; comboFlash = 0;
         beep(220, 100, 0.3, 'sawtooth', 0.22);
         if(navigator.vibrate) navigator.vibrate([60,20,60]);
+        // Reposiciona no centro da tela para dar chance durante a invencibilidade
+        bleu.y = H / 2;
+        bleu.vy = 0;
         gameState = 'hurt'; // para o jogo até o jogador tocar
       } else {
         // Sem vidas — morte real
