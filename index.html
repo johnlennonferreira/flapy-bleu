@@ -76,17 +76,17 @@ function beep(f1, f2, dur, type, vol) {
 
 // ─── FASES (10 fases, muda a cada 10 pontos para teste) ─────
 const PHASES = [
-  { speed: 2.4, gap: 148, label: 'PHASE 1'  },
-  { speed: 2.4, gap: 148, label: 'PHASE 2'  },
-  { speed: 2.4, gap: 148, label: 'PHASE 3'  },
-  { speed: 2.4, gap: 148, label: 'PHASE 4'  },
-  { speed: 2.4, gap: 148, label: 'PHASE 5'  },
-  { speed: 2.4, gap: 148, label: 'PHASE 6'  },
-  { speed: 2.4, gap: 148, label: 'PHASE 7'  },
-  { speed: 2.4, gap: 148, label: 'PHASE 8'  },
-  { speed: 2.4, gap: 185, label: 'PHASE 9'  },
-  { speed: 2.4, gap: 148, label: 'PHASE 10' },
-]; // ← mesma dificuldade em todas, ajustar depois
+  { speed: 2.2, gapMin:162, gapMax:195, label:'PHASE 1'  }, // mais fácil — gap largo
+  { speed: 2.3, gapMin:156, gapMax:186, label:'PHASE 2'  },
+  { speed: 2.4, gapMin:150, gapMax:178, label:'PHASE 3'  },
+  { speed: 2.5, gapMin:146, gapMax:172, label:'PHASE 4'  },
+  { speed: 2.6, gapMin:142, gapMax:166, label:'PHASE 5'  },
+  { speed: 2.7, gapMin:138, gapMax:162, label:'PHASE 6'  },
+  { speed: 2.8, gapMin:135, gapMax:158, label:'PHASE 7'  },
+  { speed: 2.9, gapMin:132, gapMax:154, label:'PHASE 8'  },
+  { speed: 2.8, gapMin:148, gapMax:188, label:'PHASE 9'  }, // respiro antes do fim
+  { speed: 3.0, gapMin:128, gapMax:150, label:'PHASE 10' }, // mais difícil
+];
 function getPhaseIdx() { return Math.min(9, Math.floor(score / 4)); }
 function getPhase()    { return PHASES[getPhaseIdx()]; }
 
@@ -1061,11 +1061,14 @@ function drawCharSelect() {
 // ─── PIPE / OBSTACLE ─────────────────────────
 function makePipe(x) {
   const pv  = getPhaseVisual();
-  const gap = getPhase().gap;
-  const jitter = (Math.random() - 0.5) * 70;
+  const ph  = getPhase();
+  // Random gap size within phase range — varies pipe to pipe
+  const gap = ph.gapMin + Math.random() * (ph.gapMax - ph.gapMin);
+  // Large jitter so heights vary a lot: some very high, some very low
+  const jitter = (Math.random() - 0.5) * 130;
   let center   = lastGapCenter + pv.trend + jitter;
-  const minC   = 110 + gap/2;
-  const maxC   = H - 80 - gap/2 - 20;
+  const minC   = 115 + gap/2;
+  const maxC   = H - 80 - gap/2 - 15;
   center       = Math.max(minC, Math.min(maxC, center));
   lastGapCenter = center;
   const topH   = center - gap/2;
