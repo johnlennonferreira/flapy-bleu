@@ -638,7 +638,7 @@ var showCharSel   = false; // show character selector in idle
 
 // ─── STATE ───────────────────────────────────
 let bleu, pipes, score, frame, gameState, particles, lastGapCenter;
-let phaseFlash = 0, lastPhaseIdx = 0;
+let phaseFlash = 0, lastPhaseIdx = 0, phasePaused = false;
 let screenShake = 0, scorePop = 0, hitFlash = 0, bleuSquish = 0;
 let coins = [], coinCount = parseInt(localStorage.getItem('bleuCoins')||'0');
 var _mTimeout=null, _mPhase=-1, _mPos=0;
@@ -675,7 +675,7 @@ function resetGame() {
   particles     = [];
   newRecord     = false;
   lastGapCenter = H / 2;
-  phaseFlash    = 0;
+  phaseFlash    = 0; phasePaused = false;
   lastPhaseIdx  = 0;
   nftFlash      = 0;
   screenShake = 0; scorePop = 0; hitFlash = 0; bleuSquish = 0;
@@ -2806,11 +2806,7 @@ function drawBg() {
 
 // ─── BANNER DE FASE — animação dramática ──────
 function drawPhaseBanner() {
-  if(phaseFlash <= 0) {
-    // animação acabou — retoma o jogo automaticamente
-    if(gameState === 'phaseTransition') gameState = 'playing';
-    return;
-  }
+  if(phaseFlash <= 0) { phasePaused = false; return; }
   phaseFlash--;
   var ph = getPhase();
   var pv = getPhaseVisual();
@@ -2986,35 +2982,32 @@ function loop(ts) {
     return;
   }
 
-  // ── PHASE TRANSITION — congela física, mostra animação ──
-  if(gameState === 'phaseTransition'){
-    drawBg(); drawGround();
-    drawCharacter(bleu.x, bleu.y, bleu.flap, 0);
-    updateParticles();
-    drawPhaseBanner();
-    drawLivesHUD();
-    frame++;
-    return;
-  }
 
   // ── PLAYING ──
   if(gameState === 'playing' && !shopOverlay && !paused){
-    bleu.vy   += 0.38;
-    bleu.y    += bleu.vy;
-    bleu.flap += 0.25;
 
     var ph  = getPhase();
     var pi  = getPhaseIdx();
     var pv  = getPhaseVisual();
 
+    // ── Física congelada durante transição de fase ──
+    if(phasePaused){
+      // desbloqueia quando animação entra no fade-out (phaseFlash < 80) ou player toca
+      if(phaseFlash < 80) phasePaused = false;
+    } else {
+      bleu.vy   += 0.38;
+      bleu.y    += bleu.vy;
+    }
+    bleu.flap += 0.25;
+
     // spawn de pipes — progressivamente mais frequente
     var spawnEvery = Math.max(52, 86 - pi * 3);
-    if(frame % spawnEvery === 0){
+    if(!phasePaused && frame % spawnEvery === 0){
       pipes.push(makePipe(W+10));
     }
 
     // ─── STAR POWER-UP spawn ─────────────────
-    var spd = ph.speed * (starPower > 0 ? 1.55 : 1); // boost durante star power
+    var spd = phasePaused ? 0 : ph.speed * (starPower > 0 ? 1.55 : 1); // 0 congela tudo durante transição
     if(frame % 210 === 40 && Math.random() < 0.38 && starPower === 0) {
       // Spawn no centro do último gap (± jitter) para garantir que é alcançável
       var sy2 = lastGapCenter + (Math.random() - 0.5) * 40;
@@ -3121,11 +3114,10 @@ function loop(ts) {
           _bgGradPhase=-1; completedPhase = lastPhaseIdx;
           lastPhaseIdx = newPI;
           phaseFlash   = 190;
+          phasePaused  = true;
           if(newPI > runPhase) runPhase = newPI;
-          // para o jogo durante a animação de transição
-          gameState = 'phaseTransition';
-          bleu.vy = 0; // zera queda
-          bleu.y  = H / 2; // centro seguro
+          bleu.vy = 0;
+          bleu.y  = H / 2;
           // clear screen and center gap so player has safe passage on transition
           pipes = []; stars = []; shieldItems = [];
           lastGapCenter = H / 2;
@@ -3268,9 +3260,9 @@ function loop(ts) {
     }
 
     // Bounds (chão/teto) matam sempre — mesmo com invencível/star power
-    var _hitBounds = bleu.y+14 > H-80 || bleu.y-14 < 22;
+    var _hitBounds = !phasePaused && (bleu.y+14 > H-80 || bleu.y-14 < 22);
     // Canos só importam quando não está protegido
-    var _hitPipes  = starPower===0 && invincible===0 && hitTestPipes();
+    var _hitPipes  = !phasePaused && starPower===0 && invincible===0 && hitTestPipes();
     if(gameState==='playing' && (_hitBounds || _hitPipes)){
       // Escudo absorve 1 batida (exceto chão/teto — chão sempre mata)
       if(shield>0 && !_hitBounds){
@@ -3468,9 +3460,11 @@ function loop(ts) {
 // ─── INPUT ───────────────────────────────────
 function flap() {
   if(gameState==='idle')         { gameState='playing'; startMusic(getPhaseIdx()); combo=0; comboFlash=0; coinsThisRun=0; milestoneIdx=0; recFlash=0; }
-  else if(gameState==='playing') { bleu.vy=-7.5; bleu.flap=-1; bleuSquish=8; beep(260,520,0.09,'sine',0.16); }
-  else if(gameState==='hurt')           { gameState='playing'; invincible=140; bleu.vy=-5; beep(440,880,0.1,'sine',0.15); }
-  else if(gameState==='phaseTransition'){ gameState='playing'; phaseFlash=0; bleu.vy=-4; bleuSquish=6; } // toque pula a animação
+  else if(gameState==='playing') {
+    if(phasePaused){ phasePaused=false; phaseFlash=0; bleu.vy=-4; bleuSquish=6; return; } // pula animação
+    bleu.vy=-7.5; bleu.flap=-1; bleuSquish=8; beep(260,520,0.09,'sine',0.16);
+  }
+  else if(gameState==='hurt')    { gameState='playing'; invincible=140; bleu.vy=-5; beep(440,880,0.1,'sine',0.15); }
   else if(gameState==='dead')           { resetGame(); gameState='playing'; }
 }
 
