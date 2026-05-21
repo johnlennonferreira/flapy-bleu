@@ -657,6 +657,9 @@ var speedLines = [];
 (function(){ for(var i=0;i<18;i++) speedLines.push({ y: Math.random()*600, len: 40+Math.random()*80, speed: 6+Math.random()*8, alpha: 0.3+Math.random()*0.5 }); })();
 var combo=0, comboFlash=0, comboBest=0, recFlash=0, coinsThisRun=0, milestoneIdx=0;
 var lastScore=parseInt(localStorage.getItem('bleuLastScore')||'0');
+var runPhase=0; // fase mais longe desta run
+var bestPhaseEver=parseInt(localStorage.getItem('bleuBestPhase')||'0');
+var shareFlash=0; // feedback do botão compartilhar
 const MILESTONES=[5,10,25,50,100];
 var activeSkin=parseInt(localStorage.getItem('bleuSkin')||'0');
 var unlockedSkins=JSON.parse(localStorage.getItem('bleuSkins')||'[0]');
@@ -680,6 +683,7 @@ function resetGame() {
   combo = 0; comboFlash = 0; coinsThisRun = 0; milestoneIdx = 0; recFlash = 0;
   lives = 3; invincible = 0; starPower = 0; stars = [];
   shield = 0; shieldItems = []; shieldBreak = 0;
+  runPhase = 0; shareFlash = 0;
 }
 resetGame();
 
@@ -3047,6 +3051,7 @@ function loop(ts) {
           _bgGradPhase=-1; completedPhase = lastPhaseIdx;
           lastPhaseIdx = newPI;
           phaseFlash   = 150;
+          if(newPI > runPhase) runPhase = newPI;
           // clear screen and center gap so player has safe passage on transition
           pipes = []; stars = []; shieldItems = [];
           lastGapCenter = H / 2;
@@ -3230,6 +3235,7 @@ function loop(ts) {
         }
         lastScore=score; localStorage.setItem('bleuLastScore',lastScore); totalScore+=score; localStorage.setItem('bleuTotal',totalScore);
         if(score>0) top5=saveTop5(score);
+        if(runPhase > bestPhaseEver){ bestPhaseEver=runPhase; localStorage.setItem('bleuBestPhase', bestPhaseEver); }
         gameState='dead'; screenShake=14; hitFlash=8; stopMusic();
         if(comboBest<combo) comboBest=combo;
         combo=0; comboFlash=0; milestoneIdx=0;
@@ -3285,72 +3291,98 @@ function loop(ts) {
       ctx.fillText('NEW RECORD!', W/2, H/2-92);
       ctx.shadowBlur = 0;
     }
-    // dark panel
-    ctx.fillStyle = 'rgba(0,5,20,0.72)';
-    ctx.beginPath(); ctx.roundRect(W/2-110,H/2-80,220,200,14); ctx.fill();
-    // REKT title
-    ctx.font = 'bold 32px Courier New';
-    ctx.shadowColor = '#FF1744'; ctx.shadowBlur = 28;
-    ctx.fillStyle = '#FF1744';
-    ctx.fillText('REKT', W/2, H/2-42);
+    // ── painel principal ──
+    ctx.fillStyle = 'rgba(0,5,20,0.80)';
+    ctx.beginPath(); ctx.roundRect(W/2-118, H/2-88, 236, 268, 14); ctx.fill();
+    ctx.strokeStyle = '#0052FF44'; ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // REKT
+    ctx.font = 'bold 30px Courier New';
+    ctx.shadowColor = '#FF1744'; ctx.shadowBlur = 22;
+    ctx.fillStyle = '#FF1744'; ctx.textAlign = 'center';
+    ctx.fillText('REKT', W/2, H/2-54);
     ctx.shadowBlur = 0;
-    // score row
-    ctx.fillStyle = '#fff'; ctx.font = 'bold 22px Courier New';
-    ctx.fillText('Score: ' + score, W/2, H/2-8);
-    // combo best
+
+    // Score grande
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 26px Courier New';
+    ctx.fillText(score, W/2, H/2-22);
+    ctx.fillStyle = '#ffffff55'; ctx.font = '10px Courier New';
+    ctx.fillText('PONTOS', W/2, H/2-8);
+
+    // Fase alcançada esta run
+    var phaseName = PHASE_VISUALS[runPhase] ? PHASE_VISUALS[runPhase].name : PHASE_VISUALS[0].name;
+    ctx.fillStyle = '#00D4FF'; ctx.font = 'bold 11px Courier New';
+    ctx.fillText('📍 ' + phaseName, W/2, H/2+10);
+
+    // Melhor fase histórica
+    if(bestPhaseEver > 0 && PHASE_VISUALS[bestPhaseEver]){
+      ctx.fillStyle = '#ffffff44'; ctx.font = '10px Courier New';
+      ctx.fillText('melhor fase: ' + PHASE_VISUALS[bestPhaseEver].name, W/2, H/2+24);
+    }
+
+    // Combo + moedas
+    var extraY = H/2+38;
     if(comboBest >= 2){
       ctx.fillStyle = comboBest>=5?'#ff4488':comboBest>=3?'#FFD700':'#00D4FF';
-      ctx.font = 'bold 12px Courier New';
-      ctx.fillText('Melhor combo: x' + comboBest, W/2, H/2+12);
+      ctx.font = 'bold 11px Courier New';
+      ctx.fillText('combo x' + comboBest, W/2, extraY); extraY+=14;
     }
-    // coins this run
     if(coinsThisRun > 0){
-      ctx.fillStyle = '#FFD700'; ctx.font = '12px Courier New';
-      ctx.shadowColor = '#FFD70066'; ctx.shadowBlur = 8;
-      ctx.fillText('🐉 +' + coinsThisRun + ' moedas', W/2, H/2+28);
-      ctx.shadowBlur = 0;
+      ctx.fillStyle = '#FFD700'; ctx.font = '11px Courier New';
+      ctx.fillText('🐉 +' + coinsThisRun + ' moedas', W/2, extraY); extraY+=14;
     }
-    // ── Top 5 ──
+
+    // Novo recorde
     if(newRecord){
-      ctx.fillStyle='#FFD700'; ctx.font='bold 13px Courier New';
-      ctx.shadowColor='#FFD700'; ctx.shadowBlur=16;
-      ctx.fillText('🏆 NOVO RECORDE: '+highScore, W/2, H/2+42);
+      ctx.fillStyle='#FFD700'; ctx.font='bold 12px Courier New';
+      ctx.shadowColor='#FFD700'; ctx.shadowBlur=14;
+      ctx.fillText('🏆 NOVO RECORDE!', W/2, extraY); extraY+=14;
       ctx.shadowBlur=0;
     }
+
+    // Top 5
     var medals=['🥇','🥈','🥉','④','⑤'];
     var t5=loadTop5();
-    ctx.font='bold 11px Courier New'; ctx.textAlign='center';
+    ctx.font='bold 10px Courier New';
     for(var ti=0;ti<Math.min(t5.length,5);ti++){
-      var isMe=(t5[ti]===score && ti===0 && newRecord);
-      ctx.fillStyle = ti===0?'#FFD700': ti===1?'#C0C0C0': ti===2?'#cd7f32':'#ffffff66';
-      ctx.globalAlpha = isMe ? 1 : (ti===0?0.95:0.7-ti*0.08);
-      ctx.fillText(medals[ti]+' '+t5[ti], W/2, H/2+56+ti*14);
+      ctx.fillStyle = ti===0?'#FFD700': ti===1?'#C0C0C0': ti===2?'#cd7f32':'#ffffff55';
+      ctx.globalAlpha = ti===0?1:0.75-ti*0.1;
+      ctx.fillText(medals[ti]+' '+t5[ti], W/2, extraY+ti*13);
     }
     ctx.globalAlpha=1;
-    // big retry button
-    var pulse = 0.97 + 0.03*Math.sin(frame*0.12);
-    ctx.save();
-    ctx.translate(W/2, H/2+140);
-    ctx.scale(pulse, pulse);
+
+    // ── Botão COMPARTILHAR ──
+    var shareY = H/2+138;
+    var shareCol = shareFlash>0 ? '#00CC66' : '#0052FF';
+    ctx.fillStyle = shareCol+'22';
+    ctx.beginPath(); ctx.roundRect(W/2-74, shareY-16, 148, 30, 8); ctx.fill();
+    ctx.strokeStyle = shareCol+'88'; ctx.lineWidth=1; ctx.stroke();
+    ctx.fillStyle = shareFlash>0 ? '#00FF88' : '#00D4FF';
+    ctx.font = 'bold 12px Courier New'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(shareFlash>0 ? '✓ COPIADO!' : '🔗 COMPARTILHAR', W/2, shareY+1);
+    ctx.textBaseline='alphabetic';
+
+    // ── Botão JOGAR DE NOVO ──
+    var pulse2 = 0.97 + 0.03*Math.sin(frame*0.12);
+    ctx.save(); ctx.translate(W/2, H/2+178); ctx.scale(pulse2, pulse2);
     ctx.fillStyle = '#0052FF';
-    ctx.beginPath(); ctx.roundRect(-80,-18,160,36,10); ctx.fill();
-    ctx.font = 'bold 15px Courier New';
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillStyle = '#fff';
-    ctx.fillText('▶ JOGAR DE NOVO', 0, 0);
-    ctx.textBaseline = 'alphabetic';
-    ctx.restore();
-    // menu button
-    ctx.fillStyle = '#ffffff0a';
-    ctx.beginPath(); ctx.roundRect(W/2-55, H/2+164, 110, 28, 8); ctx.fill();
-    ctx.strokeStyle = '#0052FF44'; ctx.lineWidth = 1;
-    ctx.stroke();
-    ctx.font = '12px Courier New'; ctx.fillStyle = '#0052FFcc';
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText('⌂  MENU', W/2, H/2+178);
-    ctx.textBaseline = 'alphabetic';
-    ctx.fillStyle = '#ffffff22'; ctx.font = '9px Courier New';
-    ctx.fillText('$BLEU never stops', W/2, H/2+202);
+    ctx.beginPath(); ctx.roundRect(-78,-17,156,34,10); ctx.fill();
+    ctx.font='bold 14px Courier New'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillStyle='#fff'; ctx.fillText('▶ JOGAR DE NOVO', 0, 0);
+    ctx.textBaseline='alphabetic'; ctx.restore();
+
+    // ── Botão MENU ──
+    ctx.fillStyle='#ffffff08';
+    ctx.beginPath(); ctx.roundRect(W/2-50, H/2+202, 100, 26, 8); ctx.fill();
+    ctx.strokeStyle='#0052FF33'; ctx.lineWidth=1; ctx.stroke();
+    ctx.font='11px Courier New'; ctx.fillStyle='#0052FFaa';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('⌂  MENU', W/2, H/2+215);
+    ctx.textBaseline='alphabetic';
+    ctx.fillStyle='#ffffff18'; ctx.font='9px Courier New';
+    ctx.fillText('$BLEU never stops', W/2, H/2+238);
+    if(shareFlash>0) shareFlash--;
   }
   ctx.restore();
   if(screenShake>0)screenShake--;
@@ -3431,11 +3463,19 @@ function handleClick(ex, ey) {
 
   // ── DEAD screen buttons
   if(gameState === 'dead') {
-    // Menu button: W/2-55 to W/2+55, H/2+164 to H/2+192
-    if(cx>=W/2-55&&cx<=W/2+55&&cy>=H/2+164&&cy<=H/2+192){
+    // Botão COMPARTILHAR: H/2+122 a H/2+152
+    if(cx>=W/2-74&&cx<=W/2+74&&cy>=H/2+122&&cy<=H/2+152){
+      var pv2 = PHASE_VISUALS[runPhase]||PHASE_VISUALS[0];
+      var shareText = '🎮 Flapy Bleu\nScore: '+score+' | '+pv2.name+'\n🔵 https://flapy-bleu.vercel.app';
+      if(navigator.share){ navigator.share({title:'Flapy Bleu', text:shareText, url:'https://flapy-bleu.vercel.app'}); }
+      else { try{ navigator.clipboard.writeText(shareText); }catch(e){} }
+      shareFlash=90; return;
+    }
+    // Botão MENU: H/2+202 a H/2+228
+    if(cx>=W/2-50&&cx<=W/2+50&&cy>=H/2+202&&cy<=H/2+228){
       resetGame(); idleTab='play'; return;
     }
-    // Retry — anywhere else on dead screen
+    // Retry — anywhere else (incluindo botão JOGAR DE NOVO)
     flap(); return;
   }
 
