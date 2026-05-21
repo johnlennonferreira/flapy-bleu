@@ -3460,7 +3460,7 @@ function loop(ts) {
 
 // ─── INPUT ───────────────────────────────────
 function flap() {
-  if(gameState==='idle')         { gameState='playing'; startMusic(getPhaseIdx()); combo=0; comboFlash=0; coinsThisRun=0; milestoneIdx=0; recFlash=0; }
+  if(gameState==='idle')         { gameState='playing'; startMusic(getPhaseIdx()); combo=0; comboFlash=0; coinsThisRun=0; milestoneIdx=0; recFlash=0; phaseFlash=190; phasePaused=true; bleu.vy=0; bleu.y=H/2; }
   else if(gameState==='playing') {
     if(phasePaused){ phasePaused=false; phaseFlash=0; bleu.vy=-4; bleuSquish=6; return; } // pula animação
     bleu.vy=-7.5; bleu.flap=-1; bleuSquish=8; beep(260,520,0.09,'sine',0.16);
