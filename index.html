@@ -679,7 +679,7 @@ function checkDailyLogin() {
   dailyModal=true;
 }
 function claimDailyReward() {
-  if(dailyReward==='coins') { /* coins disabled for now — earned only via phases */ }
+  if(dailyReward==='coins') { coinCount+=dailyRewardVal; localStorage.setItem('bleuCoins',coinCount); }
   else if(dailyReward==='chest') { /* chest disabled for now */ }
   else if(dailyReward==='skin') {
     var locked = SKINS.map(function(_,i){return i;}).filter(function(i){return unlockedSkins.indexOf(i)<0;});
