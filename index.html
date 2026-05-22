@@ -608,85 +608,87 @@ const SKINS = [
 // ─── LEADERBOARD TAB ────────────────────────────────────────────────
 function drawLeaderboardTab() {
   ctx.textAlign='center';
+
+  // ── Title ──
   ctx.font='bold 15px Courier New';
   var rg=ctx.createLinearGradient(W/2-70,0,W/2+70,0);
   rg.addColorStop(0,'#FFD700'); rg.addColorStop(1,'#00D4FF');
   ctx.fillStyle=rg; ctx.shadowColor='#FFD700'; ctx.shadowBlur=14;
-  ctx.fillText('RANKING', W/2, H/2-122); ctx.shadowBlur=0;
+  ctx.fillText('⛓  ONCHAIN RANK', W/2, H/2-128); ctx.shadowBlur=0;
 
+  // ── Wallet status bar ──
+  var wy = H/2-110;
+  if(walletAddress){
+    ctx.fillStyle='#00FF8822'; ctx.strokeStyle='#00FF8866'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.roundRect(W/2-112,wy,224,26,8); ctx.fill(); ctx.stroke();
+    ctx.fillStyle='#00FF88'; ctx.font='bold 10px Courier New'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('⛓ '+walletShort+' · Base Network', W/2, wy+13);
+    ctx.textBaseline='alphabetic';
+    // disconnect
+    ctx.fillStyle='#ffffff0a'; ctx.strokeStyle='#ffffff22'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.roundRect(W/2-28,wy+30,56,14,4); ctx.fill(); ctx.stroke();
+    ctx.font='7px Courier New'; ctx.fillStyle='#ffffff44'; ctx.textAlign='center';
+    ctx.fillText('disconnect', W/2, wy+40);
+  } else {
+    var wbp=0.97+0.03*Math.sin(frame*0.1);
+    ctx.save(); ctx.translate(W/2, wy+13); ctx.scale(wbp,wbp);
+    ctx.fillStyle='#0052FF';
+    ctx.beginPath(); ctx.roundRect(-110,-13,220,26,8); ctx.fill();
+    ctx.strokeStyle='#00D4FF55'; ctx.lineWidth=1.5; ctx.stroke();
+    ctx.fillStyle='#fff'; ctx.font='bold 11px Courier New'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('💎  CONNECT WALLET', 0, 0);
+    ctx.textBaseline='alphabetic'; ctx.restore();
+  }
+
+  // ── Stats row ──
+  var statsY = walletAddress ? wy+52 : wy+38;
   var rows=[
-    { label:'LAST SCORE',         val:lastScore,  color:'#00D4FF', icon:'🎮' },
-    { label:'MELHOR SCORE',    val:highScore,  color:'#FFD700', icon:'🏆' },
-    { label:'SCORE TOTAL',     val:totalScore, color:'#aa44ff', icon:'📊' }
+    { label:'LAST SCORE', val:lastScore,  color:'#00D4FF', icon:'🎮' },
+    { label:'BEST SCORE', val:highScore,  color:'#FFD700', icon:'🏆' },
+    { label:'TOTAL',      val:totalScore, color:'#aa44ff', icon:'📊' }
   ];
   for(var ri=0;ri<rows.length;ri++){
-    var ry=H/2-82+ri*58;
-    ctx.fillStyle='#0052FF18'; ctx.strokeStyle='#0052FF44'; ctx.lineWidth=1;
-    ctx.fillRect(W/2-112,ry,224,50); ctx.strokeRect(W/2-112,ry,224,50);
-    ctx.font='9px Courier New'; ctx.fillStyle='#ffffff55';
-    ctx.textAlign='left'; ctx.fillText(rows[ri].icon+' '+rows[ri].label, W/2-104, ry+14);
+    var ry=statsY+ri*52;
+    ctx.fillStyle='#0052FF14'; ctx.strokeStyle='#0052FF33'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.roundRect(W/2-112,ry,224,44,8); ctx.fill(); ctx.stroke();
+    ctx.font='8px Courier New'; ctx.fillStyle='#ffffff44';
+    ctx.textAlign='left'; ctx.fillText(rows[ri].icon+'  '+rows[ri].label, W/2-100, ry+14);
     ctx.textAlign='right';
-    ctx.font='bold 20px Courier New'; ctx.fillStyle=rows[ri].color;
+    ctx.font='bold 22px Courier New'; ctx.fillStyle=rows[ri].color;
     ctx.shadowColor=rows[ri].color; ctx.shadowBlur=8;
-    ctx.fillText(rows[ri].val, W/2+104, ry+38); ctx.shadowBlur=0;
+    ctx.fillText(rows[ri].val, W/2+104, ry+36); ctx.shadowBlur=0;
   }
   ctx.textAlign='center';
 
-  // ── Wallet Section ──
-  var wy = H/2+104;
-  ctx.font='bold 9px Courier New'; ctx.fillStyle='#00D4FF88';
-  ctx.fillText('━━━  💎 WALLET BASE  ━━━', W/2, wy-2);
-
+  // ── My onchain scores ──
   if(walletAddress){
-    // Conectado — exibe endereço e melhores scores desta wallet
-    ctx.fillStyle='#00FF8818'; ctx.strokeStyle='#00FF8855'; ctx.lineWidth=1.5;
-    ctx.beginPath(); ctx.roundRect(W/2-112,wy+4,224,30,8); ctx.fill(); ctx.stroke();
-    ctx.font='bold 10px Courier New'; ctx.fillStyle='#00FF88';
-    ctx.fillText('✓  '+walletShort, W/2, wy+23);
-
-    // Botão desconectar (pequeno, discreto)
-    ctx.fillStyle='#ffffff0a'; ctx.strokeStyle='#ffffff22'; ctx.lineWidth=1;
-    ctx.beginPath(); ctx.roundRect(W/2-30,wy+38,60,16,5); ctx.fill(); ctx.stroke();
-    ctx.font='7px Courier New'; ctx.fillStyle='#ffffff44';
-    ctx.fillText('disconnect', W/2, wy+49);
-
-    // Melhores scores desta wallet
     var myScores = walletScores.filter(function(e){
       return e.addr && e.addr.toLowerCase()===walletAddress.toLowerCase();
     });
     myScores.sort(function(a,b){return b.score-a.score;});
+    var scY = statsY + 3*52 + 8;
+    ctx.font='bold 8px Courier New'; ctx.fillStyle='#FFD700aa';
+    ctx.fillText('— YOUR ONCHAIN SCORES —', W/2, scY);
     if(myScores.length>0){
-      ctx.font='bold 9px Courier New'; ctx.fillStyle='#FFD700aa';
-      ctx.fillText('YOUR BEST SCORES', W/2, wy+70);
       var wMedals=['🥇','🥈','🥉'];
       var wCols=['#FFD700','#C0C0C0','#cd7f32'];
       for(var wi2=0;wi2<Math.min(myScores.length,3);wi2++){
-        ctx.font='bold 10px Courier New'; ctx.fillStyle=wCols[wi2];
+        ctx.fillStyle=wCols[wi2]; ctx.font='bold 9px Courier New';
         var pName=PHASE_VISUALS[myScores[wi2].phase||0]?PHASE_VISUALS[myScores[wi2].phase||0].name:'—';
-        ctx.fillText(wMedals[wi2]+'  '+myScores[wi2].score+'  pts  ·  '+pName, W/2, wy+84+wi2*14);
+        ctx.fillText(wMedals[wi2]+'  '+myScores[wi2].score+'  ·  '+pName, W/2, scY+14+wi2*14);
       }
-      ctx.font='9px Courier New'; ctx.fillStyle='#ffffff22';
-      ctx.fillText(myScores.length+' jogada'+(myScores.length!==1?'s':'')+' salvas', W/2, wy+128);
+      ctx.font='8px Courier New'; ctx.fillStyle='#ffffff22';
+      ctx.fillText(myScores.length+' run'+(myScores.length!==1?'s':'')+' recorded', W/2, scY+58);
     } else {
-      ctx.font='10px Courier New'; ctx.fillStyle='#ffffff33';
-      ctx.fillText('play and your scores will be saved!', W/2, wy+74);
+      ctx.font='9px Courier New'; ctx.fillStyle='#ffffff33';
+      ctx.fillText('play and your scores will be saved!', W/2, scY+20);
     }
   } else {
-    // Botão CONECTAR — pulsando
-    var wbp = 0.97+0.03*Math.sin(frame*0.1);
-    ctx.save(); ctx.translate(W/2, wy+22); ctx.scale(wbp,wbp);
-    ctx.fillStyle='#0052FF';
-    ctx.beginPath(); ctx.roundRect(-110,-18,220,36,10); ctx.fill();
-    ctx.strokeStyle='#00D4FF55'; ctx.lineWidth=1.5; ctx.stroke();
-    ctx.fillStyle='#fff'; ctx.font='bold 12px Courier New';
-    ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText('💎  CONNECT WALLET', 0, 0);
-    ctx.textBaseline='alphabetic'; ctx.restore();
-
-    ctx.font='9px Courier New'; ctx.fillStyle='#ffffff33';
-    ctx.fillText('Coinbase Wallet  ·  Base Network', W/2, wy+52);
-    ctx.font='8px Courier New'; ctx.fillStyle='#0052FF66';
-    ctx.fillText('save your scores · global ranking coming soon', W/2, wy+66);
+    var ncY = statsY + 3*52 + 14;
+    ctx.font='9px Courier New'; ctx.fillStyle='#0052FF66';
+    ctx.fillText('connect wallet to save scores on Base', W/2, ncY);
+    ctx.fillStyle='#ffffff22'; ctx.font='8px Courier New';
+    ctx.fillText('global leaderboard · onchain rewards · NFT skins', W/2, ncY+16);
   }
 }
 
@@ -933,10 +935,28 @@ function drawBleu(x, y, flapAnim, vy) {
   ctx.beginPath(); ctx.ellipse(-5, sf-2, 8, 6, -0.3, 0, Math.PI*2);
   ctx.fillStyle = cBodyLt; ctx.globalAlpha=0.45; ctx.fill(); ctx.globalAlpha=1;
 
-  // Belly patch
+  // Belly — BASE hexagon logo
+  ctx.save();
+  ctx.translate(5, 8 + sf);
+  // Hex background
+  ctx.globalAlpha = 0.82;
+  ctx.fillStyle = cBelly;
   ctx.beginPath();
-  ctx.ellipse(5, 8 + sf, 11, 9, 0.15, 0, Math.PI * 2);
-  ctx.fillStyle = cBelly; ctx.globalAlpha = 0.75; ctx.fill(); ctx.globalAlpha = 1;
+  for(var _hi=0; _hi<6; _hi++){
+    var _ha = (_hi*Math.PI/3) - Math.PI/6;
+    var _hx = Math.cos(_ha)*10, _hy = Math.sin(_ha)*8;
+    if(_hi===0) ctx.moveTo(_hx,_hy); else ctx.lineTo(_hx,_hy);
+  }
+  ctx.closePath(); ctx.fill();
+  ctx.globalAlpha = 0.35; ctx.strokeStyle = sk.outline; ctx.lineWidth = 1;
+  ctx.stroke();
+  // "B" Base letter
+  ctx.globalAlpha = 0.9;
+  ctx.fillStyle = activeSkin===0 ? '#0052FF' : sk.shadow;
+  ctx.font = 'bold 9px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('B', 0.5, 0.5);
+  ctx.globalAlpha = 1;
+  ctx.restore();
 
   // WING
   ctx.save();
@@ -1020,6 +1040,17 @@ function drawBleu(x, y, flapAnim, vy) {
     ctx.globalAlpha = Math.min(0.35, scoreGlow/15*0.4);
     ctx.beginPath(); ctx.arc(4, -10, 22, 0, Math.PI * 2);
     ctx.fillStyle = sk.glow; ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+
+  // Onchain wallet glow — subtle green aura when wallet connected
+  if(walletAddress) {
+    ctx.save();
+    var _wg = 0.08 + 0.05*Math.sin(frame*0.06);
+    ctx.globalAlpha = _wg;
+    ctx.fillStyle = '#00FF88';
+    ctx.beginPath(); ctx.arc(4, -10, 28, 0, Math.PI*2); ctx.fill();
     ctx.globalAlpha = 1;
     ctx.restore();
   }
@@ -3477,41 +3508,48 @@ function loop(ts) {
     drawPhaseBanner();
     drawNFTBanner();
 
-    // HUD — score
+    // HUD — score card
     ctx.textAlign = 'center';
+    // Card background
+    ctx.fillStyle='#00000033'; ctx.strokeStyle=pv.glowColor+'44'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.roundRect(W/2-38, 26, 76, 36, 8); ctx.fill(); ctx.stroke();
+    // Score number
     var _ps = scorePop>0 ? 1+(scorePop/12)*0.6 : 1;
-    ctx.save(); ctx.translate(W/2,52); ctx.scale(_ps,_ps);
+    ctx.save(); ctx.translate(W/2,50); ctx.scale(_ps,_ps);
     ctx.font = 'bold 26px Courier New';
     ctx.fillStyle = pv.glowColor;
     ctx.fillText(score, 0, 0);
     ctx.restore();
     if(scorePop>0) scorePop--;
+    // Phase label below score
+    ctx.fillStyle = pv.glowColor+'88'; ctx.font = 'bold 7px Courier New';
+    ctx.fillText(ph.label, W/2, 66);
     // Pause button
     ctx.fillStyle='#ffffff18'; ctx.strokeStyle='#ffffff33'; ctx.lineWidth=1;
     ctx.fillRect(W-36,6,26,20); ctx.strokeRect(W-36,6,26,20);
     ctx.fillStyle='#ffffffaa'; ctx.font='bold 10px Courier New'; ctx.textAlign='left';
     ctx.fillText(paused?'▶':'II',W-30,20);
-    // HUD — coin counter (top right)
-    drawCoin(W - 38, 34);
+    // HUD — coin counter (top right, adjusted for wallet badge)
+    drawCoin(W - 38, walletAddress ? 48 : 34);
     ctx.shadowColor = '#88ccff'; ctx.shadowBlur = 6;
     ctx.fillStyle = '#d8f4ff'; ctx.font = 'bold 13px Courier New'; ctx.textAlign = 'left';
-    ctx.fillText(coinCount, W - 24, 39);
+    ctx.fillText(coinCount, W - 24, walletAddress ? 53 : 39);
     ctx.shadowBlur = 0;
-    // progress bar — top left, below ticker
-    var progress = (score % 4) / 4;
-    ctx.fillStyle = '#ffffff14';
-    ctx.fillRect(6, 23, 70, 3);
-    var barG = ctx.createLinearGradient(6, 23, 76, 23);
-    barG.addColorStop(0,'#FFD700'); barG.addColorStop(1,'#00D4FF');
+    // progress bar — next phase, below score card
+    var progress = (score % 15) / 15;
+    ctx.fillStyle = '#ffffff10';
+    ctx.beginPath(); ctx.roundRect(W/2-38, 72, 76, 3, 2); ctx.fill();
+    var barG = ctx.createLinearGradient(W/2-38, 0, W/2+38, 0);
+    barG.addColorStop(0, pv.glowColor); barG.addColorStop(1,'#FFD700');
     ctx.fillStyle = barG;
-    ctx.fillRect(6, 23, 70 * progress, 3);
+    ctx.beginPath(); ctx.roundRect(W/2-38, 72, 76*progress, 3, 2); ctx.fill();
     // lives + star power HUD
     drawLivesHUD();
     // best
-    if(highScore > 0){
+    if(highScore > 0 && score > 0){
       ctx.textAlign = 'center';
-      ctx.fillStyle = '#ffffff44'; ctx.font = '10px Courier New';
-      ctx.fillText('best ' + highScore, W/2, 68);
+      ctx.fillStyle = '#ffffff33'; ctx.font = '9px Courier New';
+      ctx.fillText('best ' + highScore, W/2, 82);
     }
     // combo HUD
     if(comboFlash > 0){
