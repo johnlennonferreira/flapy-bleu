@@ -789,6 +789,7 @@ let screenShake = 0, scorePop = 0, hitFlash = 0, bleuSquish = 0;
 let coins = [], coinCount = parseInt(localStorage.getItem('bleuCoins')||'0');
 var _mTimeout=null, _mPhase=-1, _mPos=0;
 var completedPhase=0, chestClicks=0, chestBounce=0, chestOpened=false, chestCoins=0, chestOpenAnim=0, awardCoins=0, awardCoinAnim=0;
+var bleuAngle=0; // smooth rotation (radians)
 var deadChest={active:false,opened:false,coins:0,anim:0};
 var idleTab='play';
 var totalScore=parseInt(localStorage.getItem('bleuTotal')||'0');
@@ -914,19 +915,27 @@ function resetGame() {
   lives = 3; invincible = 0; starPower = 0; stars = [];
   deadChest={active:false,opened:false,coins:0,anim:0,clicks:0};
   shield = 0; shieldItems = []; shieldBreak = 0;
-  runPhase = 0; shareFlash = 0;
+  runPhase = 0; shareFlash = 0; bleuAngle = 0;
 }
 resetGame();
 
 // ─────────────────────────────────────────────
 //  BLEU — personagem principal
 // ─────────────────────────────────────────────
-function drawBleu(x, y, flapAnim, vy) {
+function drawBleu(x, y, flapAnim, angle) {
   ctx.save();
   ctx.translate(x, y);
-  ctx.rotate(Math.max(-0.35, Math.min(0.45, vy * 0.028)));
+  // angle is pre-calculated smooth bleuAngle (or raw vy*0.028 for non-gameplay uses)
+  var rotAngle = (typeof angle === 'number' && Math.abs(angle) > 0.001)
+    ? angle                                        // pre-smoothed angle
+    : Math.max(-0.35, Math.min(1.35, angle));
+  ctx.rotate(rotAngle);
 
-  var wf = Math.sin(flapAnim * 2.4) * 10;
+  // 3-frame wing animation: up (0) → mid (1) → down (2)
+  var wingFrame = Math.floor(Math.abs(Math.sin(flapAnim * 2.4)) * 3) % 3;
+  var wingAngles = [-0.55 * Math.PI, -0.2 * Math.PI, 0.08 * Math.PI]; // up/mid/down
+  var wingY      = [-6, -2, 4];                     // vertical offset per frame
+  var wf = wingY[wingFrame];
   var sf = Math.sin(flapAnim * 1.2) * 1.2;
   var ff = Math.sin(flapAnim * 3.1);
   var ef = Math.abs(Math.sin(flapAnim * 2.4));
@@ -976,10 +985,10 @@ function drawBleu(x, y, flapAnim, vy) {
   ctx.globalAlpha = 1;
   ctx.restore();
 
-  // WING
+  // WING — 3 discrete frames (up/mid/down)
   ctx.save();
-  ctx.translate(2, -4 + sf);
-  ctx.rotate((-0.4 + wf * 0.045) * Math.PI);
+  ctx.translate(2, -4 + wf);
+  ctx.rotate(wingAngles[wingFrame]);
   var wGrad = ctx.createLinearGradient(0, 0, 0, -28);
   wGrad.addColorStop(0, cBody); wGrad.addColorStop(1, cBodyLt);
   ctx.beginPath();
@@ -3335,9 +3344,13 @@ function loop(ts) {
       // desbloqueia quando animação entra no fade-out (phaseFlash < 80) ou player toca
       if(phaseFlash < 80){ phasePaused = false; phaseFlash = 0; }
     } else {
-      bleu.vy   += 0.38;
+      bleu.vy   += 0.42;                          // gravity
+      if(bleu.vy > 11) bleu.vy = 11;             // terminal velocity
       bleu.y    += bleu.vy;
     }
+    // smooth rotation: tilt up on flap, nose-dive when falling fast
+    var targetAngle = Math.max(-0.42, Math.min(1.35, bleu.vy * 0.115));
+    bleuAngle += (targetAngle - bleuAngle) * 0.18;
     bleu.flap += 0.25;
 
     // spawn de pipes — progressivamente mais frequente
@@ -3532,7 +3545,7 @@ function loop(ts) {
     if(bleuSquish>0){var _sq=bleuSquish/8;ctx.translate(bleu.x,bleu.y);ctx.scale(1+_sq*.2,1-_sq*.18);ctx.translate(-bleu.x,-bleu.y);bleuSquish--;}
     // blink when invincible (every 6f) or star power (every 8f)
     var _blink = (invincible>0 && Math.floor(invincible/6)%2===0) || (starPower>0 && Math.floor(frame/8)%2===0);
-    if(!_blink) drawCharacter(bleu.x, bleu.y, bleu.flap, bleu.vy);
+    if(!_blink) drawCharacter(bleu.x, bleu.y, bleu.flap, bleuAngle);
     ctx.restore();
     updateParticles();
     updateScorePopups();
@@ -3724,7 +3737,7 @@ function loop(ts) {
   // ── DEAD ──
   if(gameState === 'dead'){
     for(var i=0; i<pipes.length; i++) drawObstacle(pipes[i]);
-    drawCharacter(bleu.x, bleu.y+4, bleu.flap, bleu.vy);
+    drawCharacter(bleu.x, bleu.y+4, bleu.flap, bleuAngle);
     updateParticles();
     ctx.textAlign = 'center';
     if(newRecord){
