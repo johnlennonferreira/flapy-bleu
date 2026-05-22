@@ -679,8 +679,8 @@ function checkDailyLogin() {
   dailyModal=true;
 }
 function claimDailyReward() {
-  if(dailyReward==='coins') { coinCount+=dailyRewardVal; localStorage.setItem('bleuCoins',coinCount); }
-  else if(dailyReward==='chest') { /* trigger bonus chest after dismiss */ }
+  if(dailyReward==='coins') { /* coins disabled for now — earned only via phases */ }
+  else if(dailyReward==='chest') { /* chest disabled for now */ }
   else if(dailyReward==='skin') {
     var locked = SKINS.map(function(_,i){return i;}).filter(function(i){return unlockedSkins.indexOf(i)<0;});
     if(locked.length>0){ var newSk=locked[Math.floor(Math.random()*locked.length)]; unlockedSkins.push(newSk); localStorage.setItem('bleuSkins',JSON.stringify(unlockedSkins)); }
@@ -3439,11 +3439,9 @@ function loop(ts) {
         if(combo===5){ beep(880, 1760, 0.22, 'square', 0.08); screenShake=6; spawnScorePopup(bleu.x,bleu.y-55,'🔥 FEVER!'); }
         if(combo===10){ beep(1047, 2093, 0.28, 'square', 0.1); screenShake=8; spawnScorePopup(bleu.x,bleu.y-55,'💎 x10 ULTRA!'); }
         spawnScorePopup(bleu.x, bleu.y-25);
-        // milestone bonus
+        // milestone visual only (no coin bonus)
         if(MILESTONES[milestoneIdx] && score>=MILESTONES[milestoneIdx]){
-          var bonus = MILESTONES[milestoneIdx]*2;
-          coinCount+=bonus; localStorage.setItem('bleuCoins',coinCount);
-          spawnScorePopup(bleu.x, bleu.y-55, '+'+bonus+' 🐉 BONUS!');
+          spawnScorePopup(bleu.x, bleu.y-55, '🏆 MILESTONE '+MILESTONES[milestoneIdx]+'!');
           beep(880,1760,0.35,'sine',0.18);
           screenShake=8;
           milestoneIdx++;
@@ -3674,9 +3672,8 @@ function loop(ts) {
         if(runPhase > bestPhaseEver){ bestPhaseEver=runPhase; localStorage.setItem('bleuBestPhase', bestPhaseEver); }
         gameState='dead'; screenShake=14; hitFlash=8; stopMusic();
         if(score>0) submitWalletScore(score);
-        // Spawn death chest as consolation prize
-        var _dc=Math.floor(8+Math.random()*18);
-        deadChest={active:true,opened:false,coins:_dc,anim:0,clicks:0};
+        // Death chest disabled (coins only from phase completion)
+        deadChest={active:false,opened:false,coins:0,anim:0,clicks:0};
         if(comboBest<combo) comboBest=combo;
         combo=0; comboFlash=0; milestoneIdx=0;
         if(navigator.vibrate) navigator.vibrate([80,30,80]);
