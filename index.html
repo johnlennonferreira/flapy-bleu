@@ -19,7 +19,7 @@
     display: block;
   }
   #ui { position: fixed; top: 8px; left: 50%; transform: translateX(-50%); color: #0052FF; font-size: clamp(10px, 3vw, 13px); text-align: center; text-shadow: 0 0 10px #0052FF; white-space: nowrap; pointer-events: none; z-index: 10; }
-  #mute { position: fixed; bottom: 14px; right: 14px; background: #0052FF18; border: 1px solid #0052FF44; color: #0052FF; font-family: 'Courier New', monospace; font-size: 12px; padding: 10px 14px; border-radius: 6px; cursor: pointer; touch-action: manipulation; z-index: 10; }
+  #mute { display: none; }
 </style>
 </head>
 <body>
@@ -128,16 +128,26 @@ function getPhaseVisual() { return PHASE_VISUALS[getPhaseIdx()]; }
 
 // ─── PHASE MUSIC ────────────────────────────────────────────
 const PHASE_MUSIC = [
-  { n:[110,0,138,165,138,110,0,0, 146,138,165,110,0,138,0,0],  d:120, w:'square',   v:.05  },
-  { n:[523,659,784,659,523,0,392,523, 659,784,659,523,440,523,0,0], d:110, w:'sine', v:.055 },
-  { n:[349,440,523,440,349,0,294,349, 440,523,698,523,440,349,0,0], d:155, w:'sine', v:.05  },
-  { n:[220,0,261,329,261,220,0,196, 0,247,294,247,220,0,196,0], d:195, w:'triangle',v:.055 },
-  { n:[262,330,392,523,392,330,262,0, 220,277,330,440,392,330,0,262], d:155, w:'sine', v:.06 },
-  { n:[110,0,130,0,146,130,110,0, 98,0,116,130,116,98,0,0],   d:190, w:'sawtooth', v:.04  },
-  { n:[440,0,554,659,0,880,659,554, 440,0,659,880,0,659,554,0], d:95, w:'square',   v:.045 },
-  { n:[294,330,370,440,370,330,294,0, 247,294,330,370,330,294,0,0], d:175, w:'sine', v:.055 },
-  { n:[185,0,207,246,220,185,0,174, 0,207,0,185,174,0,185,0], d:215, w:'sine',     v:.045 },
-  { n:[523,659,784,880,1047,880,784,659, 523,0,659,784,880,1047,880,0], d:105, w:'sine', v:.06 }
+  // Phase 1 — PERPDEX TERMINAL: techy 8-bit beat
+  { n:[110,0,138,0,165,138,110,0, 146,0,138,165,110,0,138,0, 110,0,123,0,138,123,110,0, 98,0,110,138,110,98,0,0], d:105, w:'square', v:.044 },
+  // Phase 2 — BASE NETWORK: bright hopeful melody
+  { n:[523,0,659,784,659,523,0,523, 392,523,659,784,880,784,0,0, 523,659,784,880,784,659,523,0, 440,523,659,784,659,440,0,0], d:100, w:'sine', v:.048 },
+  // Phase 3 — TO THE MOON: ascending wonder
+  { n:[349,392,440,523,440,392,349,0, 294,349,392,440,523,698,523,0, 392,440,523,659,523,440,392,0, 349,440,523,392,349,294,0,0], d:135, w:'sine', v:.045 },
+  // Phase 4 — CRYPTO FOREST: mysterious minor groove
+  { n:[220,0,261,0,329,261,220,0, 196,0,247,294,247,196,0,196, 220,261,329,261,220,0,196,0, 185,220,261,220,185,0,174,0], d:170, w:'triangle', v:.05 },
+  // Phase 5 — HEAVEN'S GATE: epic choir-like
+  { n:[262,330,392,0,523,392,330,262, 220,277,330,440,392,330,220,0, 262,330,392,523,659,523,392,0, 330,392,523,392,330,262,0,262], d:140, w:'sine', v:.052 },
+  // Phase 6 — DUNGEON CASTLE: dark brooding
+  { n:[110,0,131,0,146,131,110,0, 98,0,116,0,131,116,98,0, 110,131,146,131,110,0,98,0, 87,110,131,110,87,0,0,87], d:175, w:'sawtooth', v:.036 },
+  // Phase 7 — OUTER SPACE: fast futuristic
+  { n:[440,0,554,659,880,659,554,0, 440,554,659,880,1047,880,0,0, 440,0,554,659,0,880,659,554, 440,0,659,880,659,440,0,0], d:88, w:'square', v:.04 },
+  // Phase 8 — CELESTIAL DESERT: flowing desert melody
+  { n:[294,330,370,440,370,330,294,0, 247,294,330,370,440,370,0,0, 330,370,440,494,440,370,330,0, 294,247,294,330,247,220,0,0], d:158, w:'sine', v:.048 },
+  // Phase 9 — VOLCANO: tense driving rhythm
+  { n:[185,0,185,207,246,0,220,185, 0,174,185,207,185,0,174,0, 185,207,246,220,185,0,185,207, 246,220,185,174,185,0,0,174], d:190, w:'sine', v:.042 },
+  // Phase 10 — COINBASE PLANET: triumphant finale
+  { n:[523,659,784,880,1047,880,784,659, 523,0,659,784,880,1047,880,0, 784,880,1047,880,784,659,523,0, 659,784,880,1047,880,784,659,523], d:95, w:'sine', v:.052 }
 ];
 // Música da estrela — estilo Mario star, rápida e frenética
 var STAR_MUSIC = { n:[659,523,659,784, 784,880,784,659, 523,659,784,880, 1047,880,784,659], d:72, w:'square', v:0.045 };
@@ -165,12 +175,28 @@ function _tickMusic() {
   if (f > 0) {
     var a = getAC();
     if (a) try {
+      var dur = pm.d/1000;
+      // Main tone
       var o = a.createOscillator(), g = a.createGain();
       o.connect(g); g.connect(a.destination);
       o.type = pm.w; o.frequency.value = f;
       g.gain.setValueAtTime(pm.v, a.currentTime);
-      g.gain.exponentialRampToValueAtTime(0.001, a.currentTime + pm.d/1000*.8);
-      o.start(a.currentTime); o.stop(a.currentTime + pm.d/1000);
+      g.gain.exponentialRampToValueAtTime(0.001, a.currentTime + dur*.85);
+      o.start(a.currentTime); o.stop(a.currentTime + dur);
+      // Octave harmonic (softer, adds warmth)
+      var o2 = a.createOscillator(), g2 = a.createGain();
+      o2.connect(g2); g2.connect(a.destination);
+      o2.type = pm.w==='square'?'sine':pm.w; o2.frequency.value = f * 2;
+      g2.gain.setValueAtTime(pm.v * 0.28, a.currentTime);
+      g2.gain.exponentialRampToValueAtTime(0.001, a.currentTime + dur*.6);
+      o2.start(a.currentTime); o2.stop(a.currentTime + dur);
+      // Fifth harmonic (adds richness)
+      var o3 = a.createOscillator(), g3 = a.createGain();
+      o3.connect(g3); g3.connect(a.destination);
+      o3.type = 'sine'; o3.frequency.value = f * 1.5;
+      g3.gain.setValueAtTime(pm.v * 0.14, a.currentTime);
+      g3.gain.exponentialRampToValueAtTime(0.001, a.currentTime + dur*.5);
+      o3.start(a.currentTime); o3.stop(a.currentTime + dur);
     } catch(e) {}
   }
   _mPos++;
@@ -407,7 +433,7 @@ function isColorEquipped(charIdx, colorIdx) {
   return false;
 }
 function shopBuyOrEquip() {
-  var colors = shopChar===0 ? BLEU_COLORS : GENGAR_COLORS;
+  var colors = shopChar===0 ? BLEU_COLORS : PHANTOM_COLORS;
   var color  = colors[shopSelColor];
   if(!color) return;
   var owned    = isColorOwned(shopChar, shopSelColor);
@@ -445,7 +471,7 @@ function drawShopTab() {
 
   // ── Character selector tabs ──
   var ctw=118, cgap=10, ctx0=W/2-(ctw+cgap/2);
-  var charNames=['BLEU','GENGAR'], charLock=[false,!gengarUnlocked];
+  var charNames=['BLEU','PHANTOM'], charLock=[false,!gengarUnlocked];
   for(var _ci=0; _ci<2; _ci++){
     var _cx=ctx0+_ci*(ctw+cgap);
     var _isAct=shopChar===_ci;
@@ -465,7 +491,7 @@ function drawShopTab() {
   ctx.save(); ctx.translate(W/2, _prevY); ctx.scale(1.9,1.9);
   ctx.globalAlpha = (shopChar===1&&!gengarUnlocked) ? 0.35 : 1;
   if(shopChar===0) drawBleu(0,0,frame*0.28,0);
-  else             drawGengar(0,0,frame*0.28,0);
+  else             drawPhantom(0,0,frame*0.28,0);
   ctx.globalAlpha=1; ctx.restore();
   activeColorBleu=_savedCB; activeColorGengar=_savedCG;
 
@@ -479,7 +505,7 @@ function drawShopTab() {
   }
 
   // ── Fan orbs ──
-  var _fanColors = shopChar===0 ? BLEU_COLORS : GENGAR_COLORS;
+  var _fanColors = shopChar===0 ? BLEU_COLORS : PHANTOM_COLORS;
   for(var _fi2=0; _fi2<5; _fi2++){
     var _fa2=FAN_ANGLES[_fi2]*Math.PI/180;
     var _fx=W/2+FAN_RADIUS*Math.cos(_fa2), _fy=_prevY+FAN_RADIUS*Math.sin(_fa2);
@@ -545,12 +571,12 @@ function drawShopTab() {
     ctx.beginPath(); ctx.roundRect(W/2-122,93,244,430,14); ctx.fill();
     ctx.strokeStyle='#9933ff55'; ctx.lineWidth=1.5; ctx.stroke();
     ctx.save(); ctx.translate(W/2,240); ctx.scale(2,2); ctx.globalAlpha=0.6;
-    drawGengar(0,0,frame*0.22,0); ctx.globalAlpha=1; ctx.restore();
+    drawPhantom(0,0,frame*0.22,0); ctx.globalAlpha=1; ctx.restore();
     ctx.font='bold 15px Courier New'; ctx.fillStyle='#aa44ff';
     ctx.shadowColor='#aa44ff'; ctx.shadowBlur=14;
-    ctx.fillText('🔒 GENGAR', W/2, 310); ctx.shadowBlur=0;
+    ctx.fillText('🔒 PHANTOM', W/2, 310); ctx.shadowBlur=0;
     ctx.font='10px Courier New'; ctx.fillStyle='#ffffff55';
-    ctx.fillText('the ghost of Base Network', W/2, 328);
+    ctx.fillText('phantom of the Base Network', W/2, 328);
     var _canUnlock=coinCount>=500;
     ctx.fillStyle=_canUnlock?'#aa44ff22':'#ffffff08';
     ctx.strokeStyle=_canUnlock?'#aa44ff':'#ffffff22'; ctx.lineWidth=1.5;
@@ -560,6 +586,45 @@ function drawShopTab() {
     ctx.fillText('UNLOCK  🐉 500', W/2, 363); ctx.textBaseline='alphabetic';
   }
   ctx.textAlign='center';
+
+  // ── ITEMS SECTION — Shield purchase ──
+  if(shopChar!==1||gengarUnlocked){
+    var _itmY = 490;
+    // Divider
+    ctx.strokeStyle='#ffffff15'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(W/2-100,_itmY); ctx.lineTo(W/2+100,_itmY); ctx.stroke();
+    // Section title
+    ctx.font='bold 10px Courier New'; ctx.fillStyle='#ffffff44'; ctx.textAlign='center';
+    ctx.fillText('ITEMS', W/2, _itmY+14);
+    // Shield item card
+    var _shdX=W/2-70, _shdY=_itmY+20, _shdW=140, _shdH=48;
+    var _shdCanBuy=(coinCount>=80)&&(shieldStock<3);
+    ctx.fillStyle=shieldStock>0?'#00FF8818':'#ffffff08';
+    ctx.strokeStyle=shieldStock>0?'#00FF8866':'#ffffff22'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.roundRect(_shdX,_shdY,_shdW,_shdH,10); ctx.fill(); ctx.stroke();
+    // Shield icon (drawn small on canvas)
+    ctx.save(); ctx.translate(_shdX+28,_shdY+_shdH/2);
+    ctx.beginPath();
+    ctx.moveTo(0,-14); ctx.lineTo(14,-8); ctx.lineTo(14,2);
+    ctx.bezierCurveTo(14,10,7,16,0,18);
+    ctx.bezierCurveTo(-7,16,-14,10,-14,2); ctx.lineTo(-14,-8); ctx.closePath();
+    ctx.fillStyle=shieldStock>0?'#00FF88':'#44aaff'; ctx.fill();
+    ctx.strokeStyle=shieldStock>0?'#00cc66':'#2277cc'; ctx.lineWidth=1.5; ctx.stroke();
+    ctx.fillStyle='#ffffff88'; ctx.font='bold 9px Courier New'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(shieldStock>0?shieldStock:'⬆', 0, 2); ctx.textBaseline='alphabetic';
+    ctx.restore();
+    // Shield text
+    ctx.textAlign='left'; ctx.font='bold 11px Courier New';
+    ctx.fillStyle=shieldStock>0?'#00FF88':'#aaddff';
+    ctx.fillText('SHIELD', _shdX+50, _shdY+18);
+    ctx.font='9px Courier New'; ctx.fillStyle='#ffffff55';
+    ctx.fillText(shieldStock>=3?'MAX ('+shieldStock+'/3)':'Stock: '+shieldStock+'/3', _shdX+50, _shdY+31);
+    if(shieldStock<3){
+      ctx.fillStyle=_shdCanBuy?'#FFD700aa':'#ff4444aa';
+      ctx.fillText('🐉 80 coins', _shdX+50, _shdY+44);
+    }
+    ctx.textAlign='center';
+  }
 }
 
 
@@ -572,14 +637,16 @@ const BLEU_COLORS = [
   { name:'CYBER',    price:200, body:'#ff0080', bodyLt:'#ff66bb', shadow:'#880040', belly:'#ffccee', outline:'#660030', glow:'#ff00ff' },
   { name:'BASE',     price:300, body:'#0052FF', bodyLt:'#4488ff', shadow:'#002299', belly:'#cce0ff', outline:'#001a99', glow:'#0052FF' },
 ];
-// ─── GENGAR COLOR PALETTES (5 colors) ───────────────────────────────
-const GENGAR_COLORS = [
+// ─── PHANTOM COLOR PALETTES (5 colors) ─────────────────────────────
+const PHANTOM_COLORS = [
   { name:'CLASSIC', price:0,   body:'#7B62A3', bodyLt:'#A98FCC', shadow:'#3D2A6A', belly:'#C4AADF', outline:'#2D1A5A', glow:'#9966CC', eyeColor:'#FF1493' },
   { name:'SHADOW',  price:100, body:'#2a1a3a', bodyLt:'#4a3a5a', shadow:'#150d1e', belly:'#6a5a7a', outline:'#0d0814', glow:'#6622aa', eyeColor:'#cc00ff' },
   { name:'SHINY',   price:180, body:'#008fcc', bodyLt:'#44ccee', shadow:'#005577', belly:'#aaddff', outline:'#003d5a', glow:'#00ccff', eyeColor:'#FF5500' },
   { name:'NEON',    price:220, body:'#cc00ff', bodyLt:'#ee66ff', shadow:'#880099', belly:'#f0ccff', outline:'#550077', glow:'#dd00ff', eyeColor:'#FFFF00' },
   { name:'GOLDEN',  price:350, body:'#c8a020', bodyLt:'#f0c840', shadow:'#8a6800', belly:'#f5e098', outline:'#5a4400', glow:'#FFD700', eyeColor:'#FF0044' },
 ];
+// backward-compat alias
+var GENGAR_COLORS = PHANTOM_COLORS;
 
 // ─── LEADERBOARD TAB ────────────────────────────────────────────────
 function drawLeaderboardTab() {
@@ -818,6 +885,7 @@ var unlockedColorsBleu=JSON.parse(localStorage.getItem('bleuColsB')||'[0]');
 var unlockedColorsGengar=JSON.parse(localStorage.getItem('bleuColsG')||'[]');
 var gengarUnlocked=localStorage.getItem('bleuGengar')==='1';
 var shopChar=0, shopSelColor=0;
+var shieldStock=parseInt(localStorage.getItem('bleuShieldStock')||'0'); // purchasable shields
 var chestType='normal';
 
 // ─── WALLET ──────────────────────────────────────────────────
@@ -921,7 +989,10 @@ function resetGame() {
   combo = 0; comboFlash = 0; coinsThisRun = 0; milestoneIdx = 0; recFlash = 0;
   lives = 3; invincible = 0; starPower = 0; stars = [];
   deadChest={active:false,opened:false,coins:0,anim:0,clicks:0};
-  shield = 0; shieldItems = []; shieldBreak = 0;
+  // Apply purchased shield stock
+  if(shieldStock>0){ shield=1; shieldStock--; localStorage.setItem('bleuShieldStock',shieldStock); }
+  else { shield = 0; }
+  shieldItems = []; shieldBreak = 0;
   runPhase = 0; shareFlash = 0; bleuAngle = 0; bleuFlapTimer = 0;
 }
 resetGame();
@@ -1112,106 +1183,138 @@ function drawBleu(x, y, flapAnim, angle) {
   ctx.restore();
 }
 
-// ─── GENGAR — ghost character ────────────────────────────────────────
-function drawGengar(x, y, flapAnim, angle) {
+// ─── PHANTOM — ghost character (Haunter-inspired, phantom of Base Network) ──
+function drawPhantom(x, y, flapAnim, angle) {
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(angle || 0);
 
   var _wCycle = Math.floor(flapAnim * 0.22) % 4;
-  var af = (_wCycle === 3) ? 1 : _wCycle; // arm frame 0,1,2
-  var armY = [-9, -3, 5][af];
-  var sf = Math.sin(flapAnim * 1.2) * 1.2;
+  var af = (_wCycle === 3) ? 1 : _wCycle; // hand frame 0,1,2
+  var handBob = [-10, -3, 7][af];
+  var sf = Math.sin(flapAnim * 0.9) * 2.5;
 
-  var gc = GENGAR_COLORS[activeColorGengar] || GENGAR_COLORS[0];
-  var cB  = gc.body, cBL = gc.bodyLt, cD = gc.shadow, cO = gc.outline;
+  var gc = PHANTOM_COLORS[activeColorGengar] || PHANTOM_COLORS[0];
+  var cB = gc.body, cBL = gc.bodyLt, cD = gc.shadow, cO = gc.outline;
   var cEy = gc.eyeColor || '#FF1493';
-  ctx.lineJoin='round'; ctx.lineCap='round';
+  ctx.lineJoin = 'round'; ctx.lineCap = 'round';
 
-  // LEFT ARM (back, drawn first)
-  ctx.save(); ctx.translate(-21, armY + sf);
-  ctx.beginPath(); ctx.moveTo(0,0);
-  ctx.bezierCurveTo(-14,-6,-18,6,-13,14);
-  ctx.bezierCurveTo(-8,20,-1,10,0,0);
-  ctx.fillStyle=cD; ctx.globalAlpha=0.75; ctx.fill();
-  ctx.lineWidth=1.5; ctx.strokeStyle=cO; ctx.stroke(); ctx.globalAlpha=1;
+  // FLOATING LEFT HAND (back — drawn first so it's behind)
+  ctx.save();
+  ctx.translate(-30, handBob + sf - 3);
+  ctx.globalAlpha = 0.82;
+  // Palm
+  ctx.beginPath(); ctx.ellipse(0, 0, 10, 8, 0.15, 0, Math.PI * 2);
+  var lhg = ctx.createRadialGradient(-3,-3,1,0,0,10);
+  lhg.addColorStop(0, cBL); lhg.addColorStop(1, cD);
+  ctx.fillStyle = lhg; ctx.fill();
+  ctx.lineWidth = 1.5; ctx.strokeStyle = cO; ctx.stroke();
+  // 3 spiky fingers pointing up-left
+  var lfAngles = [-1.7, -1.25, -0.85];
+  for (var fi = 0; fi < 3; fi++) {
+    var fa = lfAngles[fi];
+    var fx1 = Math.cos(fa + 0.22) * 8, fy1 = Math.sin(fa + 0.22) * 7;
+    var fx2 = Math.cos(fa) * 18,       fy2 = Math.sin(fa) * 18;
+    var fx3 = Math.cos(fa - 0.22) * 8, fy3 = Math.sin(fa - 0.22) * 7;
+    ctx.beginPath(); ctx.moveTo(fx1,fy1); ctx.lineTo(fx2,fy2); ctx.lineTo(fx3,fy3);
+    ctx.closePath();
+    ctx.fillStyle = cB; ctx.fill();
+    ctx.lineWidth = 1; ctx.strokeStyle = cO; ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
   ctx.restore();
 
-  // MAIN BODY — ghost blob
+  // GHOST HEAD — Haunter's iconic jagged/misty silhouette
   ctx.beginPath();
-  ctx.arc(0, -4, 22, Math.PI, 0);               // top dome
-  ctx.bezierCurveTo(22, 10, 16, 20, 10, 24);    // right side
-  ctx.bezierCurveTo(6, 28, 3, 21, 0, 24);       // bottom spike 1
-  ctx.bezierCurveTo(-3, 21,-6, 28,-10, 24);     // bottom spike 2
-  ctx.bezierCurveTo(-16, 20,-22, 10,-22, -4);   // left side
+  ctx.arc(0, -6, 21, Math.PI, 0); // top dome
+  // Right side down with misty spikes
+  ctx.lineTo(21, 2);
+  ctx.bezierCurveTo(22, 8,  17, 10, 13, 16);
+  ctx.bezierCurveTo(10, 20,  7, 14,  4, 19);
+  ctx.bezierCurveTo( 1, 23, -2, 16, -5, 20);
+  ctx.bezierCurveTo(-9, 24,-13, 16,-14, 19);
+  ctx.bezierCurveTo(-17, 22,-19, 12,-21, 5);
   ctx.closePath();
-  var gBodyGrad = ctx.createRadialGradient(-6,-10,2, 0,-2,24);
-  gBodyGrad.addColorStop(0, cBL); gBodyGrad.addColorStop(1, cB);
+  var gBodyGrad = ctx.createRadialGradient(-5, -12, 2, 0, -4, 23);
+  gBodyGrad.addColorStop(0, cBL);
+  gBodyGrad.addColorStop(0.55, cB);
+  gBodyGrad.addColorStop(1, cD);
   ctx.fillStyle = gBodyGrad; ctx.fill();
   ctx.lineWidth = 2; ctx.strokeStyle = cO; ctx.stroke();
 
-  // Body highlight
-  ctx.beginPath(); ctx.ellipse(-7,-10, 9,7, -0.3, 0, Math.PI*2);
-  ctx.fillStyle=cBL; ctx.globalAlpha=0.38; ctx.fill(); ctx.globalAlpha=1;
+  // Inner glow highlight
+  ctx.beginPath(); ctx.ellipse(-5, -10, 9, 7, -0.25, 0, Math.PI * 2);
+  ctx.fillStyle = cBL; ctx.globalAlpha = 0.32; ctx.fill(); ctx.globalAlpha = 1;
 
-  // LEFT EAR
-  ctx.beginPath();
-  ctx.moveTo(-14,-22); ctx.lineTo(-22,-40); ctx.lineTo(-4,-24);
-  ctx.closePath();
-  ctx.fillStyle=cB; ctx.fill(); ctx.lineWidth=1.5; ctx.strokeStyle=cO; ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(-14,-22); ctx.lineTo(-19,-36); ctx.lineTo(-7,-24);
-  ctx.closePath(); ctx.fillStyle=cBL; ctx.globalAlpha=0.4; ctx.fill(); ctx.globalAlpha=1;
+  // Misty gas trails at bottom
+  for (var gi = 0; gi < 4; gi++) {
+    var gx = (gi - 1.5) * 7;
+    var gy = 20 + gi * 2 + Math.sin(flapAnim * 0.6 + gi) * 2;
+    ctx.beginPath(); ctx.arc(gx, gy, 4 - gi * 0.5, 0, Math.PI * 2);
+    ctx.fillStyle = cB; ctx.globalAlpha = 0.12 + gi * 0.04; ctx.fill();
+  }
+  ctx.globalAlpha = 1;
 
-  // RIGHT EAR
-  ctx.beginPath();
-  ctx.moveTo(12,-22); ctx.lineTo(22,-40); ctx.lineTo(4,-24);
-  ctx.closePath();
-  ctx.fillStyle=cB; ctx.fill(); ctx.lineWidth=1.5; ctx.strokeStyle=cO; ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(12,-22); ctx.lineTo(19,-36); ctx.lineTo(7,-24);
-  ctx.closePath(); ctx.fillStyle=cBL; ctx.globalAlpha=0.4; ctx.fill(); ctx.globalAlpha=1;
-
-  // LEFT EYE
-  ctx.beginPath(); ctx.ellipse(-9,-4,6,5,0,0,Math.PI*2);
-  ctx.fillStyle=cEy; ctx.fill(); ctx.lineWidth=1; ctx.strokeStyle=cO; ctx.stroke();
-  ctx.beginPath(); ctx.arc(-8,-5,2.2,0,Math.PI*2);
-  ctx.fillStyle='#ffffff'; ctx.globalAlpha=0.55; ctx.fill(); ctx.globalAlpha=1;
+  // LEFT EYE — large, glowing Haunter eyes
+  ctx.beginPath(); ctx.ellipse(-8, -7, 7.5, 6.5, 0, 0, Math.PI * 2);
+  ctx.fillStyle = cEy; ctx.fill();
+  ctx.lineWidth = 1.2; ctx.strokeStyle = cO; ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(-8, -7, 4, 5, 0, 0, Math.PI * 2);
+  ctx.fillStyle = '#11001a'; ctx.fill(); // pupil
+  ctx.beginPath(); ctx.arc(-6, -9, 2.5, 0, Math.PI * 2);
+  ctx.fillStyle = '#ffffff'; ctx.globalAlpha = 0.6; ctx.fill(); ctx.globalAlpha = 1;
 
   // RIGHT EYE
-  ctx.beginPath(); ctx.ellipse(9,-4,6,5,0,0,Math.PI*2);
-  ctx.fillStyle=cEy; ctx.fill(); ctx.lineWidth=1; ctx.strokeStyle=cO; ctx.stroke();
-  ctx.beginPath(); ctx.arc(10,-5,2.2,0,Math.PI*2);
-  ctx.fillStyle='#ffffff'; ctx.globalAlpha=0.55; ctx.fill(); ctx.globalAlpha=1;
+  ctx.beginPath(); ctx.ellipse(8, -7, 7.5, 6.5, 0, 0, Math.PI * 2);
+  ctx.fillStyle = cEy; ctx.fill();
+  ctx.lineWidth = 1.2; ctx.strokeStyle = cO; ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(8, -7, 4, 5, 0, 0, Math.PI * 2);
+  ctx.fillStyle = '#11001a'; ctx.fill();
+  ctx.beginPath(); ctx.arc(10, -9, 2.5, 0, Math.PI * 2);
+  ctx.fillStyle = '#ffffff'; ctx.globalAlpha = 0.6; ctx.fill(); ctx.globalAlpha = 1;
 
-  // MOUTH — wide evil grin
-  ctx.beginPath();
-  ctx.moveTo(-15, 6); ctx.bezierCurveTo(-12,18, 12,18, 15,6);
-  ctx.fillStyle=cD; ctx.fill(); ctx.lineWidth=1.5; ctx.strokeStyle=cO; ctx.stroke();
-  // Teeth
-  ctx.fillStyle='#ffffff'; ctx.lineWidth=0.8; ctx.strokeStyle=cO;
-  var tx2=[-10,-5,0,5,10];
-  for(var _ti=0; _ti<5; _ti++){
-    ctx.beginPath(); ctx.moveTo(tx2[_ti]-2,7); ctx.lineTo(tx2[_ti],13); ctx.lineTo(tx2[_ti]+2,7);
-    ctx.closePath(); ctx.fill(); ctx.stroke();
+  // TONGUE — Haunter's iconic protruding tongue
+  ctx.beginPath(); ctx.ellipse(0, 5, 6, 9, 0, 0, Math.PI * 2);
+  ctx.fillStyle = '#dd2244'; ctx.fill();
+  ctx.lineWidth = 1.2; ctx.strokeStyle = cO; ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(-1.5, 3, 2.2, 3.5, -0.15, 0, Math.PI * 2);
+  ctx.fillStyle = '#ff6688'; ctx.globalAlpha = 0.55; ctx.fill(); ctx.globalAlpha = 1;
+
+  // FLOATING RIGHT HAND (front — drawn last so it's on top)
+  ctx.save();
+  ctx.translate(30, handBob + sf + 3);
+  // Palm
+  ctx.beginPath(); ctx.ellipse(0, 0, 10, 8, -0.15, 0, Math.PI * 2);
+  var rhg = ctx.createRadialGradient(-3,-3,1,0,0,10);
+  rhg.addColorStop(0, cBL); rhg.addColorStop(1, cB);
+  ctx.fillStyle = rhg; ctx.fill();
+  ctx.lineWidth = 1.5; ctx.strokeStyle = cO; ctx.stroke();
+  // 3 spiky fingers pointing up-right
+  var rfAngles = [-Math.PI + 0.85, -Math.PI + 1.25, -Math.PI + 1.7];
+  for (var fi2 = 0; fi2 < 3; fi2++) {
+    var fa2 = rfAngles[fi2];
+    var fx4 = Math.cos(fa2 + 0.22) * 8, fy4 = Math.sin(fa2 + 0.22) * 7;
+    var fx5 = Math.cos(fa2) * 18,       fy5 = Math.sin(fa2) * 18;
+    var fx6 = Math.cos(fa2 - 0.22) * 8, fy6 = Math.sin(fa2 - 0.22) * 7;
+    ctx.beginPath(); ctx.moveTo(fx4,fy4); ctx.lineTo(fx5,fy5); ctx.lineTo(fx6,fy6);
+    ctx.closePath();
+    ctx.fillStyle = cBL; ctx.fill();
+    ctx.lineWidth = 1; ctx.strokeStyle = cO; ctx.stroke();
   }
-
-  // RIGHT ARM (front)
-  ctx.save(); ctx.translate(21, armY + sf);
-  ctx.beginPath(); ctx.moveTo(0,0);
-  ctx.bezierCurveTo(14,-6,18,6,13,14);
-  ctx.bezierCurveTo(8,20,1,10,0,0);
-  var aGrad = ctx.createLinearGradient(0,0,14,10);
-  aGrad.addColorStop(0,cB); aGrad.addColorStop(1,cBL);
-  ctx.fillStyle=aGrad; ctx.fill(); ctx.lineWidth=1.5; ctx.strokeStyle=cO; ctx.stroke();
   ctx.restore();
 
   // Wallet glow
-  if(walletAddress){
-    ctx.save(); var _wg=0.08+0.05*Math.sin(frame*0.06); ctx.globalAlpha=_wg;
-    ctx.fillStyle='#00FF88'; ctx.beginPath(); ctx.arc(0,0,30,0,Math.PI*2); ctx.fill();
-    ctx.globalAlpha=1; ctx.restore();
+  if (walletAddress) {
+    ctx.save();
+    var _wg = 0.08 + 0.05 * Math.sin(frame * 0.06);
+    ctx.globalAlpha = _wg;
+    ctx.fillStyle = '#00FF88';
+    ctx.beginPath(); ctx.arc(0, 0, 32, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 1; ctx.restore();
   }
   ctx.restore();
 }
+function drawGengar(x, y, flapAnim, angle) { drawPhantom(x, y, flapAnim, angle); }
 // ─── BRETT — coming soon ──
 function drawBrett(x, y, flapAnim, vy) { drawBleu(x, y, flapAnim, vy); }
 function drawBrett_ORIG(x, y, flapAnim, vy) {
@@ -1371,7 +1474,7 @@ function drawBrett_ORIG(x, y, flapAnim, vy) {
 
 // ─── CHARACTER DISPATCHER ────────────────────
 function drawCharacter(x, y, flap, angle) {
-  if(activeChar===1 && gengarUnlocked) drawGengar(x, y, flap, angle);
+  if(activeChar===1 && gengarUnlocked) drawPhantom(x, y, flap, angle);
   else drawBleu(x, y, flap, angle);
 }
 
@@ -1964,8 +2067,8 @@ function drawTitanFaceBg() {
     ctx.fill();
     ctx.globalAlpha = 1;
   }
-  // One main giant, partially visible at bottom
-  drawGiant(W*0.5, H*0.88, 1.1, 0.75);
+  // One main giant, partially visible at bottom — kept faint so gap stays clear
+  drawGiant(W*0.5, H*0.92, 1.1, 0.22);
 }
 
 // ─── DRAW ELECTRIFIED CHAIN OBSTACLE (phase 4) ──
@@ -2467,6 +2570,12 @@ function drawTicker(pv) {
   var ph = getPhase();
   ctx.fillStyle = '#FFD700'; ctx.font = 'bold 9px Courier New'; ctx.textAlign = 'left';
   ctx.fillText(ph.label, 6, 14);
+  // Mute toggle — always visible top-right of ticker
+  ctx.textAlign = 'right'; ctx.font = '13px Arial';
+  ctx.globalAlpha = muted ? 0.9 : 0.55;
+  ctx.fillStyle = muted ? '#ff6644' : '#aaddff';
+  ctx.fillText(muted ? '🔇' : '🔊', W-5, 15);
+  ctx.globalAlpha = 1;
   ctx.fillStyle = pv.glowColor + 'cc'; ctx.font = '8px Courier New'; ctx.textAlign = 'center';
   ctx.fillText(pv.name, W/2, 14);
   ctx.fillStyle = pv.glowColor; ctx.font = '8px Courier New'; ctx.textAlign = 'right';
@@ -4093,6 +4202,13 @@ function handleClick(ex, ey) {
   var rect = canvas.getBoundingClientRect();
   var scaleX = W/rect.width, scaleY = H/rect.height;
   var cx = (ex-rect.left)*scaleX, cy = (ey-rect.top)*scaleY;
+  // Mute toggle — top-right corner (ticker area, always accessible)
+  if(cy >= 0 && cy <= 22 && cx >= W-50 && cx <= W) {
+    muted = !muted;
+    document.getElementById('mute').textContent = muted ? '🔇 MUTE' : '🔊 SFX';
+    if(muted) stopMusic(); else if(gameState==='playing') startMusic(getPhaseIdx());
+    return;
+  }
   if(dailyModal){
     if(cx>=W/2-65&&cx<=W/2+65&&cy>=H/2+78&&cy<=H/2+112){ claimDailyReward(); beep(523,1047,0.2,'sine',0.14); }
     return;
@@ -4166,7 +4282,19 @@ function handleClick(ex, ey) {
       // Action button
       var _btnY2=CHAR_PREVIEW_Y+146;
       if(cx>=W/2-76&&cx<=W/2+76&&cy>=_btnY2&&cy<=_btnY2+34){ shopBuyOrEquip(); return; }
-      // Gengar unlock button
+      // Shield purchase (items section)
+      if((shopChar!==1||gengarUnlocked)&&cx>=W/2-70&&cx<=W/2+70&&cy>=510&&cy<=558){
+        if(shieldStock>=3){ beep(220,150,0.1,'sawtooth',0.06); return; }
+        if(coinCount>=80){
+          coinCount-=80; if(coinCount<0)coinCount=0; localStorage.setItem('bleuCoins',coinCount);
+          shieldStock++; localStorage.setItem('bleuShieldStock',shieldStock);
+          beep(523,1047,0.22,'sine',0.13);
+          [659,784].forEach(function(f,i){setTimeout(function(){beep(f,f,0.1,'sine',0.09);},i*60);});
+          spawnParticles(W/2,H/2,'#00FF88',10);
+        } else { beep(220,150,0.12,'sawtooth',0.08); hitFlash=3; }
+        return;
+      }
+      // Gengar/Phantom unlock button
       if(shopChar===1&&!gengarUnlocked&&cx>=W/2-82&&cx<=W/2+82&&cy>=344&&cy<=382){
         if(coinCount>=500){
           coinCount-=500; localStorage.setItem('bleuCoins',coinCount);
