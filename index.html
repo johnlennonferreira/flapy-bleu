@@ -791,6 +791,7 @@ let coins = [], coinCount = parseInt(localStorage.getItem('bleuCoins')||'0');
 var _mTimeout=null, _mPhase=-1, _mPos=0;
 var completedPhase=0, chestClicks=0, chestBounce=0, chestOpened=false, chestCoins=0, chestOpenAnim=0, awardCoins=0, awardCoinAnim=0;
 var bleuAngle=0; // smooth rotation (radians)
+var bleuFlapTimer=0; // frames of wing animation remaining after a flap
 var deadChest={active:false,opened:false,coins:0,anim:0};
 var idleTab='play';
 var totalScore=parseInt(localStorage.getItem('bleuTotal')||'0');
@@ -921,7 +922,7 @@ function resetGame() {
   lives = 3; invincible = 0; starPower = 0; stars = [];
   deadChest={active:false,opened:false,coins:0,anim:0,clicks:0};
   shield = 0; shieldItems = []; shieldBreak = 0;
-  runPhase = 0; shareFlash = 0; bleuAngle = 0;
+  runPhase = 0; shareFlash = 0; bleuAngle = 0; bleuFlapTimer = 0;
 }
 resetGame();
 
@@ -992,27 +993,24 @@ function drawBleu(x, y, flapAnim, angle) {
   ctx.globalAlpha = 1;
   ctx.restore();
 
-  // BACK WING — drawn before body, slightly darker, offset right/down
+  // BACK WING — left side of body at junction, behind body
+  // Anchor: left edge of body at body/head junction height
+  // Angles: PI*0.35 = up, 0 = mid/horizontal, -PI*0.35 = down
+  var _wAngles = [Math.PI*0.38, 0, -Math.PI*0.32];
+  var _wA = _wAngles[wingFrame];
   ctx.save();
-  ctx.translate(8, 2 + wf * 0.8);
-  ctx.rotate(wingAngles[wingFrame] + 0.12);
-  var wGradBack = ctx.createLinearGradient(0, 0, 0, -26);
-  wGradBack.addColorStop(0, cShadow);
-  wGradBack.addColorStop(0.5, cBody);
-  wGradBack.addColorStop(1, cBodyLt);
-  ctx.globalAlpha = 0.72;
+  ctx.translate(-8, 2); // left of body center, junction height
+  ctx.rotate(_wA);
+  var wGradBack = ctx.createLinearGradient(0,0,-18,0);
+  wGradBack.addColorStop(0, cShadow); wGradBack.addColorStop(1, cBody);
+  ctx.globalAlpha=0.68;
   ctx.beginPath();
-  ctx.moveTo(0, 0);
-  ctx.bezierCurveTo(-4, -10, 2, -22, 14, -18);
-  ctx.bezierCurveTo(18, -14, 16, -6, 0, 0);
-  ctx.fillStyle = wGradBack; ctx.fill();
-  ctx.lineWidth = 1.2; ctx.strokeStyle = cOutline; ctx.stroke();
-  // feather detail lines
-  ctx.lineWidth = 0.7; ctx.strokeStyle = cShadow; ctx.globalAlpha = 0.35;
-  ctx.beginPath(); ctx.moveTo(0,0); ctx.bezierCurveTo(3,-8,9,-14,12,-16); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(0,0); ctx.bezierCurveTo(-1,-8,5,-16,11,-18); ctx.stroke();
-  ctx.globalAlpha = 1;
-  ctx.restore();
+  ctx.moveTo(0,0);
+  ctx.bezierCurveTo(-2,-4,-10,-12,-16,-7);
+  ctx.bezierCurveTo(-18,-2,-14,5,0,0);
+  ctx.fillStyle=wGradBack; ctx.fill();
+  ctx.lineWidth=1.2; ctx.strokeStyle=cOutline; ctx.stroke();
+  ctx.globalAlpha=1; ctx.restore();
 
   // HEAD
   ctx.beginPath();
@@ -1072,28 +1070,23 @@ function drawBleu(x, y, flapAnim, angle) {
   ctx.beginPath(); ctx.arc(4, -12, 7, 0.15, Math.PI - 0.15);
   ctx.lineWidth = 1.8; ctx.strokeStyle = cOutline; ctx.stroke();
 
-  // FRONT WING — drawn on top of body for depth
+  // FRONT WING — same anchor as back wing, drawn after body (on top)
   ctx.save();
-  ctx.translate(-1, -2 + wf);
-  ctx.rotate(wingAngles[wingFrame]);
-  var wGradFront = ctx.createLinearGradient(0, 0, 6, -32);
-  wGradFront.addColorStop(0, cBody);
-  wGradFront.addColorStop(0.4, cBodyLt);
-  wGradFront.addColorStop(1, '#ffffff');
+  ctx.translate(-8, 2);
+  ctx.rotate(_wA);
+  var wGradFront=ctx.createLinearGradient(0,0,-18,0);
+  wGradFront.addColorStop(0,cBody); wGradFront.addColorStop(0.5,cBodyLt); wGradFront.addColorStop(1,'#ffffffaa');
   ctx.beginPath();
-  ctx.moveTo(0, 0);
-  ctx.bezierCurveTo(-7, -12, 2, -30, 14, -24);
-  ctx.bezierCurveTo(19, -20, 17, -9, 0, 0);
-  ctx.fillStyle = wGradFront; ctx.fill();
-  ctx.lineWidth = 1.6; ctx.strokeStyle = cOutline; ctx.stroke();
-  // feather highlights
-  ctx.lineWidth = 0.9; ctx.strokeStyle = '#ffffff'; ctx.globalAlpha = 0.45;
-  ctx.beginPath(); ctx.moveTo(0,0); ctx.bezierCurveTo(2,-9,9,-18,12,-21); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(1,-3); ctx.bezierCurveTo(4,-11,11,-20,13,-23); ctx.stroke();
-  ctx.lineWidth = 0.7; ctx.strokeStyle = cShadow; ctx.globalAlpha = 0.3;
-  ctx.beginPath(); ctx.moveTo(0,0); ctx.bezierCurveTo(-2,-10,4,-22,10,-24); ctx.stroke();
-  ctx.globalAlpha = 1;
-  ctx.restore();
+  ctx.moveTo(0,0);
+  ctx.bezierCurveTo(-2,-5,-12,-14,-18,-8);
+  ctx.bezierCurveTo(-20,-3,-15,6,0,0);
+  ctx.fillStyle=wGradFront; ctx.fill();
+  ctx.lineWidth=1.6; ctx.strokeStyle=cOutline; ctx.stroke();
+  // feather highlight lines
+  ctx.lineWidth=0.8; ctx.strokeStyle='#ffffff'; ctx.globalAlpha=0.5;
+  ctx.beginPath(); ctx.moveTo(0,0); ctx.bezierCurveTo(-3,-4,-11,-10,-15,-7); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(-2,2); ctx.bezierCurveTo(-5,-2,-13,-6,-17,-3); ctx.stroke();
+  ctx.globalAlpha=1; ctx.restore();
 
   // GLOW (no shadowBlur — use alpha only for performance)
   if(scoreGlow > 0) {
@@ -3431,7 +3424,7 @@ function loop(ts) {
 
       // ── TAP TO START pulsing button ──
       var _sp = 0.96 + 0.04*Math.sin(frame*0.12);
-      ctx.save(); ctx.translate(W/2, H/2+62); ctx.scale(_sp, _sp);
+      ctx.save(); ctx.translate(W/2, H/2+50); ctx.scale(_sp, _sp);
       var _sg = ctx.createLinearGradient(-88,0,88,0);
       _sg.addColorStop(0,'#0044DD'); _sg.addColorStop(0.5,'#0066FF'); _sg.addColorStop(1,'#0044DD');
       ctx.fillStyle = _sg;
@@ -3447,7 +3440,7 @@ function loop(ts) {
       drawCharSelect();
 
       // ── Wallet section — prominent ──
-      var wy0 = H/2+66;
+      var wy0 = H/2+98;
       if(walletAddress){
         // Connected state — green badge
         ctx.fillStyle='#00FF8822'; ctx.strokeStyle='#00FF8877'; ctx.lineWidth=1.5;
@@ -3509,6 +3502,7 @@ function loop(ts) {
     var targetAngle = Math.max(-0.42, Math.min(1.35, bleu.vy * 0.115));
     bleuAngle += (targetAngle - bleuAngle) * 0.18;
     bleu.flap += 0.25;
+    if(bleuFlapTimer > 0) bleuFlapTimer--;
 
     // spawn de pipes — progressivamente mais frequente
     var spawnEvery = Math.max(52, 86 - pi * 3);
@@ -3702,7 +3696,8 @@ function loop(ts) {
     if(bleuSquish>0){var _sq=bleuSquish/8;ctx.translate(bleu.x,bleu.y);ctx.scale(1+_sq*.2,1-_sq*.18);ctx.translate(-bleu.x,-bleu.y);bleuSquish--;}
     // blink when invincible (every 6f) or star power (every 8f)
     var _blink = (invincible>0 && Math.floor(invincible/6)%2===0) || (starPower>0 && Math.floor(frame/8)%2===0);
-    if(!_blink) drawCharacter(bleu.x, bleu.y, bleu.flap, bleuAngle);
+    // 4.6 → wingFrame=1 (neutral/mid) when not flapping
+    if(!_blink) drawCharacter(bleu.x, bleu.y, bleuFlapTimer>0 ? bleu.flap : 4.6, bleuAngle);
     ctx.restore();
     updateParticles();
     updateScorePopups();
@@ -4083,7 +4078,7 @@ function flap() {
   if(gameState==='idle')         { gameState='playing'; startMusic(getPhaseIdx()); combo=0; comboFlash=0; coinsThisRun=0; milestoneIdx=0; recFlash=0; phaseFlash=190; phasePaused=true; bleu.vy=0; bleu.y=H/2; }
   else if(gameState==='playing') {
     if(phasePaused){ phasePaused=false; phaseFlash=0; bleu.vy=-4; bleuSquish=6; return; } // pula animação
-    bleu.vy=-7.5; bleu.flap=-1; bleuSquish=8;
+    bleu.vy=-7.5; bleu.flap=0; bleuSquish=8; bleuFlapTimer=18;
     // Wing flap sound — whoosh down then up
     beep(380,180,0.06,'triangle',0.13);
     setTimeout(function(){ beep(160,320,0.05,'triangle',0.09); }, 55);
@@ -4208,7 +4203,11 @@ function handleClick(ex, ey) {
     }
     // Play tab — wallet buttons
     if(idleTab==='play') {
-      var wy0c = H/2+66;
+      var wy0c = H/2+98;
+      // TAP TO START button: H/2+50 ± 18
+      if(cx>=W/2-88&&cx<=W/2+88&&cy>=H/2+32&&cy<=H/2+68){
+        flap(); return;
+      }
       if(!walletAddress){
         if(cx>=W/2-100&&cx<=W/2+100&&cy>=wy0c&&cy<=wy0c+32){ connectWallet(); return; }
       } else {
