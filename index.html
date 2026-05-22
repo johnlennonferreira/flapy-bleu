@@ -25,7 +25,7 @@
 <body>
 <div id="ui">💎 FLAPY BLEU — tap or SPACE to flap</div>
 <canvas id="c" width="400" height="600"></canvas>
-<button id="mute">🔊 SOM</button>
+<button id="mute">🔊 SFX</button>
 <script>
 const canvas = document.getElementById('c');
 // roundRect polyfill for older browsers
@@ -51,7 +51,7 @@ const W = canvas.width, H = canvas.height;
 var _ac = null, muted = false;
 document.getElementById('mute').onclick = function() {
   muted = !muted;
-  document.getElementById('mute').textContent = muted ? '🔇 MUDO' : '🔊 SOM';
+  document.getElementById('mute').textContent = muted ? '🔇 MUTE' : '🔊 SFX';
   if(muted) stopMusic(); else if(gameState==='playing') startMusic(getPhaseIdx());
 };
 function getAC() {
@@ -328,7 +328,7 @@ function drawAwardScreen() {
   ctx.textAlign='center';
 
   // Título da fase
-  var aTitle = chestType==='rare' ? '⭐ FASE ÉPICA!' : chestType==='gold' ? '🔥 FASE DOURADA!' : 'FASE '+(completedPhase+1)+' COMPLETA!';
+  var aTitle = chestType==='rare' ? '⭐ EPIC PHASE!' : chestType==='gold' ? '🔥 GOLDEN PHASE!' : 'PHASE '+(completedPhase+1)+' COMPLETE!';
   var titleCol = chestType==='rare' ? '#cc44ff' : chestType==='gold' ? '#FFD700' : '#00D4FF';
   // Glow via alpha duplo (sem shadowBlur)
   ctx.globalAlpha=0.3; ctx.fillStyle=titleCol;
@@ -359,7 +359,7 @@ function drawAwardScreen() {
 
     // "VOCÊ GANHOU!"
     ctx.fillStyle='#ffffff99'; ctx.font='bold 11px Courier New';
-    ctx.textAlign='center'; ctx.fillText('VOCÊ GANHOU!', 0, -18);
+    ctx.textAlign='center'; ctx.fillText('YOU WON!', 0, -18);
 
     // Número de moedas — destaque máximo
     ctx.globalAlpha=0.2; ctx.fillStyle=col2;
@@ -372,10 +372,10 @@ function drawAwardScreen() {
     // Legenda fora do scale
     ctx.globalAlpha=entryT;
     ctx.fillStyle='#ffffff88'; ctx.font='12px Courier New'; ctx.textAlign='center';
-    ctx.fillText(prize+' moedas do dragão', cx, prizeY+80);
+    ctx.fillText(prize+' dragon coins', cx, prizeY+80);
     ctx.fillStyle=coinCount>0?'#FFD700':'#ffffff55';
     ctx.font='11px Courier New';
-    ctx.fillText('total: '+coinCount+' moedas', cx, prizeY+96);
+    ctx.fillText('total: '+coinCount+' coins', cx, prizeY+96);
     ctx.globalAlpha=1;
 
     // Botão CONTINUAR — aparece depois do prêmio estar visível
@@ -395,7 +395,7 @@ function drawAwardScreen() {
 
 // ─── IDLE TABS ───────────────────────────────────────────────
 function drawIdleTabs() {
-  var labels=['JOGAR','LOJA','SKINS','RANK'], keys=['play','shop','skins','leaderboard'];
+  var labels=['PLAY','SHOP','SKINS','RANK'], keys=['play','shop','skins','leaderboard'];
   var icons=['▶','🛒','🎨','🏆'];
   var tw=82, th=44, gap=5, total=labels.length*(tw+gap)-gap;
   var tx0=W/2-total/2, ty=H-58;
@@ -444,7 +444,7 @@ function drawShopCards(yStart, compact) {
       ctx.strokeStyle=equipped?sk.body:'#ffffff22'; ctx.lineWidth=1;
       ctx.beginPath(); ctx.roundRect(sx-tw/2+4,btnY,tw-8,10,3); ctx.fill(); ctx.stroke();
       ctx.font='6px Courier New'; ctx.fillStyle=equipped?sk.body:'#ffffff66';
-      ctx.fillText(equipped?'✓ EQUIPADA':'EQUIPAR',sx,btnY+7);
+      ctx.fillText(equipped?'✓ EQUIPPED':'EQUIP',sx,btnY+7);
     } else {
       ctx.fillStyle=canBuy?'#FFD70020':'#ff000018';
       ctx.strokeStyle=canBuy?'#FFD700':'#ff4444'; ctx.lineWidth=1;
@@ -459,14 +459,14 @@ function drawShopTab() {
   // Header
   ctx.font='bold 15px Courier New'; ctx.fillStyle='#FFD700';
   ctx.shadowColor='#FFD700'; ctx.shadowBlur=10;
-  ctx.fillText('LOJA', W/2, 36); ctx.shadowBlur=0;
+  ctx.fillText('SHOP', W/2, 36); ctx.shadowBlur=0;
   ctx.font='11px Courier New'; ctx.fillStyle='#FFD700';
-  ctx.fillText('🐉 '+coinCount+' moedas', W/2, 54);
+  ctx.fillText('🐉 '+coinCount+' coins', W/2, 54);
 
   // ── SKINS section ──
   ctx.textAlign='left';
   ctx.font='bold 8px Courier New'; ctx.fillStyle='#00D4FFaa';
-  ctx.fillText('💎 SKINS — compra com moedas do dragão', 16, 70);
+  ctx.fillText('💎 SKINS — buy with dragon coins', 16, 70);
   ctx.textAlign='center';
   drawShopCards(76, false);
 
@@ -474,7 +474,7 @@ function drawShopTab() {
   var py = 410;
   ctx.textAlign='left';
   ctx.font='bold 8px Courier New'; ctx.fillStyle='#aa44ffaa';
-  ctx.fillText('⚗️ POÇÕES', 16, py);
+  ctx.fillText('⚗️ POTIONS', 16, py);
   var potions=[{icon:'💊',name:'Vida Extra',sub:'em breve'},{icon:'⚡',name:'Speed+',sub:'em breve'},{icon:'🛡️',name:'Shield',sub:'em breve'}];
   for(var pi2=0;pi2<3;pi2++){
     var px2=16+pi2*126, py2=py+5;
@@ -485,14 +485,14 @@ function drawShopTab() {
     ctx.font='7px Courier New'; ctx.fillStyle='#ffffff44';
     ctx.fillText(potions[pi2].name, px2+66, py2+14);
     ctx.font='bold 7px Courier New'; ctx.fillStyle='#aa44ff55';
-    ctx.fillText('EM BREVE', px2+66, py2+28);
+    ctx.fillText('COMING SOON',px2+66, py2+28);
   }
 
   // ── ITENS ESPECIAIS ──
   var iy = py+52;
   ctx.textAlign='left';
   ctx.font='bold 8px Courier New'; ctx.fillStyle='#FFD700aa';
-  ctx.fillText('🗡️ ITENS ESPECIAIS', 16, iy);
+  ctx.fillText('🗡️ SPECIAL ITEMS', 16, iy);
   var items2=[{icon:'🧲',name:'Moeda x2',sub:'em breve'},{icon:'💫',name:'Auto-Flip',sub:'em breve'},{icon:'🎯',name:'Aim+',sub:'em breve'}];
   for(var ii3=0;ii3<3;ii3++){
     var ix2=16+ii3*126, iy2=iy+5;
@@ -503,7 +503,7 @@ function drawShopTab() {
     ctx.font='7px Courier New'; ctx.fillStyle='#ffffff44';
     ctx.fillText(items2[ii3].name, ix2+66, iy2+14);
     ctx.font='bold 7px Courier New'; ctx.fillStyle='#FFD70044';
-    ctx.fillText('EM BREVE', ix2+66, iy2+28);
+    ctx.fillText('COMING SOON',ix2+66, iy2+28);
   }
   ctx.textAlign='center';
 }
@@ -514,32 +514,32 @@ function drawShopOverlay() {
   var sg=ctx.createLinearGradient(W/2-70,0,W/2+70,0);
   sg.addColorStop(0,'#FFD700'); sg.addColorStop(1,'#00D4FF');
   ctx.fillStyle=sg; ctx.shadowColor='#FFD700'; ctx.shadowBlur=14;
-  ctx.fillText('LOJA — FASE '+(completedPhase+1)+' COMPLETA', W/2, 36); ctx.shadowBlur=0;
+  ctx.fillText('SHOP — PHASE '+(completedPhase+1)+' COMPLETE', W/2, 36); ctx.shadowBlur=0;
   ctx.font='11px Courier New'; ctx.fillStyle='#FFD700';
-  ctx.fillText('🐉 '+coinCount+' moedas disponíveis', W/2, 56);
+  ctx.fillText('🐉 '+coinCount+' coins available', W/2, 56);
   ctx.font='bold 8px Courier New'; ctx.fillStyle='#00D4FFaa';
-  ctx.textAlign='left'; ctx.fillText('💎 SKINS — compra com moedas', 16, 72); ctx.textAlign='center';
+  ctx.textAlign='left'; ctx.fillText('💎 SKINS — buy with coins', 16, 72); ctx.textAlign='center';
   drawShopCards(76, true);
   // future items row placeholder
   ctx.fillStyle='#ffffff06'; ctx.strokeStyle='#ffffff11'; ctx.lineWidth=1;
   ctx.fillRect(W/2-118,H-118,236,32); ctx.strokeRect(W/2-118,H-118,236,32);
   ctx.font='9px Courier New'; ctx.fillStyle='#ffffff33';
-  ctx.fillText('⚗️ poções  •  🗡️ power-ups  •  🃏 itens  — em breve', W/2, H-99);
+  ctx.fillText('⚗️ potions  •  🗡️ power-ups  •  🃏 items  — coming soon', W/2, H-99);
   // continue button
   ctx.fillStyle='#0052FF'; ctx.strokeStyle='#00D4FF'; ctx.lineWidth=2;
   ctx.fillRect(W/2-80,H-74,160,36); ctx.strokeRect(W/2-80,H-74,160,36);
   ctx.font='bold 12px Courier New'; ctx.fillStyle='#fff';
   ctx.shadowColor='#00D4FF'; ctx.shadowBlur=8;
-  ctx.fillText('CONTINUAR JOGANDO', W/2, H-50); ctx.shadowBlur=0;
+  ctx.fillText('KEEP PLAYING', W/2, H-50); ctx.shadowBlur=0;
 }
 function drawSkinsTab() {
   ctx.textAlign='center';
   // Title
   ctx.font='bold 13px Courier New'; ctx.fillStyle='#00D4FF';
   ctx.shadowColor='#00D4FF'; ctx.shadowBlur=10;
-  ctx.fillText('MINHAS SKINS', W/2, H/2-134); ctx.shadowBlur=0;
+  ctx.fillText('MY SKINS', W/2, H/2-134); ctx.shadowBlur=0;
   ctx.font='10px Courier New'; ctx.fillStyle='#FFD700';
-  ctx.fillText('🐉 '+coinCount+' moedas', W/2, H/2-116);
+  ctx.fillText('🐉 '+coinCount+' coins', W/2, H/2-116);
 
   // Filter: only show skins the player owns
   var owned = unlockedSkins.slice().sort(function(a,b){return a-b;});
@@ -567,21 +567,21 @@ function drawSkinsTab() {
     ctx.font='bold 8px Courier New'; ctx.fillStyle='#fff'; ctx.textAlign='center';
     ctx.fillText(sk2.name, sx2, sy2+th2-18);
     ctx.font='7px Courier New'; ctx.fillStyle='#ffffff55';
-    ctx.fillText(sk2.rarity||'PADRÃO', sx2, sy2+th2-8);
+    ctx.fillText(sk2.rarity||'DEFAULT', sx2, sy2+th2-8);
     // equipped badge
     if(equipped){
       ctx.fillStyle=sk2.body; ctx.font='bold 7px Courier New';
-      ctx.fillText('✓ USO', sx2, sy2+10);
+      ctx.fillText('✓ IN USE', sx2, sy2+10);
     }
   }
 
   // Empty state
   if(owned.length<=1){
     ctx.font='9px Courier New'; ctx.fillStyle='#ffffff33';
-    ctx.fillText('compre mais skins na Loja 🛒', W/2, H/2+100);
+    ctx.fillText('buy more skins in the Shop 🛒', W/2, H/2+100);
   } else {
     ctx.font='9px Courier New'; ctx.fillStyle='#ffffff33';
-    ctx.fillText('toque na skin para equipar', W/2, H/2+100);
+    ctx.fillText('tap a skin to equip', W/2, H/2+100);
   }
 }
 
@@ -590,19 +590,19 @@ function drawSkinsTab() {
 // ─── SKINS ────────────────────────────────────────────────────────────
 const SKINS = [
   // 0 – padrão (grátis)
-  { name:'PADRÃO',    rarity:'COMUM', price:0,   body:'#3b8fff', bodyLt:'#6ab4ff', shadow:'#1a5fcc', belly:'#d6eeff', outline:'#1a4fa0', glow:'#4499ff' },
-  // 1-5 skins originais
-  { name:'NEON',      rarity:'COMUM', price:80,  body:'#00e5ff', bodyLt:'#88f8ff', shadow:'#007a99', belly:'#ccfeff', outline:'#005577', glow:'#00e5ff' },
-  { name:'DOURADO',   rarity:'COMUM', price:180, body:'#FFD700', bodyLt:'#FFE866', shadow:'#B8860B', belly:'#FFF5CC', outline:'#8B6914', glow:'#FFD700' },
-  { name:'CYBERPUNK', rarity:'COMUM', price:200, body:'#ff0080', bodyLt:'#ff66bb', shadow:'#880040', belly:'#ffccee', outline:'#660030', glow:'#ff00ff' },
-  { name:'MEME',      rarity:'COMUM', price:80,  body:'#ff6600', bodyLt:'#ff9944', shadow:'#cc4400', belly:'#ffddcc', outline:'#882200', glow:'#ff8800' },
-  { name:'BASE',      rarity:'COMUM', price:250, body:'#0052FF', bodyLt:'#4488ff', shadow:'#002299', belly:'#cce0ff', outline:'#001a99', glow:'#0052FF' },
-  // 6-10 novas skins
-  { name:'ROXO',      rarity:'COMUM', price:80,  body:'#9933ff', bodyLt:'#cc88ff', shadow:'#5500cc', belly:'#eeccff', outline:'#3d0099', glow:'#aa44ff' },
-  { name:'VERDE',     rarity:'COMUM', price:80,  body:'#00cc44', bodyLt:'#44ff88', shadow:'#006622', belly:'#ccffdd', outline:'#004d1a', glow:'#00dd55' },
-  { name:'VERMELHO',  rarity:'COMUM', price:100, body:'#ff2233', bodyLt:'#ff7788', shadow:'#aa0011', belly:'#ffcccc', outline:'#880011', glow:'#ff3344' },
-  { name:'ROSA',      rarity:'COMUM', price:100, body:'#ff66cc', bodyLt:'#ffaaee', shadow:'#cc2299', belly:'#ffddff', outline:'#990077', glow:'#ff44cc' },
-  { name:'PRETO',     rarity:'COMUM', price:150, body:'#222233', bodyLt:'#444466', shadow:'#111122', belly:'#aaaacc', outline:'#000011', glow:'#5555aa' }
+  { name:'DEFAULT',   rarity:'COMMON', price:0,   body:'#3b8fff', bodyLt:'#6ab4ff', shadow:'#1a5fcc', belly:'#d6eeff', outline:'#1a4fa0', glow:'#4499ff' },
+  // 1-5 original skins
+  { name:'NEON',      rarity:'COMMON', price:80,  body:'#00e5ff', bodyLt:'#88f8ff', shadow:'#007a99', belly:'#ccfeff', outline:'#005577', glow:'#00e5ff' },
+  { name:'GOLDEN',    rarity:'COMMON', price:180, body:'#FFD700', bodyLt:'#FFE866', shadow:'#B8860B', belly:'#FFF5CC', outline:'#8B6914', glow:'#FFD700' },
+  { name:'CYBERPUNK', rarity:'COMMON', price:200, body:'#ff0080', bodyLt:'#ff66bb', shadow:'#880040', belly:'#ffccee', outline:'#660030', glow:'#ff00ff' },
+  { name:'MEME',      rarity:'COMMON', price:80,  body:'#ff6600', bodyLt:'#ff9944', shadow:'#cc4400', belly:'#ffddcc', outline:'#882200', glow:'#ff8800' },
+  { name:'BASE',      rarity:'COMMON', price:250, body:'#0052FF', bodyLt:'#4488ff', shadow:'#002299', belly:'#cce0ff', outline:'#001a99', glow:'#0052FF' },
+  // 6-10 new skins
+  { name:'PURPLE',    rarity:'COMMON', price:80,  body:'#9933ff', bodyLt:'#cc88ff', shadow:'#5500cc', belly:'#eeccff', outline:'#3d0099', glow:'#aa44ff' },
+  { name:'GREEN',     rarity:'COMMON', price:80,  body:'#00cc44', bodyLt:'#44ff88', shadow:'#006622', belly:'#ccffdd', outline:'#004d1a', glow:'#00dd55' },
+  { name:'RED',       rarity:'COMMON', price:100, body:'#ff2233', bodyLt:'#ff7788', shadow:'#aa0011', belly:'#ffcccc', outline:'#880011', glow:'#ff3344' },
+  { name:'PINK',      rarity:'COMMON', price:100, body:'#ff66cc', bodyLt:'#ffaaee', shadow:'#cc2299', belly:'#ffddff', outline:'#990077', glow:'#ff44cc' },
+  { name:'BLACK',     rarity:'COMMON', price:150, body:'#222233', bodyLt:'#444466', shadow:'#111122', belly:'#aaaacc', outline:'#000011', glow:'#5555aa' }
 ];
 
 // ─── LEADERBOARD TAB ────────────────────────────────────────────────
@@ -615,7 +615,7 @@ function drawLeaderboardTab() {
   ctx.fillText('RANKING', W/2, H/2-122); ctx.shadowBlur=0;
 
   var rows=[
-    { label:'PONTUAÇÃO ANTERIOR', val:lastScore,  color:'#00D4FF', icon:'🎮' },
+    { label:'LAST SCORE',         val:lastScore,  color:'#00D4FF', icon:'🎮' },
     { label:'MELHOR SCORE',    val:highScore,  color:'#FFD700', icon:'🏆' },
     { label:'SCORE TOTAL',     val:totalScore, color:'#aa44ff', icon:'📊' }
   ];
@@ -648,7 +648,7 @@ function drawLeaderboardTab() {
     ctx.fillStyle='#ffffff0a'; ctx.strokeStyle='#ffffff22'; ctx.lineWidth=1;
     ctx.beginPath(); ctx.roundRect(W/2-30,wy+38,60,16,5); ctx.fill(); ctx.stroke();
     ctx.font='7px Courier New'; ctx.fillStyle='#ffffff44';
-    ctx.fillText('desconectar', W/2, wy+49);
+    ctx.fillText('disconnect', W/2, wy+49);
 
     // Melhores scores desta wallet
     var myScores = walletScores.filter(function(e){
@@ -657,7 +657,7 @@ function drawLeaderboardTab() {
     myScores.sort(function(a,b){return b.score-a.score;});
     if(myScores.length>0){
       ctx.font='bold 9px Courier New'; ctx.fillStyle='#FFD700aa';
-      ctx.fillText('SEUS MELHORES SCORES', W/2, wy+70);
+      ctx.fillText('YOUR BEST SCORES', W/2, wy+70);
       var wMedals=['🥇','🥈','🥉'];
       var wCols=['#FFD700','#C0C0C0','#cd7f32'];
       for(var wi2=0;wi2<Math.min(myScores.length,3);wi2++){
@@ -669,7 +669,7 @@ function drawLeaderboardTab() {
       ctx.fillText(myScores.length+' jogada'+(myScores.length!==1?'s':'')+' salvas', W/2, wy+128);
     } else {
       ctx.font='10px Courier New'; ctx.fillStyle='#ffffff33';
-      ctx.fillText('jogue e seus scores serão salvos!', W/2, wy+74);
+      ctx.fillText('play and your scores will be saved!', W/2, wy+74);
     }
   } else {
     // Botão CONECTAR — pulsando
@@ -680,13 +680,13 @@ function drawLeaderboardTab() {
     ctx.strokeStyle='#00D4FF55'; ctx.lineWidth=1.5; ctx.stroke();
     ctx.fillStyle='#fff'; ctx.font='bold 12px Courier New';
     ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText('💎  CONECTAR CARTEIRA', 0, 0);
+    ctx.fillText('💎  CONNECT WALLET', 0, 0);
     ctx.textBaseline='alphabetic'; ctx.restore();
 
     ctx.font='9px Courier New'; ctx.fillStyle='#ffffff33';
     ctx.fillText('Coinbase Wallet  ·  Base Network', W/2, wy+52);
     ctx.font='8px Courier New'; ctx.fillStyle='#0052FF66';
-    ctx.fillText('salve seus scores · ranking global em breve', W/2, wy+66);
+    ctx.fillText('save your scores · global ranking coming soon', W/2, wy+66);
   }
 }
 
@@ -721,9 +721,9 @@ function drawDailyModal() {
   var dg=ctx.createLinearGradient(W/2-80,0,W/2+80,0);
   dg.addColorStop(0,'#FFD700'); dg.addColorStop(1,'#00D4FF');
   ctx.fillStyle=dg; ctx.shadowColor='#FFD700'; ctx.shadowBlur=20;
-  ctx.fillText('LOGIN DIÁRIO', W/2, H/2-122); ctx.shadowBlur=0;
+  ctx.fillText('DAILY LOGIN', W/2, H/2-122); ctx.shadowBlur=0;
   ctx.font='11px Courier New'; ctx.fillStyle='#ffffff66';
-  ctx.fillText('Dia '+dailyDay+' de 7', W/2, H/2-98);
+  ctx.fillText('Day '+dailyDay+' of 7', W/2, H/2-98);
 
   // 7-day progress strip
   var icons=['💰','📦','🎨','💰','💰','💰','🎁'];
@@ -741,17 +741,17 @@ function drawDailyModal() {
 
   // Today's reward box
   ctx.font='bold 13px Courier New'; ctx.fillStyle='#ffffff88';
-  ctx.fillText('Recompensa de hoje:', W/2, H/2+12);
+  ctx.fillText("Today's reward:", W/2, H/2+12);
   ctx.font='bold 24px Courier New';
   if(dailyReward==='coins'){
     ctx.fillStyle='#FFD700'; ctx.shadowColor='#FFD700'; ctx.shadowBlur=18;
-    ctx.fillText('+'+dailyRewardVal+' moedas 🐉', W/2, H/2+48);
+    ctx.fillText('+'+dailyRewardVal+' coins 🐉', W/2, H/2+48);
   } else if(dailyReward==='chest'){
     ctx.fillStyle='#C8960C'; ctx.shadowColor='#C8960C'; ctx.shadowBlur=18;
-    ctx.fillText('📦 Baú Grátis!', W/2, H/2+48);
+    ctx.fillText('📦 Free Chest!', W/2, H/2+48);
   } else {
     ctx.fillStyle='#00D4FF'; ctx.shadowColor='#00D4FF'; ctx.shadowBlur=18;
-    ctx.fillText('🎨 Skin Especial!', W/2, H/2+48);
+    ctx.fillText('🎨 Special Skin!', W/2, H/2+48);
   }
   ctx.shadowBlur=0;
 
@@ -760,7 +760,7 @@ function drawDailyModal() {
   ctx.fillRect(W/2-65,H/2+78,130,34); ctx.strokeRect(W/2-65,H/2+78,130,34);
   ctx.font='bold 13px Courier New'; ctx.fillStyle='#fff';
   ctx.shadowColor='#00D4FF'; ctx.shadowBlur=8;
-  ctx.fillText('COLETAR', W/2, H/2+100); ctx.shadowBlur=0;
+  ctx.fillText('CLAIM', W/2, H/2+100); ctx.shadowBlur=0;
 }
 
 // ─── SCORE POPUP ─────────────────────────────────────────────────────
@@ -1260,7 +1260,7 @@ function drawNFTBanner() {
   ctx.textAlign = 'center';
   // NFT badge
   ctx.fillStyle = '#FFD700'; ctx.font = 'bold 11px Courier New';
-  ctx.fillText('✦ NFT DESBLOQUEADO ✦', W/2, H/2-58);
+  ctx.fillText('✦ NFT UNLOCKED ✦', W/2, H/2-58);
   // Big text
   ctx.font = 'bold 30px Courier New';
   var ng = ctx.createLinearGradient(W/2-90, 0, W/2+90, 0);
@@ -1271,9 +1271,9 @@ function drawNFTBanner() {
   ctx.shadowBlur = 0;
   // Sub
   ctx.fillStyle = '#ffffffcc'; ctx.font = '10px Courier New';
-  ctx.fillText('Novo personagem jogável desbloqueado!', W/2, H/2+0);
+  ctx.fillText('New playable character unlocked!', W/2, H/2+0);
   ctx.fillStyle = '#00D4FFaa'; ctx.font = '9px Courier New';
-  ctx.fillText('Mude o personagem na tela inicial', W/2, H/2+16);
+  ctx.fillText('Change character on the home screen', W/2, H/2+16);
   // Mini Brett preview
   ctx.globalAlpha = alpha * 0.9;
   ctx.restore();
@@ -3060,7 +3060,7 @@ function drawPhaseBanner() {
   ctx.textAlign = 'center';
   ctx.fillStyle = '#ffffff66';
   ctx.font = 'bold 11px Courier New';
-  ctx.fillText('✦  NOVA FASE  ✦', W/2, H/2-52);
+  ctx.fillText('✦  NEW PHASE  ✦', W/2, H/2-52);
 
   // Label da fase (PHASE 3) — grande
   ctx.fillStyle = '#FFD700';
@@ -3081,7 +3081,7 @@ function drawPhaseBanner() {
   // Velocidade + barra de progresso de fase
   ctx.fillStyle = '#ffffff88';
   ctx.font = '11px Courier New';
-  ctx.fillText('velocidade  ' + ph.speed.toFixed(1) + 'x', W/2, H/2+32);
+  ctx.fillText('speed  ' + ph.speed.toFixed(1) + 'x', W/2, H/2+32);
 
   // Barra de progresso (fase atual / total)
   var pi = getPhaseIdx();
@@ -3094,7 +3094,7 @@ function drawPhaseBanner() {
   // Nível em texto abaixo da barra
   ctx.fillStyle = '#ffffff44';
   ctx.font = '9px Courier New';
-  ctx.fillText((pi+1) + ' / ' + PHASES.length + ' fases', W/2, H/2+64);
+  ctx.fillText((pi+1) + ' / ' + PHASES.length + ' phases', W/2, H/2+64);
 
   ctx.restore();
 }
@@ -3182,7 +3182,7 @@ function loop(ts) {
         ctx.fillText('💎 '+walletShort, W/2, H-78);
       } else {
         ctx.fillStyle='#0052FF66'; ctx.font='9px Courier New';
-        ctx.fillText('💎 RANK → conectar wallet', W/2, H-78);
+        ctx.fillText('💎 RANK → connect wallet', W/2, H-78);
       }
     } else if(idleTab==='shop'){
       drawShopTab();
@@ -3320,7 +3320,7 @@ function loop(ts) {
         if(MILESTONES[milestoneIdx] && score>=MILESTONES[milestoneIdx]){
           var bonus = MILESTONES[milestoneIdx]*2;
           coinCount+=bonus; localStorage.setItem('bleuCoins',coinCount);
-          spawnScorePopup(bleu.x, bleu.y-55, '+'+bonus+' 🐉 BÔNUS!');
+          spawnScorePopup(bleu.x, bleu.y-55, '+'+bonus+' 🐉 BONUS!');
           beep(880,1760,0.35,'sine',0.18);
           screenShake=8;
           milestoneIdx++;
@@ -3474,7 +3474,7 @@ function loop(ts) {
       ctx.font = 'bold 13px Courier New';
       ctx.fillStyle = '#FFD700';
       ctx.shadowColor = '#FFD700'; ctx.shadowBlur = 20;
-      ctx.fillText('🏆 NOVO RECORDE!', W/2, H/2-70);
+      ctx.fillText('🏆 NEW RECORD!', W/2, H/2-70);
       ctx.shadowBlur = 0;
       ctx.restore();
       recFlash--;
@@ -3546,9 +3546,9 @@ function loop(ts) {
     ctx.fillText('💔', W/2, H/2-50);
     // texto
     ctx.font='bold 18px Courier New'; ctx.fillStyle='#FF4466';
-    ctx.fillText('VOCÊ PERDEU UMA VIDA!', W/2, H/2+2);
+    ctx.fillText('YOU LOST A LIFE!', W/2, H/2+2);
     ctx.font='bold 13px Courier New'; ctx.fillStyle='#ffffff99';
-    ctx.fillText('vidas restantes: '+lives, W/2, H/2+26);
+    ctx.fillText('lives remaining: '+lives, W/2, H/2+26);
     // botão continuar pulsando
     var _hp = 1 + 0.06*Math.sin(frame*0.12);
     ctx.save(); ctx.translate(W/2, H/2+72); ctx.scale(_hp,_hp);
@@ -3596,7 +3596,7 @@ function loop(ts) {
     ctx.fillStyle = '#fff'; ctx.font = 'bold 26px Courier New';
     ctx.fillText(score, W/2, H/2-22);
     ctx.fillStyle = '#ffffff55'; ctx.font = '10px Courier New';
-    ctx.fillText('PONTOS', W/2, H/2-8);
+    ctx.fillText('SCORE', W/2, H/2-8);
 
     // Fase alcançada esta run
     var phaseName = PHASE_VISUALS[runPhase] ? PHASE_VISUALS[runPhase].name : PHASE_VISUALS[0].name;
@@ -3606,7 +3606,7 @@ function loop(ts) {
     // Melhor fase histórica
     if(bestPhaseEver > 0 && PHASE_VISUALS[bestPhaseEver]){
       ctx.fillStyle = '#ffffff44'; ctx.font = '10px Courier New';
-      ctx.fillText('melhor fase: ' + PHASE_VISUALS[bestPhaseEver].name, W/2, H/2+24);
+      ctx.fillText('best phase: ' + PHASE_VISUALS[bestPhaseEver].name, W/2, H/2+24);
     }
 
     // Combo + moedas
@@ -3618,14 +3618,14 @@ function loop(ts) {
     }
     if(coinsThisRun > 0){
       ctx.fillStyle = '#FFD700'; ctx.font = '11px Courier New';
-      ctx.fillText('🐉 +' + coinsThisRun + ' moedas', W/2, extraY); extraY+=14;
+      ctx.fillText('🐉 +' + coinsThisRun + ' coins', W/2, extraY); extraY+=14;
     }
 
     // Novo recorde
     if(newRecord){
       ctx.fillStyle='#FFD700'; ctx.font='bold 12px Courier New';
       ctx.shadowColor='#FFD700'; ctx.shadowBlur=14;
-      ctx.fillText('🏆 NOVO RECORDE!', W/2, extraY); extraY+=14;
+      ctx.fillText('🏆 NEW RECORD!', W/2, extraY); extraY+=14;
       ctx.shadowBlur=0;
     }
 
@@ -3657,7 +3657,7 @@ function loop(ts) {
     ctx.fillStyle = '#0052FF';
     ctx.beginPath(); ctx.roundRect(-78,-17,156,34,10); ctx.fill();
     ctx.font='bold 14px Courier New'; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillStyle='#fff'; ctx.fillText('▶ JOGAR DE NOVO', 0, 0);
+    ctx.fillStyle='#fff'; ctx.fillText('▶ PLAY AGAIN', 0, 0);
     ctx.textBaseline='alphabetic'; ctx.restore();
 
     // ── Botão MENU ──
@@ -3674,18 +3674,18 @@ function loop(ts) {
     // ── Wallet indicator na tela de morte ──
     if(walletAddress){
       ctx.fillStyle='#00FF8866'; ctx.font='9px Courier New';
-      ctx.fillText('💎 '+walletShort+' · score salvo', W/2, H/2+256);
+      ctx.fillText('💎 '+walletShort+' · score saved', W/2, H/2+256);
     } else {
       // Botão sutil para conectar
       ctx.fillStyle='#0052FF99'; ctx.font='bold 9px Courier New';
-      ctx.fillText('💎 conectar wallet → ranking global', W/2, H/2+256);
+      ctx.fillText('💎 connect wallet → global ranking', W/2, H/2+256);
     }
     if(shareFlash>0) shareFlash--;
   }
   ctx.restore();
   if(screenShake>0)screenShake--;
   if(shopOverlay){ drawShopOverlay(); }
-  if(paused && gameState==='playing'){ ctx.fillStyle='rgba(0,5,20,.65)'; ctx.fillRect(0,0,W,H); ctx.textAlign='center'; ctx.font='bold 22px Courier New'; ctx.fillStyle='#fff'; ctx.shadowColor='#0052FF'; ctx.shadowBlur=20; ctx.fillText('PAUSADO',W/2,H/2); ctx.shadowBlur=0; ctx.font='11px Courier New'; ctx.fillStyle='#ffffff88'; ctx.fillText('toque ▶ ou tecle P para continuar',W/2,H/2+28); }
+  if(paused && gameState==='playing'){ ctx.fillStyle='rgba(0,5,20,.65)'; ctx.fillRect(0,0,W,H); ctx.textAlign='center'; ctx.font='bold 22px Courier New'; ctx.fillStyle='#fff'; ctx.shadowColor='#0052FF'; ctx.shadowBlur=20; ctx.fillText('PAUSED',W/2,H/2); ctx.shadowBlur=0; ctx.font='11px Courier New'; ctx.fillStyle='#ffffff88'; ctx.fillText('tap ▶ or press P to resume',W/2,H/2+28); }
   if(hitFlash>0){ctx.globalAlpha=(hitFlash/8)*.38;ctx.fillStyle='#ff1133';ctx.fillRect(0,0,W,H);ctx.globalAlpha=1;hitFlash--;}
 }
 
