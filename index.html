@@ -314,92 +314,52 @@ function drawTreasureChest(cx, cy) {
 }
 
 function drawAwardScreen() {
-  // Fundo escuro
   ctx.fillStyle='rgba(0,5,20,.88)'; ctx.fillRect(0,0,W,H);
+  var cx=W/2; ctx.textAlign='center';
 
-  // Flash de abertura (primeiros frames após abrir)
-  if(chestOpened && chestOpenAnim<=6){
-    ctx.globalAlpha=(6-chestOpenAnim)/6*0.7;
-    ctx.fillStyle='#FFE040'; ctx.fillRect(0,0,W,H);
-    ctx.globalAlpha=1;
-  }
-
-  var cx=W/2, cy=H/2+20;
-  ctx.textAlign='center';
-
-  // Título da fase
+  // Phase title
   var aTitle = chestType==='rare' ? '⭐ EPIC PHASE!' : chestType==='gold' ? '🔥 GOLDEN PHASE!' : 'PHASE '+(completedPhase+1)+' COMPLETE!';
   var titleCol = chestType==='rare' ? '#cc44ff' : chestType==='gold' ? '#FFD700' : '#00D4FF';
-  // Glow via alpha duplo (sem shadowBlur)
   ctx.globalAlpha=0.3; ctx.fillStyle=titleCol;
-  ctx.font='bold 22px Courier New'; ctx.fillText(aTitle,cx+2,cy-150+2);
+  ctx.font='bold 22px Courier New'; ctx.fillText(aTitle,cx+2,H/2-110+2);
   ctx.globalAlpha=1; ctx.fillStyle=titleCol;
-  ctx.fillText(aTitle, cx, cy-150);
+  ctx.shadowColor=titleCol; ctx.shadowBlur=16;
+  ctx.fillText(aTitle, cx, H/2-110); ctx.shadowBlur=0;
 
+  // Phase visual name
+  var pv2=PHASE_VISUALS[completedPhase]||PHASE_VISUALS[0];
+  ctx.fillStyle=pv2.glowColor; ctx.font='bold 28px Arial';
+  ctx.globalAlpha=0.2; ctx.fillText(pv2.name,cx,H/2-72);
+  ctx.globalAlpha=1; ctx.font='bold 24px Arial';
+  ctx.fillText(pv2.name, cx, H/2-72);
 
-  // Baú
-  drawTreasureChest(cx, cy-40);
-  if(chestOpened && chestOpenAnim<40) chestOpenAnim++;
+  // Coins earned this phase
+  var phCoins = chestType==='rare'?60:chestType==='gold'?35:15;
+  phCoins += Math.floor(phCoins*0.5*Math.random());
+  ctx.fillStyle='#FFD700'; ctx.font='bold 36px Arial';
+  ctx.shadowColor='#FFD700'; ctx.shadowBlur=20;
+  ctx.fillText('+'+phCoins, cx, H/2+10); ctx.shadowBlur=0;
+  ctx.fillStyle='#FFD700aa'; ctx.font='10px Courier New';
+  ctx.fillText('🐉 dragon coins', cx, H/2+28);
+  ctx.fillStyle='#ffffff33'; ctx.font='9px Courier New';
+  ctx.fillText('total: '+coinCount+' coins', cx, H/2+44);
 
-  // Prêmio — entra com scale após abertura
-  if(chestOpened && chestOpenAnim>=14){
-    var col2   = chestType==='rare'?'#cc44ff': chestType==='gold'?'#FFD700':'#00D4FF';
-    var prize  = chestType==='rare'?'🔮':'🐉';
-    var entryT = Math.min(1,(chestOpenAnim-14)/8); // 0→1 em 8 frames
-    var sc     = 0.4 + 0.6*entryT;                // escala de entrada
-    var prizeY = cy+70;
+  // Two buttons
+  var p2=0.97+0.03*Math.sin(frame*0.14);
+  ctx.save(); ctx.translate(cx-58, H/2+82); ctx.scale(p2,p2);
+  ctx.fillStyle='#FFD70022'; ctx.strokeStyle='#FFD700bb'; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.roundRect(-48,-18,96,36,8); ctx.fill(); ctx.stroke();
+  ctx.fillStyle='#FFD700'; ctx.font='bold 13px Courier New';
+  ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('🛒  SHOP',0,0);
+  ctx.textBaseline='alphabetic'; ctx.restore();
 
-    ctx.save(); ctx.translate(cx, prizeY); ctx.scale(sc, sc);
-
-    // Painel do prêmio
-    ctx.fillStyle='#00000066';
-    ctx.beginPath(); ctx.roundRect(-100,-36,200,100,12); ctx.fill();
-    ctx.strokeStyle=col2+'88'; ctx.lineWidth=2;
-    ctx.stroke();
-
-    // "VOCÊ GANHOU!"
-    ctx.fillStyle='#ffffff99'; ctx.font='bold 11px Courier New';
-    ctx.textAlign='center'; ctx.fillText('YOU WON!', 0, -18);
-
-    // Número de moedas — destaque máximo
-    ctx.globalAlpha=0.2; ctx.fillStyle=col2;
-    ctx.font='bold 48px Arial'; ctx.fillText('+'+chestCoins, 2, 34);
-    ctx.globalAlpha=1; ctx.fillStyle=col2;
-    ctx.font='bold 48px Arial'; ctx.fillText('+'+chestCoins, 0, 32);
-
-    ctx.restore();
-
-    // Legenda fora do scale
-    ctx.globalAlpha=entryT;
-    ctx.fillStyle='#ffffff88'; ctx.font='12px Courier New'; ctx.textAlign='center';
-    ctx.fillText(prize+' dragon coins', cx, prizeY+80);
-    ctx.fillStyle=coinCount>0?'#FFD700':'#ffffff55';
-    ctx.font='11px Courier New';
-    ctx.fillText('total: '+coinCount+' coins', cx, prizeY+96);
-    ctx.globalAlpha=1;
-
-    // Botões — aparecem depois do prêmio estar visível
-    if(chestOpenAnim>=26){
-      var p2=0.97+0.03*Math.sin(frame*0.14);
-      // Botão SHOP
-      ctx.save(); ctx.translate(cx-56, prizeY+118); ctx.scale(p2,p2);
-      ctx.fillStyle='#FFD70022'; ctx.strokeStyle='#FFD700aa'; ctx.lineWidth=1.5;
-      ctx.beginPath(); ctx.roundRect(-46,-17,92,34,8); ctx.fill(); ctx.stroke();
-      ctx.fillStyle='#FFD700'; ctx.font='bold 12px Courier New';
-      ctx.textAlign='center'; ctx.textBaseline='middle';
-      ctx.fillText('🛒  SHOP', 0, 0);
-      ctx.textBaseline='alphabetic'; ctx.restore();
-      // Botão CONTINUE
-      ctx.save(); ctx.translate(cx+56, prizeY+118); ctx.scale(p2,p2);
-      ctx.fillStyle='#0052FF';
-      ctx.beginPath(); ctx.roundRect(-46,-17,92,34,8); ctx.fill();
-      ctx.strokeStyle='#00D4FF55'; ctx.lineWidth=1.5; ctx.stroke();
-      ctx.fillStyle='#fff'; ctx.font='bold 12px Courier New';
-      ctx.textAlign='center'; ctx.textBaseline='middle';
-      ctx.fillText('▶  GO', 0, 0);
-      ctx.textBaseline='alphabetic'; ctx.restore();
-    }
-  }
+  ctx.save(); ctx.translate(cx+58, H/2+82); ctx.scale(p2,p2);
+  ctx.fillStyle='#0052FF';
+  ctx.beginPath(); ctx.roundRect(-48,-18,96,36,8); ctx.fill();
+  ctx.strokeStyle='#00D4FF55'; ctx.lineWidth=1.5; ctx.stroke();
+  ctx.fillStyle='#fff'; ctx.font='bold 13px Courier New';
+  ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('▶  GO',0,0);
+  ctx.textBaseline='alphabetic'; ctx.restore();
 }
 
 // ─── IDLE TABS ───────────────────────────────────────────────
@@ -825,6 +785,7 @@ let screenShake = 0, scorePop = 0, hitFlash = 0, bleuSquish = 0;
 let coins = [], coinCount = parseInt(localStorage.getItem('bleuCoins')||'0');
 var _mTimeout=null, _mPhase=-1, _mPos=0;
 var completedPhase=0, chestClicks=0, chestBounce=0, chestOpened=false, chestCoins=0, chestOpenAnim=0;
+var deadChest={active:false,opened:false,coins:0,anim:0};
 var idleTab='play';
 var totalScore=parseInt(localStorage.getItem('bleuTotal')||'0');
 var shopOverlay=false, paused=false;
@@ -907,6 +868,7 @@ function resetGame() {
   idleTab = 'play'; scorePopups = []; scoreGlow = 0; chestType = 'normal'; shopOverlay = false; paused = false;
   combo = 0; comboFlash = 0; coinsThisRun = 0; milestoneIdx = 0; recFlash = 0;
   lives = 3; invincible = 0; starPower = 0; stars = [];
+  deadChest={active:false,opened:false,coins:0,anim:0,clicks:0};
   shield = 0; shieldItems = []; shieldBreak = 0;
   runPhase = 0; shareFlash = 0;
 }
@@ -3471,7 +3433,13 @@ function loop(ts) {
               setTimeout(function(){ beep(f,f*1.2,0.25,'sine',0.2); }, ii*100);
             });
           }
-          { chestType=(newPI===9)?'rare':(newPI>=6)?'gold':'normal'; gameState='award'; chestClicks=0;chestBounce=0;chestOpened=false;chestCoins=0;chestOpenAnim=0;bleu.vy=0; }
+          { chestType=(newPI===9)?'rare':(newPI>=6)?'gold':'normal';
+            // Auto-give phase coins
+            var _pc=(chestType==='rare'?60:chestType==='gold'?35:15)+Math.floor(Math.random()*10);
+            coinCount+=_pc; localStorage.setItem('bleuCoins',coinCount);
+            spawnParticles(W/2,H/2,'#FFD700',14); spawnParticles(W/2,H/2,'#fff',6);
+            if(navigator.vibrate) navigator.vibrate([40,20,80]);
+            gameState='award'; bleu.vy=0; }
         }
       }
     }
@@ -3655,7 +3623,10 @@ function loop(ts) {
         if(score>0) top5=saveTop5(score);
         if(runPhase > bestPhaseEver){ bestPhaseEver=runPhase; localStorage.setItem('bleuBestPhase', bestPhaseEver); }
         gameState='dead'; screenShake=14; hitFlash=8; stopMusic();
-        if(score>0) submitWalletScore(score); // salva score com wallet (se conectada)
+        if(score>0) submitWalletScore(score);
+        // Spawn death chest as consolation prize
+        var _dc=Math.floor(8+Math.random()*18);
+        deadChest={active:true,opened:false,coins:_dc,anim:0,clicks:0};
         if(comboBest<combo) comboBest=combo;
         combo=0; comboFlash=0; milestoneIdx=0;
         if(navigator.vibrate) navigator.vibrate([80,30,80]);
@@ -3802,6 +3773,30 @@ function loop(ts) {
     ctx.fillStyle='#ffffff18'; ctx.font='9px Courier New';
     ctx.fillText('$BLEU never stops', W/2, H/2+238);
 
+    // ── Death chest (consolation prize) ──
+    if(deadChest.active){
+      var dcy=H/2+196;
+      if(!deadChest.opened){
+        // Pulsing small chest
+        var dcp=1+0.06*Math.sin(frame*0.18);
+        ctx.save(); ctx.translate(W/2, dcy); ctx.scale(dcp*0.55,dcp*0.55);
+        drawTreasureChest(0,-20);
+        ctx.restore();
+        ctx.fillStyle='#FFD700aa'; ctx.font='bold 9px Courier New'; ctx.textAlign='center';
+        ctx.fillText('🎁 free chest  —  tap to open!', W/2, dcy+20);
+      } else {
+        if(deadChest.anim<30) deadChest.anim++;
+        var da=Math.min(1,deadChest.anim/15);
+        ctx.globalAlpha=da;
+        ctx.fillStyle='#FFD700'; ctx.font='bold 22px Arial'; ctx.textAlign='center';
+        ctx.fillText('+'+deadChest.coins, W/2, dcy);
+        ctx.fillStyle='#FFD700aa'; ctx.font='9px Courier New';
+        ctx.fillText('🐉 coins collected!', W/2, dcy+16);
+        ctx.globalAlpha=1;
+        spawnParticles(W/2, dcy-10, '#FFD700', 2);
+      }
+    }
+
     // ── Wallet onchain section ──
     var wdy = H/2+248;
     if(walletAddress){
@@ -3893,39 +3888,15 @@ function handleClick(ex, ey) {
   // ── HURT — qualquer toque retoma
   if(gameState === 'hurt') { flap(); return; }
 
-  // ── AWARD chest click
+  // ── AWARD — phase complete, two buttons
   if(gameState === 'award') {
-    if(!chestOpened) {
-      chestClicks++;
-      // bounce e som escalados por clique
-      chestBounce = 10 + chestClicks * 8;
-      var freq = 200 + chestClicks * 180;
-      beep(freq, freq*2, 0.18+chestClicks*0.06, 'sawtooth', 0.18);
-      if(navigator.vibrate) navigator.vibrate(30+chestClicks*40);
-      if(chestClicks >= 3) {
-        chestOpened = true;
-        chestCoins = chestCoinsRand();
-        coinCount += chestCoins;
-        localStorage.setItem('bleuCoins', coinCount);
-        // explosão sonora
-        [523,659,784,1047,1319].forEach(function(f,i){
-          setTimeout(function(){ beep(f,f*1.5,0.18,'sine',0.15); },i*70);
-        });
-        spawnParticles(W/2, H/2, '#FFD700', 18);
-        spawnParticles(W/2, H/2, '#ffffff', 10);
-        if(navigator.vibrate) navigator.vibrate([60,20,60,20,100]);
+    var btnY2 = H/2+82;
+    if(cy>=btnY2-18&&cy<=btnY2+18){
+      if(cx>=W/2-106&&cx<=W/2-10){ // SHOP
+        gameState='idle'; idleTab='shop'; stopMusic(); beep(523,784,0.1,'sine',0.12); return;
       }
-    } else if(chestOpenAnim >= 26) {
-      // Two buttons: SHOP (left) | CONTINUE (right)
-      var prizeY2 = H/2+20+70;
-      var btnY2 = prizeY2+118;
-      if(cy>=btnY2-17&&cy<=btnY2+17){
-        if(cx>=W/2-102&&cx<=W/2-10){ // SHOP button
-          gameState='idle'; idleTab='shop'; stopMusic(); beep(523,784,0.1,'sine',0.12); return;
-        }
-        if(cx>=W/2+10&&cx<=W/2+102){ // CONTINUE button
-          gameState='playing'; startMusic(getPhaseIdx()); beep(659,1047,0.1,'sine',0.12); return;
-        }
+      if(cx>=W/2+10&&cx<=W/2+106){ // GO / CONTINUE
+        gameState='playing'; startMusic(getPhaseIdx()); beep(659,1047,0.1,'sine',0.12); return;
       }
     }
     return;
@@ -3933,6 +3904,16 @@ function handleClick(ex, ey) {
 
   // ── DEAD screen buttons
   if(gameState === 'dead') {
+    // Death chest tap
+    if(deadChest.active && !deadChest.opened && cy>=H/2+152&&cy<=H/2+224&&cx>=W/2-70&&cx<=W/2+70){
+      deadChest.opened=true;
+      coinCount+=deadChest.coins; localStorage.setItem('bleuCoins',coinCount);
+      beep(523,1047,0.2,'sine',0.14);
+      [659,784,1047].forEach(function(f,i){setTimeout(function(){beep(f,f*1.5,0.12,'sine',0.1);},i*70);});
+      spawnParticles(W/2,H/2+196,'#FFD700',14);
+      if(navigator.vibrate) navigator.vibrate([30,20,60]);
+      return;
+    }
     // Botão COMPARTILHAR: H/2+122 a H/2+152
     if(cx>=W/2-74&&cx<=W/2+74&&cy>=H/2+122&&cy<=H/2+152){
       var pv2 = PHASE_VISUALS[runPhase]||PHASE_VISUALS[0];
