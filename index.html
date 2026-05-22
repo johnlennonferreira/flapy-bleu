@@ -2882,6 +2882,37 @@ function drawShieldItem(x, y) {
   ctx.restore();
 }
 
+// ─── IDLE CRYPTO PARTICLES ───────────────────
+var _idleParts = (function(){
+  var symbols = ['0x1a2B','⬡','$BLEU','BASE','0xff','⛓','🔵','0x0052'];
+  var parts = [];
+  for(var i=0;i<18;i++) parts.push({
+    x: Math.random()*400, y: Math.random()*600,
+    vx: (Math.random()-.5)*0.3, vy: -0.3-Math.random()*0.4,
+    alpha: 0.04+Math.random()*0.10,
+    sym: symbols[Math.floor(Math.random()*symbols.length)],
+    size: 7+Math.floor(Math.random()*5),
+    hue: Math.random()<0.5 ? '#0052FF' : Math.random()<0.5 ? '#00D4FF' : '#FFD700'
+  });
+  return parts;
+})();
+function drawIdleParticles() {
+  ctx.save();
+  for(var i=0;i<_idleParts.length;i++){
+    var p=_idleParts[i];
+    p.x+=p.vx; p.y+=p.vy;
+    if(p.y < -20){ p.y=620; p.x=Math.random()*400; }
+    if(p.x < -40) p.x=440; if(p.x > 440) p.x=-40;
+    ctx.globalAlpha = p.alpha * (0.7+0.3*Math.sin(frame*0.02+i));
+    ctx.fillStyle = p.hue;
+    ctx.font = 'bold '+p.size+'px Courier New';
+    ctx.textAlign = 'left';
+    ctx.fillText(p.sym, p.x, p.y);
+  }
+  ctx.globalAlpha=1;
+  ctx.restore();
+}
+
 // ─── LIVES + STAR POWER HUD ──────────────────
 function drawLivesHUD() {
   ctx.textAlign='left'; ctx.font='bold 13px Arial';
@@ -2891,6 +2922,17 @@ function drawLivesHUD() {
     ctx.fillText('♥', 8+li*17, 34);
   }
   ctx.globalAlpha=1;
+  // Wallet badge top-right
+  if(walletAddress){
+    ctx.save();
+    ctx.globalAlpha = 0.7 + 0.3*Math.sin(frame*0.05);
+    ctx.fillStyle='#00FF8833'; ctx.strokeStyle='#00FF8877'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.roundRect(W-86, 6, 80, 16, 5); ctx.fill(); ctx.stroke();
+    ctx.fillStyle='#00FF88'; ctx.font='bold 7px Courier New'; ctx.textAlign='right'; ctx.textBaseline='middle';
+    ctx.fillText('⛓ '+walletShort, W-10, 14);
+    ctx.textBaseline='alphabetic'; ctx.globalAlpha=1;
+    ctx.restore();
+  }
   // Shield indicator
   if(shield>0){
     var pulse2 = 0.85 + 0.15*Math.sin(frame*0.18);
@@ -3153,37 +3195,67 @@ function loop(ts) {
   if(gameState === 'idle'){
     drawIdleTabs();
     if(idleTab==='play'){
+      drawIdleParticles();
       drawCharacter(bleu.x, bleu.y + Math.sin(frame*.045)*8, frame*.22, 0);
       ctx.textAlign = 'center';
+
+      // ── Title ──
       ctx.font = 'bold 34px Courier New';
       var tg = ctx.createLinearGradient(W/2-80, 0, W/2+80, 0);
       tg.addColorStop(0,'#0052FF'); tg.addColorStop(0.5,'#00D4FF'); tg.addColorStop(1,'#FFD700');
       ctx.fillStyle = tg; ctx.shadowColor = '#0052FF'; ctx.shadowBlur = 28;
       ctx.fillText('FLAPY BLEU', W/2, H/2-82); ctx.shadowBlur = 0;
-      ctx.fillStyle = '#FFD700'; ctx.font = 'bold 11px Courier New';
-      ctx.shadowColor='#FFD700'; ctx.shadowBlur=8;
-      ctx.fillText('$BLEU  *  BASE NETWORK  *  TO THE MOON', W/2, H/2-56);
-      ctx.shadowBlur = 0;
-      ctx.fillStyle = '#ffffff88'; ctx.font = '13px Courier New';
-      ctx.fillText('tap / SPACE to fly', W/2, H/2-26);
-      ctx.fillStyle = '#ffffff44'; ctx.font = '10px Courier New';
-      ctx.fillText('dodge the candles  *  ride the charts', W/2, H/2-4);
+
+      // ── WEB3 GAME pill badge ──
+      var badgePulse = 0.92+0.08*Math.sin(frame*0.07);
+      ctx.save(); ctx.translate(W/2, H/2-62); ctx.scale(badgePulse, badgePulse);
+      ctx.fillStyle='#0052FF33'; ctx.strokeStyle='#0052FFaa'; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.roundRect(-58,-10,116,20,10); ctx.fill(); ctx.stroke();
+      ctx.fillStyle='#00D4FF'; ctx.font='bold 9px Courier New'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText('⬡  WEB3 GAME  ·  BASE NETWORK', 0, 0);
+      ctx.textBaseline='alphabetic'; ctx.restore();
+
+      // ── Sub tagline ──
+      ctx.fillStyle = '#ffffff66'; ctx.font = '11px Courier New';
+      ctx.fillText('tap / SPACE to fly  ·  dodge the candles', W/2, H/2-30);
+
+      // ── BEST score ──
       if(highScore > 0){
         ctx.fillStyle = '#FFD700'; ctx.font = 'bold 13px Courier New';
         ctx.shadowColor = '#FFD700'; ctx.shadowBlur = 12;
-        ctx.fillText('BEST: ' + highScore, W/2, H/2+46); ctx.shadowBlur = 0;
+        ctx.fillText('BEST: ' + highScore, W/2, H/2+44); ctx.shadowBlur = 0;
       }
+
       drawCharSelect();
-      ctx.fillStyle = '#0052FF88'; ctx.font = '10px Courier New'; ctx.textAlign = 'center';
-      ctx.fillText('powered by Base Network', W/2, H-95);
-      // Wallet status no idle
+
+      // ── Wallet section — prominent ──
+      var wy0 = H/2+66;
       if(walletAddress){
-        ctx.fillStyle='#00FF8877'; ctx.font='bold 9px Courier New';
-        ctx.fillText('💎 '+walletShort, W/2, H-78);
+        // Connected state — green badge
+        ctx.fillStyle='#00FF8822'; ctx.strokeStyle='#00FF8877'; ctx.lineWidth=1.5;
+        ctx.beginPath(); ctx.roundRect(W/2-100,wy0,200,32,10); ctx.fill(); ctx.stroke();
+        ctx.fillStyle='#00FF88'; ctx.font='bold 11px Courier New'; ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText('⛓ '+walletShort+' · connected', W/2, wy0+16);
+        ctx.textBaseline='alphabetic';
+        ctx.fillStyle='#00FF8866'; ctx.font='8px Courier New';
+        ctx.fillText('scores saved on Base', W/2, wy0+40);
       } else {
-        ctx.fillStyle='#0052FF66'; ctx.font='9px Courier New';
-        ctx.fillText('💎 RANK → connect wallet', W/2, H-78);
+        // Not connected — pulsing CTA button
+        var wp = 0.97+0.03*Math.sin(frame*0.10);
+        ctx.save(); ctx.translate(W/2, wy0+16); ctx.scale(wp,wp);
+        ctx.fillStyle='#0052FF';
+        ctx.beginPath(); ctx.roundRect(-100,-16,200,32,10); ctx.fill();
+        ctx.strokeStyle='#00D4FF66'; ctx.lineWidth=1.5; ctx.stroke();
+        ctx.fillStyle='#fff'; ctx.font='bold 12px Courier New'; ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText('💎  CONNECT WALLET', 0, 0);
+        ctx.textBaseline='alphabetic'; ctx.restore();
+        ctx.fillStyle='#ffffff33'; ctx.font='8px Courier New'; ctx.textAlign='center';
+        ctx.fillText('save scores · global ranking', W/2, wy0+40);
       }
+
+      // ── Powered by ──
+      ctx.fillStyle = '#0052FF66'; ctx.font = '9px Courier New'; ctx.textAlign = 'center';
+      ctx.fillText('powered by Base Network', W/2, H-82);
     } else if(idleTab==='shop'){
       drawShopTab();
     } else if(idleTab==='skins'){
@@ -3648,7 +3720,7 @@ function loop(ts) {
     ctx.strokeStyle = shareCol+'88'; ctx.lineWidth=1; ctx.stroke();
     ctx.fillStyle = shareFlash>0 ? '#00FF88' : '#00D4FF';
     ctx.font = 'bold 12px Courier New'; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText(shareFlash>0 ? '✓ COPIADO!' : '🔗 COMPARTILHAR', W/2, shareY+1);
+    ctx.fillText(shareFlash>0 ? '✓ COPIED!' : '🔗 SHARE', W/2, shareY+1);
     ctx.textBaseline='alphabetic';
 
     // ── Botão JOGAR DE NOVO ──
@@ -3671,14 +3743,26 @@ function loop(ts) {
     ctx.fillStyle='#ffffff18'; ctx.font='9px Courier New';
     ctx.fillText('$BLEU never stops', W/2, H/2+238);
 
-    // ── Wallet indicator na tela de morte ──
+    // ── Wallet onchain section ──
+    var wdy = H/2+248;
     if(walletAddress){
-      ctx.fillStyle='#00FF8866'; ctx.font='9px Courier New';
-      ctx.fillText('💎 '+walletShort+' · score saved', W/2, H/2+256);
+      // Score saved on Base — green confirmation block
+      var wdPulse = 0.92+0.08*Math.sin(frame*0.08);
+      ctx.save(); ctx.translate(W/2, wdy+14); ctx.scale(wdPulse, wdPulse);
+      ctx.fillStyle='#00FF8818'; ctx.strokeStyle='#00FF8866'; ctx.lineWidth=1.5;
+      ctx.beginPath(); ctx.roundRect(-108,-14,216,30,8); ctx.fill(); ctx.stroke();
+      ctx.fillStyle='#00FF88'; ctx.font='bold 10px Courier New'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText('⛓  SCORE SAVED ON BASE  ·  '+walletShort, 0, 0);
+      ctx.textBaseline='alphabetic'; ctx.restore();
     } else {
-      // Botão sutil para conectar
-      ctx.fillStyle='#0052FF99'; ctx.font='bold 9px Courier New';
-      ctx.fillText('💎 connect wallet → global ranking', W/2, H/2+256);
+      // Connect wallet CTA
+      var wdp2 = 0.97+0.03*Math.sin(frame*0.10);
+      ctx.save(); ctx.translate(W/2, wdy+14); ctx.scale(wdp2,wdp2);
+      ctx.fillStyle='#0052FF22'; ctx.strokeStyle='#0052FF88'; ctx.lineWidth=1.5;
+      ctx.beginPath(); ctx.roundRect(-108,-14,216,30,8); ctx.fill(); ctx.stroke();
+      ctx.fillStyle='#00D4FF'; ctx.font='bold 10px Courier New'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText('💎  CONNECT WALLET  →  SAVE ON BASE', 0, 0);
+      ctx.textBaseline='alphabetic'; ctx.restore();
     }
     if(shareFlash>0) shareFlash--;
   }
@@ -3829,6 +3913,11 @@ function handleClick(ex, ey) {
           return;
         }
       }
+    }
+    // Play tab — wallet button
+    if(idleTab==='play' && !walletAddress) {
+      var wy0c = H/2+66;
+      if(cx>=W/2-100&&cx<=W/2+100&&cy>=wy0c&&cy<=wy0c+32){ connectWallet(); return; }
     }
 // Character select (legacy, play tab)
     if(idleTab==='play' && unlockedChars >= 2) {
