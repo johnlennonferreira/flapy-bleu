@@ -587,43 +587,72 @@ function drawShopTab() {
   }
   ctx.textAlign='center';
 
-  // ── ITEMS SECTION — Shield purchase ──
+  // ── SHIELD CARD — left side of shop, aligned with character preview ──
   if(shopChar!==1||gengarUnlocked){
-    var _itmY = 490;
-    // Divider
-    ctx.strokeStyle='#ffffff15'; ctx.lineWidth=1;
-    ctx.beginPath(); ctx.moveTo(W/2-100,_itmY); ctx.lineTo(W/2+100,_itmY); ctx.stroke();
-    // Section title
-    ctx.font='bold 10px Courier New'; ctx.fillStyle='#ffffff44'; ctx.textAlign='center';
-    ctx.fillText('ITEMS', W/2, _itmY+14);
-    // Shield item card
-    var _shdX=W/2-70, _shdY=_itmY+20, _shdW=140, _shdH=48;
-    var _shdCanBuy=(coinCount>=80)&&(shieldStock<3);
-    ctx.fillStyle=shieldStock>0?'#00FF8818':'#ffffff08';
-    ctx.strokeStyle=shieldStock>0?'#00FF8866':'#ffffff22'; ctx.lineWidth=1.5;
-    ctx.beginPath(); ctx.roundRect(_shdX,_shdY,_shdW,_shdH,10); ctx.fill(); ctx.stroke();
-    // Shield icon (drawn small on canvas)
-    ctx.save(); ctx.translate(_shdX+28,_shdY+_shdH/2);
+    var _sc = { x:6, y:190, w:108, h:115 };
+    var _shdCanBuy = (coinCount>=80) && (shieldStock<3);
+    // Card background
+    ctx.fillStyle = shieldStock>0 ? '#00FF8812' : '#ffffff07';
+    ctx.strokeStyle = shieldStock>0 ? '#00FF8855' : '#ffffff1a';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.roundRect(_sc.x, _sc.y, _sc.w, _sc.h, 10); ctx.fill(); ctx.stroke();
+
+    // "ITEMS" label
+    ctx.font = 'bold 8px Courier New'; ctx.textAlign='center'; ctx.fillStyle='#ffffff33';
+    ctx.fillText('ITEMS', _sc.x+_sc.w/2, _sc.y+11);
+
+    // Shield icon — identical to the in-game drawShieldItem (bezier shield shape)
+    ctx.save();
+    ctx.translate(_sc.x+_sc.w/2, _sc.y+52);
+    var _ir = 18;
+    // Outer halo glow
+    ctx.globalAlpha = 0.18 + 0.08*Math.sin(frame*0.12);
+    ctx.fillStyle = shieldStock>0 ? '#00FF88' : '#44aaff';
+    ctx.beginPath(); ctx.arc(0,0,_ir*1.55,0,Math.PI*2); ctx.fill();
+    ctx.globalAlpha = 1;
+    // Shield body (same bezier as drawShieldItem)
+    ctx.fillStyle = shieldStock>0 ? '#00CC66' : '#2277cc';
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 1.8;
     ctx.beginPath();
-    ctx.moveTo(0,-14); ctx.lineTo(14,-8); ctx.lineTo(14,2);
-    ctx.bezierCurveTo(14,10,7,16,0,18);
-    ctx.bezierCurveTo(-7,16,-14,10,-14,2); ctx.lineTo(-14,-8); ctx.closePath();
-    ctx.fillStyle=shieldStock>0?'#00FF88':'#44aaff'; ctx.fill();
-    ctx.strokeStyle=shieldStock>0?'#00cc66':'#2277cc'; ctx.lineWidth=1.5; ctx.stroke();
-    ctx.fillStyle='#ffffff88'; ctx.font='bold 9px Courier New'; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText(shieldStock>0?shieldStock:'⬆', 0, 2); ctx.textBaseline='alphabetic';
+    ctx.moveTo(0,-_ir);
+    ctx.bezierCurveTo( _ir,-_ir,  _ir,  0,  0,  _ir);
+    ctx.bezierCurveTo(-_ir,   0, -_ir,-_ir,  0, -_ir);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    // Interior cross-stripe (like in-game icon)
+    ctx.strokeStyle = '#ffffff44'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(0,-_ir*0.7); ctx.lineTo(0,_ir*0.7); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-_ir*0.55,0); ctx.lineTo(_ir*0.55,0); ctx.stroke();
+    // Stock count or ✦ symbol
+    ctx.fillStyle = shieldStock>0 ? '#001a0f' : '#ffffff';
+    ctx.font = 'bold '+(shieldStock>0?'13':'11')+'px Arial';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(shieldStock>0 ? shieldStock : '✦', 0, 1);
+    ctx.textBaseline='alphabetic';
     ctx.restore();
-    // Shield text
-    ctx.textAlign='left'; ctx.font='bold 11px Courier New';
-    ctx.fillStyle=shieldStock>0?'#00FF88':'#aaddff';
-    ctx.fillText('SHIELD', _shdX+50, _shdY+18);
-    ctx.font='9px Courier New'; ctx.fillStyle='#ffffff55';
-    ctx.fillText(shieldStock>=3?'MAX ('+shieldStock+'/3)':'Stock: '+shieldStock+'/3', _shdX+50, _shdY+31);
-    if(shieldStock<3){
-      ctx.fillStyle=_shdCanBuy?'#FFD700aa':'#ff4444aa';
-      ctx.fillText('🐉 80 coins', _shdX+50, _shdY+44);
-    }
+
+    // SHIELD label + stock
     ctx.textAlign='center';
+    ctx.font='bold 10px Courier New';
+    ctx.fillStyle = shieldStock>0 ? '#00FF88' : '#88ccff';
+    ctx.fillText('SHIELD', _sc.x+_sc.w/2, _sc.y+80);
+    ctx.font='8px Courier New'; ctx.fillStyle='#ffffff44';
+    ctx.fillText(shieldStock>=3 ? 'MAX 3/3' : shieldStock+'/3', _sc.x+_sc.w/2, _sc.y+92);
+
+    // BUY button
+    var _bby = _sc.y+97;
+    if(shieldStock<3){
+      ctx.fillStyle = _shdCanBuy ? '#FFD70022' : '#ff444418';
+      ctx.strokeStyle = _shdCanBuy ? '#FFD700' : '#ff4444';
+      ctx.lineWidth=1.2;
+      ctx.beginPath(); ctx.roundRect(_sc.x+6,_bby,_sc.w-12,18,6); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = _shdCanBuy ? '#FFD700' : '#ff6666';
+      ctx.font='bold 8px Courier New'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText('🐉 80', _sc.x+_sc.w/2, _bby+9); ctx.textBaseline='alphabetic';
+    } else {
+      ctx.fillStyle='#00FF8844'; ctx.font='bold 8px Courier New'; ctx.textAlign='center';
+      ctx.fillText('FULL', _sc.x+_sc.w/2, _bby+12);
+    }
   }
 }
 
@@ -859,6 +888,7 @@ var _mTimeout=null, _mPhase=-1, _mPos=0;
 var completedPhase=0, chestClicks=0, chestBounce=0, chestOpened=false, chestCoins=0, chestOpenAnim=0, awardCoins=0, awardCoinAnim=0;
 var bleuAngle=0; // smooth rotation (radians)
 var bleuFlapTimer=0; // frames of wing animation remaining after a flap
+var phantomFartParticles=[]; // gas puff particles for Phantom character
 var deadChest={active:false,opened:false,coins:0,anim:0};
 var idleTab='play';
 var totalScore=parseInt(localStorage.getItem('bleuTotal')||'0');
@@ -993,7 +1023,7 @@ function resetGame() {
   if(shieldStock>0){ shield=1; shieldStock--; localStorage.setItem('bleuShieldStock',shieldStock); }
   else { shield = 0; }
   shieldItems = []; shieldBreak = 0;
-  runPhase = 0; shareFlash = 0; bleuAngle = 0; bleuFlapTimer = 0;
+  runPhase = 0; shareFlash = 0; bleuAngle = 0; bleuFlapTimer = 0; phantomFartParticles = [];
 }
 resetGame();
 
@@ -1064,24 +1094,46 @@ function drawBleu(x, y, flapAnim, angle) {
   ctx.globalAlpha = 1;
   ctx.restore();
 
-  // BACK WING — left side of body at junction, behind body
-  // Anchor: left edge of body at body/head junction height
-  // Angles: PI*0.35 = up, 0 = mid/horizontal, -PI*0.35 = down
-  var _wAngles = [Math.PI*0.38, 0, -Math.PI*0.32];
+  // ── TWO WINGS — upper and lower, beat on flap, drawn BEFORE head ──
+  // Wing angles per frame: [up-beat, mid, down-fold]
+  var _wAngles = [Math.PI*0.38, 0, -Math.PI*0.22];
   var _wA = _wAngles[wingFrame];
+
+  // UPPER WING (back) — anchored at top-left of body, above junction
   ctx.save();
-  ctx.translate(-8, 2); // left of body center, junction height
-  ctx.rotate(_wA);
-  var wGradBack = ctx.createLinearGradient(0,0,-18,0);
-  wGradBack.addColorStop(0, cShadow); wGradBack.addColorStop(1, cBody);
-  ctx.globalAlpha=0.68;
+  ctx.translate(-7, -5); // top-left of body/head area
+  ctx.rotate(-_wA);      // negative: upper wing beats UPWARD on flap
+  var wGradUp = ctx.createLinearGradient(0,0,-19,0);
+  wGradUp.addColorStop(0, cShadow+'cc'); wGradUp.addColorStop(1, cBody);
+  ctx.globalAlpha = 0.72;
   ctx.beginPath();
   ctx.moveTo(0,0);
-  ctx.bezierCurveTo(-2,-4,-10,-12,-16,-7);
-  ctx.bezierCurveTo(-18,-2,-14,5,0,0);
-  ctx.fillStyle=wGradBack; ctx.fill();
-  ctx.lineWidth=1.2; ctx.strokeStyle=cOutline; ctx.stroke();
-  ctx.globalAlpha=1; ctx.restore();
+  ctx.bezierCurveTo(-2,-3,-9,-13,-17,-8);
+  ctx.bezierCurveTo(-20,-3,-16,4,0,0);
+  ctx.fillStyle = wGradUp; ctx.fill();
+  ctx.lineWidth = 1.3; ctx.strokeStyle = cOutline; ctx.stroke();
+  // feather lines
+  ctx.lineWidth=0.7; ctx.strokeStyle='#ffffff66';
+  ctx.beginPath(); ctx.moveTo(-1,-1); ctx.bezierCurveTo(-4,-4,-10,-9,-14,-7); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(-1,1); ctx.bezierCurveTo(-5,-1,-12,-4,-16,-2); ctx.stroke();
+  ctx.globalAlpha = 1; ctx.restore();
+
+  // LOWER WING (back) — anchored at bottom-left of body, below junction
+  ctx.save();
+  ctx.translate(-7, 9);  // bottom-left of body
+  ctx.rotate(_wA);       // positive: lower wing beats DOWNWARD on flap
+  var wGradDn = ctx.createLinearGradient(0,0,-19,0);
+  wGradDn.addColorStop(0, cShadow+'bb'); wGradDn.addColorStop(1, cBody);
+  ctx.globalAlpha = 0.60;
+  ctx.beginPath();
+  ctx.moveTo(0,0);
+  ctx.bezierCurveTo(-2,3,-9,13,-17,8);
+  ctx.bezierCurveTo(-20,3,-16,-4,0,0);
+  ctx.fillStyle = wGradDn; ctx.fill();
+  ctx.lineWidth = 1.2; ctx.strokeStyle = cOutline; ctx.stroke();
+  ctx.lineWidth=0.7; ctx.strokeStyle='#ffffff55';
+  ctx.beginPath(); ctx.moveTo(-1,1); ctx.bezierCurveTo(-4,4,-10,9,-14,7); ctx.stroke();
+  ctx.globalAlpha = 1; ctx.restore();
 
   // HEAD
   ctx.beginPath();
@@ -1141,22 +1193,37 @@ function drawBleu(x, y, flapAnim, angle) {
   ctx.beginPath(); ctx.arc(4, -12, 7, 0.15, Math.PI - 0.15);
   ctx.lineWidth = 1.8; ctx.strokeStyle = cOutline; ctx.stroke();
 
-  // FRONT WING — same anchor as back wing, drawn after body (on top)
+  // UPPER WING (front) — drawn after head, brighter, slightly smaller
   ctx.save();
-  ctx.translate(-8, 2);
-  ctx.rotate(_wA);
-  var wGradFront=ctx.createLinearGradient(0,0,-18,0);
-  wGradFront.addColorStop(0,cBody); wGradFront.addColorStop(0.5,cBodyLt); wGradFront.addColorStop(1,'#ffffffaa');
+  ctx.translate(-7, -5);
+  ctx.rotate(-_wA);
+  var wGradFront = ctx.createLinearGradient(0,0,-17,0);
+  wGradFront.addColorStop(0, cBody); wGradFront.addColorStop(0.5, cBodyLt); wGradFront.addColorStop(1, '#ffffffbb');
   ctx.beginPath();
   ctx.moveTo(0,0);
-  ctx.bezierCurveTo(-2,-5,-12,-14,-18,-8);
-  ctx.bezierCurveTo(-20,-3,-15,6,0,0);
-  ctx.fillStyle=wGradFront; ctx.fill();
-  ctx.lineWidth=1.6; ctx.strokeStyle=cOutline; ctx.stroke();
-  // feather highlight lines
-  ctx.lineWidth=0.8; ctx.strokeStyle='#ffffff'; ctx.globalAlpha=0.5;
-  ctx.beginPath(); ctx.moveTo(0,0); ctx.bezierCurveTo(-3,-4,-11,-10,-15,-7); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(-2,2); ctx.bezierCurveTo(-5,-2,-13,-6,-17,-3); ctx.stroke();
+  ctx.bezierCurveTo(-1,-4,-10,-13,-16,-7);
+  ctx.bezierCurveTo(-18,-2,-13,5,0,0);
+  ctx.fillStyle = wGradFront; ctx.fill();
+  ctx.lineWidth = 1.5; ctx.strokeStyle = cOutline; ctx.stroke();
+  ctx.lineWidth=0.8; ctx.strokeStyle='#ffffff'; ctx.globalAlpha=0.55;
+  ctx.beginPath(); ctx.moveTo(-1,-1); ctx.bezierCurveTo(-3,-5,-9,-10,-13,-7); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(-2,1); ctx.bezierCurveTo(-5,-2,-11,-5,-15,-2); ctx.stroke();
+  ctx.globalAlpha=1; ctx.restore();
+
+  // LOWER WING (front) — bright, slightly smaller, beats down
+  ctx.save();
+  ctx.translate(-7, 9);
+  ctx.rotate(_wA);
+  var wGradFrontDn = ctx.createLinearGradient(0,0,-17,0);
+  wGradFrontDn.addColorStop(0, cBody); wGradFrontDn.addColorStop(0.5, cBodyLt); wGradFrontDn.addColorStop(1, '#ffffffbb');
+  ctx.beginPath();
+  ctx.moveTo(0,0);
+  ctx.bezierCurveTo(-1,4,-10,13,-16,7);
+  ctx.bezierCurveTo(-18,2,-13,-5,0,0);
+  ctx.fillStyle = wGradFrontDn; ctx.fill();
+  ctx.lineWidth = 1.5; ctx.strokeStyle = cOutline; ctx.stroke();
+  ctx.lineWidth=0.8; ctx.strokeStyle='#ffffff'; ctx.globalAlpha=0.55;
+  ctx.beginPath(); ctx.moveTo(-1,1); ctx.bezierCurveTo(-3,5,-9,10,-13,7); ctx.stroke();
   ctx.globalAlpha=1; ctx.restore();
 
   // GLOW (no shadowBlur — use alpha only for performance)
@@ -1183,138 +1250,213 @@ function drawBleu(x, y, flapAnim, angle) {
   ctx.restore();
 }
 
-// ─── PHANTOM — ghost character (Haunter-inspired, phantom of Base Network) ──
+// ─── PHANTOM — Haunter-faithful ghost (phantom of Base Network) ──────
 function drawPhantom(x, y, flapAnim, angle) {
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(angle || 0);
 
-  var _wCycle = Math.floor(flapAnim * 0.22) % 4;
-  var af = (_wCycle === 3) ? 1 : _wCycle; // hand frame 0,1,2
-  var handBob = [-10, -3, 7][af];
-  var sf = Math.sin(flapAnim * 0.9) * 2.5;
+  // hand bob: slow oscillation, independent of flapAnim so hands always float
+  var _hb = Math.sin(frame * 0.055) * 5;
+  var _hb2= Math.cos(frame * 0.048) * 5;
 
   var gc = PHANTOM_COLORS[activeColorGengar] || PHANTOM_COLORS[0];
   var cB = gc.body, cBL = gc.bodyLt, cD = gc.shadow, cO = gc.outline;
   var cEy = gc.eyeColor || '#FF1493';
   ctx.lineJoin = 'round'; ctx.lineCap = 'round';
 
-  // FLOATING LEFT HAND (back — drawn first so it's behind)
+  // ── FLOATING LEFT HAND (behind body, drawn first) ──
   ctx.save();
-  ctx.translate(-30, handBob + sf - 3);
-  ctx.globalAlpha = 0.82;
-  // Palm
-  ctx.beginPath(); ctx.ellipse(0, 0, 10, 8, 0.15, 0, Math.PI * 2);
-  var lhg = ctx.createRadialGradient(-3,-3,1,0,0,10);
-  lhg.addColorStop(0, cBL); lhg.addColorStop(1, cD);
-  ctx.fillStyle = lhg; ctx.fill();
-  ctx.lineWidth = 1.5; ctx.strokeStyle = cO; ctx.stroke();
-  // 3 spiky fingers pointing up-left
-  var lfAngles = [-1.7, -1.25, -0.85];
-  for (var fi = 0; fi < 3; fi++) {
-    var fa = lfAngles[fi];
-    var fx1 = Math.cos(fa + 0.22) * 8, fy1 = Math.sin(fa + 0.22) * 7;
-    var fx2 = Math.cos(fa) * 18,       fy2 = Math.sin(fa) * 18;
-    var fx3 = Math.cos(fa - 0.22) * 8, fy3 = Math.sin(fa - 0.22) * 7;
-    ctx.beginPath(); ctx.moveTo(fx1,fy1); ctx.lineTo(fx2,fy2); ctx.lineTo(fx3,fy3);
+  ctx.translate(-34, _hb - 2);
+  // 3 clawed fingers spread left
+  function _finger(ang, len) {
+    var bx1=Math.cos(ang+0.28)*9, by1=Math.sin(ang+0.28)*8;
+    var bx2=Math.cos(ang)*len,    by2=Math.sin(ang)*len;
+    var bx3=Math.cos(ang-0.28)*9, by3=Math.sin(ang-0.28)*8;
+    ctx.beginPath(); ctx.moveTo(bx1,by1); ctx.lineTo(bx2,by2); ctx.lineTo(bx3,by3);
     ctx.closePath();
-    ctx.fillStyle = cB; ctx.fill();
-    ctx.lineWidth = 1; ctx.strokeStyle = cO; ctx.stroke();
   }
-  ctx.globalAlpha = 1;
-  ctx.restore();
+  var lhg = ctx.createRadialGradient(-2,-2,1,0,0,11);
+  lhg.addColorStop(0,cBL); lhg.addColorStop(1,cD);
+  // back finger
+  _finger(-1.9, 19); ctx.fillStyle=cD; ctx.globalAlpha=0.7; ctx.fill(); ctx.lineWidth=1.2; ctx.strokeStyle=cO; ctx.stroke();
+  // front two fingers
+  _finger(-1.4, 20); ctx.fillStyle=cB; ctx.globalAlpha=0.85; ctx.fill(); ctx.stroke();
+  _finger(-0.9, 18); ctx.fillStyle=cBL; ctx.globalAlpha=0.75; ctx.fill(); ctx.stroke();
+  ctx.globalAlpha=1;
+  // palm
+  ctx.beginPath(); ctx.arc(0,0,10,0,Math.PI*2);
+  ctx.fillStyle=lhg; ctx.globalAlpha=0.9; ctx.fill(); ctx.lineWidth=1.4; ctx.strokeStyle=cO; ctx.stroke();
+  // claw tips (bright)
+  [[-1.9,19],[-1.4,20],[-0.9,18]].forEach(function(f){
+    ctx.beginPath(); ctx.arc(Math.cos(f[0])*f[1], Math.sin(f[0])*f[1], 2.2, 0, Math.PI*2);
+    ctx.fillStyle=cBL; ctx.globalAlpha=0.6; ctx.fill();
+  });
+  ctx.globalAlpha=1; ctx.restore();
 
-  // GHOST HEAD — Haunter's iconic jagged/misty silhouette
+  // ── HAUNTER BODY — classic spherical ghost with ALL-AROUND jagged spikes ──
+  // The spikes represent Haunter's gaseous, ethereal body boundary
   ctx.beginPath();
-  ctx.arc(0, -6, 21, Math.PI, 0); // top dome
-  // Right side down with misty spikes
-  ctx.lineTo(21, 2);
-  ctx.bezierCurveTo(22, 8,  17, 10, 13, 16);
-  ctx.bezierCurveTo(10, 20,  7, 14,  4, 19);
-  ctx.bezierCurveTo( 1, 23, -2, 16, -5, 20);
-  ctx.bezierCurveTo(-9, 24,-13, 16,-14, 19);
-  ctx.bezierCurveTo(-17, 22,-19, 12,-21, 5);
+  // Trace a circle with protruding spikes at 12 positions
+  var _bR = 22; // base radius
+  var _spikes = 10;
+  for (var _si = 0; _si <= _spikes * 2; _si++) {
+    var _sa = (_si / (_spikes * 2)) * Math.PI * 2 - Math.PI / 2;
+    var _sR = (_si % 2 === 0) ? _bR : _bR + 7 + Math.sin(_si * 1.3) * 2; // alternating spike
+    var _sx = Math.cos(_sa) * _sR;
+    var _sy = Math.sin(_sa) * _sR - 3; // shift up slightly so body sits higher
+    if (_si === 0) ctx.moveTo(_sx, _sy); else ctx.lineTo(_sx, _sy);
+  }
   ctx.closePath();
-  var gBodyGrad = ctx.createRadialGradient(-5, -12, 2, 0, -4, 23);
-  gBodyGrad.addColorStop(0, cBL);
-  gBodyGrad.addColorStop(0.55, cB);
-  gBodyGrad.addColorStop(1, cD);
-  ctx.fillStyle = gBodyGrad; ctx.fill();
+  var _bg = ctx.createRadialGradient(-6, -12, 3, 0, -3, 26);
+  _bg.addColorStop(0, cBL);
+  _bg.addColorStop(0.45, cB);
+  _bg.addColorStop(0.82, cD);
+  _bg.addColorStop(1,    cD+'88');
+  ctx.fillStyle = _bg; ctx.fill();
   ctx.lineWidth = 2; ctx.strokeStyle = cO; ctx.stroke();
 
-  // Inner glow highlight
-  ctx.beginPath(); ctx.ellipse(-5, -10, 9, 7, -0.25, 0, Math.PI * 2);
-  ctx.fillStyle = cBL; ctx.globalAlpha = 0.32; ctx.fill(); ctx.globalAlpha = 1;
+  // Inner highlight (top-left glow, makes it look translucent/gaseous)
+  ctx.beginPath(); ctx.ellipse(-7, -14, 9, 7, -0.3, 0, Math.PI*2);
+  ctx.fillStyle = cBL; ctx.globalAlpha = 0.35; ctx.fill(); ctx.globalAlpha = 1;
 
-  // Misty gas trails at bottom
-  for (var gi = 0; gi < 4; gi++) {
-    var gx = (gi - 1.5) * 7;
-    var gy = 20 + gi * 2 + Math.sin(flapAnim * 0.6 + gi) * 2;
-    ctx.beginPath(); ctx.arc(gx, gy, 4 - gi * 0.5, 0, Math.PI * 2);
-    ctx.fillStyle = cB; ctx.globalAlpha = 0.12 + gi * 0.04; ctx.fill();
+  // Wispy trails at bottom (gaseous effect)
+  for (var _wi = 0; _wi < 5; _wi++) {
+    var _wx = (_wi - 2) * 8 + Math.sin(frame*0.04 + _wi)*2;
+    var _wy = _bR + 4 + _wi * 1.5;
+    var _wr = 3.5 - _wi * 0.4;
+    if(_wr <= 0) break;
+    ctx.beginPath(); ctx.arc(_wx, _wy, _wr, 0, Math.PI*2);
+    ctx.fillStyle = cD; ctx.globalAlpha = 0.18 - _wi*0.03; ctx.fill();
   }
   ctx.globalAlpha = 1;
 
-  // LEFT EYE — large, glowing Haunter eyes
-  ctx.beginPath(); ctx.ellipse(-8, -7, 7.5, 6.5, 0, 0, Math.PI * 2);
-  ctx.fillStyle = cEy; ctx.fill();
-  ctx.lineWidth = 1.2; ctx.strokeStyle = cO; ctx.stroke();
-  ctx.beginPath(); ctx.ellipse(-8, -7, 4, 5, 0, 0, Math.PI * 2);
-  ctx.fillStyle = '#11001a'; ctx.fill(); // pupil
-  ctx.beginPath(); ctx.arc(-6, -9, 2.5, 0, Math.PI * 2);
-  ctx.fillStyle = '#ffffff'; ctx.globalAlpha = 0.6; ctx.fill(); ctx.globalAlpha = 1;
-
-  // RIGHT EYE
-  ctx.beginPath(); ctx.ellipse(8, -7, 7.5, 6.5, 0, 0, Math.PI * 2);
-  ctx.fillStyle = cEy; ctx.fill();
-  ctx.lineWidth = 1.2; ctx.strokeStyle = cO; ctx.stroke();
-  ctx.beginPath(); ctx.ellipse(8, -7, 4, 5, 0, 0, Math.PI * 2);
-  ctx.fillStyle = '#11001a'; ctx.fill();
-  ctx.beginPath(); ctx.arc(10, -9, 2.5, 0, Math.PI * 2);
-  ctx.fillStyle = '#ffffff'; ctx.globalAlpha = 0.6; ctx.fill(); ctx.globalAlpha = 1;
-
-  // TONGUE — Haunter's iconic protruding tongue
-  ctx.beginPath(); ctx.ellipse(0, 5, 6, 9, 0, 0, Math.PI * 2);
-  ctx.fillStyle = '#dd2244'; ctx.fill();
-  ctx.lineWidth = 1.2; ctx.strokeStyle = cO; ctx.stroke();
-  ctx.beginPath(); ctx.ellipse(-1.5, 3, 2.2, 3.5, -0.15, 0, Math.PI * 2);
-  ctx.fillStyle = '#ff6688'; ctx.globalAlpha = 0.55; ctx.fill(); ctx.globalAlpha = 1;
-
-  // FLOATING RIGHT HAND (front — drawn last so it's on top)
-  ctx.save();
-  ctx.translate(30, handBob + sf + 3);
-  // Palm
-  ctx.beginPath(); ctx.ellipse(0, 0, 10, 8, -0.15, 0, Math.PI * 2);
-  var rhg = ctx.createRadialGradient(-3,-3,1,0,0,10);
-  rhg.addColorStop(0, cBL); rhg.addColorStop(1, cB);
-  ctx.fillStyle = rhg; ctx.fill();
+  // ── EYES — Haunter's huge, iconic eyes ──
+  // White sclera (large ellipses)
+  ctx.beginPath(); ctx.ellipse(-8, -5, 9, 8, 0, 0, Math.PI*2);
+  ctx.fillStyle = '#f0f0ff'; ctx.fill();
   ctx.lineWidth = 1.5; ctx.strokeStyle = cO; ctx.stroke();
-  // 3 spiky fingers pointing up-right
-  var rfAngles = [-Math.PI + 0.85, -Math.PI + 1.25, -Math.PI + 1.7];
-  for (var fi2 = 0; fi2 < 3; fi2++) {
-    var fa2 = rfAngles[fi2];
-    var fx4 = Math.cos(fa2 + 0.22) * 8, fy4 = Math.sin(fa2 + 0.22) * 7;
-    var fx5 = Math.cos(fa2) * 18,       fy5 = Math.sin(fa2) * 18;
-    var fx6 = Math.cos(fa2 - 0.22) * 8, fy6 = Math.sin(fa2 - 0.22) * 7;
-    ctx.beginPath(); ctx.moveTo(fx4,fy4); ctx.lineTo(fx5,fy5); ctx.lineTo(fx6,fy6);
-    ctx.closePath();
-    ctx.fillStyle = cBL; ctx.fill();
-    ctx.lineWidth = 1; ctx.strokeStyle = cO; ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(8, -5, 9, 8, 0, 0, Math.PI*2);
+  ctx.fillStyle = '#f0f0ff'; ctx.fill(); ctx.stroke();
+
+  // Coloured iris
+  ctx.beginPath(); ctx.ellipse(-8, -5, 6, 7, 0, 0, Math.PI*2);
+  ctx.fillStyle = cEy; ctx.fill();
+  ctx.beginPath(); ctx.ellipse(8, -5, 6, 7, 0, 0, Math.PI*2);
+  ctx.fillStyle = cEy; ctx.fill();
+
+  // Black pupil
+  ctx.beginPath(); ctx.ellipse(-8, -4, 3, 4.5, 0, 0, Math.PI*2);
+  ctx.fillStyle = '#0a000f'; ctx.fill();
+  ctx.beginPath(); ctx.ellipse(8, -4, 3, 4.5, 0, 0, Math.PI*2);
+  ctx.fillStyle = '#0a000f'; ctx.fill();
+
+  // Eye shine (specular highlight — makes eyes pop)
+  ctx.beginPath(); ctx.arc(-10, -8, 2.5, 0, Math.PI*2);
+  ctx.fillStyle = '#ffffff'; ctx.globalAlpha=0.9; ctx.fill();
+  ctx.beginPath(); ctx.arc(6, -8, 2.5, 0, Math.PI*2);
+  ctx.fillStyle = '#ffffff'; ctx.fill();
+  ctx.globalAlpha = 1;
+
+  // ── MOUTH — wide, jagged Haunter grin ──
+  ctx.beginPath();
+  ctx.moveTo(-14, 7);
+  ctx.bezierCurveTo(-12, 16, 12, 16, 14, 7);
+  ctx.fillStyle = cD; ctx.fill();
+  ctx.lineWidth = 1.5; ctx.strokeStyle = cO; ctx.stroke();
+  // Jagged teeth (Haunter has very prominent teeth)
+  ctx.fillStyle = '#f5f5f0'; ctx.lineWidth = 0.8; ctx.strokeStyle = cO+'cc';
+  var _tx = [-10, -6, -2, 2, 6, 10];
+  for (var _ti = 0; _ti < _tx.length; _ti++) {
+    var _tlen = (_ti % 2 === 0) ? 8 : 6;
+    ctx.beginPath();
+    ctx.moveTo(_tx[_ti]-2.5, 8); ctx.lineTo(_tx[_ti], 8+_tlen); ctx.lineTo(_tx[_ti]+2.5, 8);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
   }
-  ctx.restore();
+  // Tongue — pink, curled
+  ctx.beginPath(); ctx.ellipse(0, 14, 6, 4, 0, 0, Math.PI*2);
+  ctx.fillStyle='#ee2255'; ctx.fill();
+  ctx.beginPath(); ctx.ellipse(-1.5, 12.5, 2.5, 2, -0.2, 0, Math.PI*2);
+  ctx.fillStyle='#ff6688'; ctx.globalAlpha=0.6; ctx.fill(); ctx.globalAlpha=1;
+
+  // ── FLOATING RIGHT HAND (front, drawn last — on top) ──
+  ctx.save();
+  ctx.translate(34, _hb2 + 2);
+  var rhg = ctx.createRadialGradient(-2,-2,1,0,0,11);
+  rhg.addColorStop(0,cBL); rhg.addColorStop(1,cB);
+  // fingers (pointing right/up)
+  var _rfA = [1.9, 1.4, 0.9];
+  _rfA.forEach(function(fa, i) {
+    var len = [18, 20, 19][i];
+    var bx1=Math.cos(fa+0.28)*9, by1=Math.sin(fa+0.28)*8;
+    var bx2=Math.cos(fa)*len,    by2=Math.sin(fa)*len;
+    var bx3=Math.cos(fa-0.28)*9, by3=Math.sin(fa-0.28)*8;
+    ctx.beginPath(); ctx.moveTo(bx1,by1); ctx.lineTo(bx2,by2); ctx.lineTo(bx3,by3);
+    ctx.closePath();
+    ctx.fillStyle=[cD,cB,cBL][i]; ctx.globalAlpha=[0.7,0.85,0.75][i]; ctx.fill();
+    ctx.lineWidth=1.2; ctx.strokeStyle=cO; ctx.stroke();
+  });
+  ctx.globalAlpha=1;
+  ctx.beginPath(); ctx.arc(0,0,10,0,Math.PI*2);
+  ctx.fillStyle=rhg; ctx.globalAlpha=0.9; ctx.fill(); ctx.lineWidth=1.4; ctx.strokeStyle=cO; ctx.stroke();
+  _rfA.forEach(function(fa, i){
+    var len=[18,20,19][i];
+    ctx.beginPath(); ctx.arc(Math.cos(fa)*len, Math.sin(fa)*len, 2.2, 0, Math.PI*2);
+    ctx.fillStyle=cBL; ctx.globalAlpha=0.6; ctx.fill();
+  });
+  ctx.globalAlpha=1; ctx.restore();
 
   // Wallet glow
   if (walletAddress) {
-    ctx.save();
-    var _wg = 0.08 + 0.05 * Math.sin(frame * 0.06);
+    var _wg = 0.07 + 0.04 * Math.sin(frame * 0.06);
     ctx.globalAlpha = _wg;
     ctx.fillStyle = '#00FF88';
-    ctx.beginPath(); ctx.arc(0, 0, 32, 0, Math.PI * 2); ctx.fill();
-    ctx.globalAlpha = 1; ctx.restore();
+    ctx.beginPath(); ctx.arc(0, 0, 34, 0, Math.PI*2); ctx.fill();
+    ctx.globalAlpha = 1;
   }
   ctx.restore();
 }
 function drawGengar(x, y, flapAnim, angle) { drawPhantom(x, y, flapAnim, angle); }
+
+// ─── PHANTOM FART particles ───────────────────────────────────────────
+function spawnPhantomFart(bx, by) {
+  for (var _fi = 0; _fi < 7; _fi++) {
+    var ang = Math.PI + (Math.random()-0.5)*0.9; // shoots LEFT (backward)
+    var spd = 1.2 + Math.random()*2.2;
+    phantomFartParticles.push({
+      x: bx - 15 - Math.random()*8,
+      y: by + (Math.random()-0.5)*10,
+      vx: Math.cos(ang)*spd - 0.5,
+      vy: Math.sin(ang)*spd,
+      r:  5 + Math.random()*7,
+      alpha: 0.55 + Math.random()*0.25,
+      life: 24 + Math.floor(Math.random()*16),
+      maxLife: 0
+    });
+    phantomFartParticles[phantomFartParticles.length-1].maxLife = phantomFartParticles[phantomFartParticles.length-1].life;
+  }
+}
+function drawPhantomFarts() {
+  for (var _i = phantomFartParticles.length-1; _i >= 0; _i--) {
+    var p = phantomFartParticles[_i];
+    p.x += p.vx; p.y += p.vy;
+    p.vx *= 0.92; p.vy *= 0.90;
+    p.r  += 0.35; // expands as it dissipates
+    p.life--;
+    if (p.life <= 0) { phantomFartParticles.splice(_i,1); continue; }
+    var t = p.life / p.maxLife; // 1→0
+    ctx.save();
+    ctx.globalAlpha = p.alpha * t * t;
+    // Fart cloud: layered yellowish-green gas
+    var fg = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
+    fg.addColorStop(0, '#ccff44cc');
+    fg.addColorStop(0.5,'#88cc22aa');
+    fg.addColorStop(1,  '#44881100');
+    ctx.fillStyle = fg;
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.fill();
+    ctx.globalAlpha=1; ctx.restore();
+  }
+}
 // ─── BRETT — coming soon ──
 function drawBrett(x, y, flapAnim, vy) { drawBleu(x, y, flapAnim, vy); }
 function drawBrett_ORIG(x, y, flapAnim, vy) {
@@ -3806,6 +3948,7 @@ function loop(ts) {
     // blink when invincible (every 6f) or star power (every 8f)
     var _blink = (invincible>0 && Math.floor(invincible/6)%2===0) || (starPower>0 && Math.floor(frame/8)%2===0);
     // 4.6 → wingFrame=1 (neutral/mid) when not flapping
+    drawPhantomFarts(); // fart cloud behind Phantom (drawn before character so it appears behind)
     if(!_blink) drawCharacter(bleu.x, bleu.y, bleuFlapTimer>0 ? bleu.flap : 4.6, bleuAngle);
     ctx.restore();
     updateParticles();
@@ -4188,9 +4331,16 @@ function flap() {
   else if(gameState==='playing') {
     if(phasePaused){ phasePaused=false; phaseFlash=0; bleu.vy=-4; bleuSquish=6; return; } // pula animação
     bleu.vy=-7.5; bleu.flap=0; bleuSquish=8; bleuFlapTimer=18;
-    // Wing flap sound — whoosh down then up
-    beep(380,180,0.06,'triangle',0.13);
-    setTimeout(function(){ beep(160,320,0.05,'triangle',0.09); }, 55);
+    if(activeChar===1 && gengarUnlocked) {
+      // PHANTOM: fart propulsion instead of wing flap
+      spawnPhantomFart(bleu.x, bleu.y);
+      beep(160,80,0.18,'sawtooth',0.12);
+      setTimeout(function(){ beep(90,60,0.12,'sawtooth',0.08); }, 60);
+    } else {
+      // BLEU: wing flap sound — whoosh down then up
+      beep(380,180,0.06,'triangle',0.13);
+      setTimeout(function(){ beep(160,320,0.05,'triangle',0.09); }, 55);
+    }
   }
   else if(gameState==='hurt')    { gameState='playing'; invincible=140; bleu.vy=-5; beep(440,880,0.1,'sine',0.15); }
   else if(gameState==='dead')           { resetGame(); gameState='playing'; }
@@ -4282,8 +4432,8 @@ function handleClick(ex, ey) {
       // Action button
       var _btnY2=CHAR_PREVIEW_Y+146;
       if(cx>=W/2-76&&cx<=W/2+76&&cy>=_btnY2&&cy<=_btnY2+34){ shopBuyOrEquip(); return; }
-      // Shield purchase (items section)
-      if((shopChar!==1||gengarUnlocked)&&cx>=W/2-70&&cx<=W/2+70&&cy>=510&&cy<=558){
+      // Shield purchase — left card (x:6, y:190, w:108, buy button at y:287)
+      if((shopChar!==1||gengarUnlocked)&&cx>=6&&cx<=114&&cy>=190&&cy<=315){
         if(shieldStock>=3){ beep(220,150,0.1,'sawtooth',0.06); return; }
         if(coinCount>=80){
           coinCount-=80; if(coinCount<0)coinCount=0; localStorage.setItem('bleuCoins',coinCount);
