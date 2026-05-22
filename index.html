@@ -378,16 +378,25 @@ function drawAwardScreen() {
     ctx.fillText('total: '+coinCount+' coins', cx, prizeY+96);
     ctx.globalAlpha=1;
 
-    // Botão CONTINUAR — aparece depois do prêmio estar visível
+    // Botões — aparecem depois do prêmio estar visível
     if(chestOpenAnim>=26){
       var p2=0.97+0.03*Math.sin(frame*0.14);
-      ctx.save(); ctx.translate(cx, prizeY+128); ctx.scale(p2,p2);
-      ctx.fillStyle='#0052FF';
-      ctx.beginPath(); ctx.roundRect(-85,-19,170,38,10); ctx.fill();
-      ctx.strokeStyle='#00D4FF55'; ctx.lineWidth=1.5; ctx.stroke();
-      ctx.fillStyle='#fff'; ctx.font='bold 14px Courier New';
+      // Botão SHOP
+      ctx.save(); ctx.translate(cx-56, prizeY+118); ctx.scale(p2,p2);
+      ctx.fillStyle='#FFD70022'; ctx.strokeStyle='#FFD700aa'; ctx.lineWidth=1.5;
+      ctx.beginPath(); ctx.roundRect(-46,-17,92,34,8); ctx.fill(); ctx.stroke();
+      ctx.fillStyle='#FFD700'; ctx.font='bold 12px Courier New';
       ctx.textAlign='center'; ctx.textBaseline='middle';
-      ctx.fillText('▶  CONTINUAR', 0, 0);
+      ctx.fillText('🛒  SHOP', 0, 0);
+      ctx.textBaseline='alphabetic'; ctx.restore();
+      // Botão CONTINUE
+      ctx.save(); ctx.translate(cx+56, prizeY+118); ctx.scale(p2,p2);
+      ctx.fillStyle='#0052FF';
+      ctx.beginPath(); ctx.roundRect(-46,-17,92,34,8); ctx.fill();
+      ctx.strokeStyle='#00D4FF55'; ctx.lineWidth=1.5; ctx.stroke();
+      ctx.fillStyle='#fff'; ctx.font='bold 12px Courier New';
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText('▶  GO', 0, 0);
       ctx.textBaseline='alphabetic'; ctx.restore();
     }
   }
@@ -3525,19 +3534,19 @@ function loop(ts) {
     // Phase label below score
     ctx.fillStyle = pv.glowColor+'88'; ctx.font = 'bold 7px Courier New';
     ctx.fillText(ph.label, W/2, 66);
-    // Pause button — large, round, semi-transparent, easy to tap
-    var pbx=W-46, pby=6, pbr=18;
+    // Pause button — bottom-left, large circle, semi-transparent
+    var pbx=34, pby=H-108, pbr=22;
     ctx.save();
-    ctx.globalAlpha = 0.25 + 0.10*Math.sin(frame*0.04);
-    ctx.fillStyle='#ffffff';
-    ctx.beginPath(); ctx.arc(pbx, pby+pbr, pbr, 0, Math.PI*2); ctx.fill();
-    ctx.globalAlpha = 0.55;
-    ctx.strokeStyle='#ffffff'; ctx.lineWidth=1.2;
-    ctx.stroke();
-    ctx.globalAlpha = 0.85;
-    ctx.fillStyle='#fff'; ctx.font='bold 14px Arial';
+    ctx.globalAlpha = 0.18 + 0.08*Math.sin(frame*0.04);
+    ctx.fillStyle='#000820';
+    ctx.beginPath(); ctx.arc(pbx, pby, pbr, 0, Math.PI*2); ctx.fill();
+    ctx.globalAlpha = 0.40;
+    ctx.strokeStyle='#ffffff'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.arc(pbx, pby, pbr, 0, Math.PI*2); ctx.stroke();
+    ctx.globalAlpha = 0.70;
+    ctx.fillStyle='#fff'; ctx.font='bold 16px Arial';
     ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText(paused?'▶':'⏸', pbx, pby+pbr);
+    ctx.fillText(paused?'▶':'⏸', pbx, pby);
     ctx.textBaseline='alphabetic';
     ctx.globalAlpha=1;
     ctx.restore();
@@ -3818,7 +3827,6 @@ function loop(ts) {
   }
   ctx.restore();
   if(screenShake>0)screenShake--;
-  if(shopOverlay){ drawShopOverlay(); }
   if(paused && gameState==='playing'){
     ctx.fillStyle='rgba(0,5,20,.70)'; ctx.fillRect(0,0,W,H);
     ctx.textAlign='center';
@@ -3842,7 +3850,10 @@ function flap() {
   if(gameState==='idle')         { gameState='playing'; startMusic(getPhaseIdx()); combo=0; comboFlash=0; coinsThisRun=0; milestoneIdx=0; recFlash=0; phaseFlash=190; phasePaused=true; bleu.vy=0; bleu.y=H/2; }
   else if(gameState==='playing') {
     if(phasePaused){ phasePaused=false; phaseFlash=0; bleu.vy=-4; bleuSquish=6; return; } // pula animação
-    bleu.vy=-7.5; bleu.flap=-1; bleuSquish=8; beep(260,520,0.09,'sine',0.16);
+    bleu.vy=-7.5; bleu.flap=-1; bleuSquish=8;
+    // Wing flap sound — whoosh down then up
+    beep(380,180,0.06,'triangle',0.13);
+    setTimeout(function(){ beep(160,320,0.05,'triangle',0.09); }, 55);
   }
   else if(gameState==='hurt')    { gameState='playing'; invincible=140; bleu.vy=-5; beep(440,880,0.1,'sine',0.15); }
   else if(gameState==='dead')           { resetGame(); gameState='playing'; }
@@ -3878,12 +3889,6 @@ function handleClick(ex, ey) {
     if(cx>=W/2-65&&cx<=W/2+65&&cy>=H/2+78&&cy<=H/2+112){ claimDailyReward(); beep(523,1047,0.2,'sine',0.14); }
     return;
   }
-  if(shopOverlay){
-    if(cy>=H-74&&cy<=H-38&&cx>=W/2-80&&cx<=W/2+80){ shopOverlay=false; return; }
-    var si2=hitShopCard(cx,cy,76,true);
-    if(si2>=0){ buySkin(si2); return; }
-    return;
-  }
 
   // ── HURT — qualquer toque retoma
   if(gameState === 'hurt') { flap(); return; }
@@ -3911,7 +3916,17 @@ function handleClick(ex, ey) {
         if(navigator.vibrate) navigator.vibrate([60,20,60,20,100]);
       }
     } else if(chestOpenAnim >= 26) {
-      shopOverlay = true; gameState = 'playing'; startMusic(getPhaseIdx());
+      // Two buttons: SHOP (left) | CONTINUE (right)
+      var prizeY2 = H/2+20+70;
+      var btnY2 = prizeY2+118;
+      if(cy>=btnY2-17&&cy<=btnY2+17){
+        if(cx>=W/2-102&&cx<=W/2-10){ // SHOP button
+          gameState='idle'; idleTab='shop'; stopMusic(); beep(523,784,0.1,'sine',0.12); return;
+        }
+        if(cx>=W/2+10&&cx<=W/2+102){ // CONTINUE button
+          gameState='playing'; startMusic(getPhaseIdx()); beep(659,1047,0.1,'sine',0.12); return;
+        }
+      }
     }
     return;
   }
@@ -3975,7 +3990,7 @@ function handleClick(ex, ey) {
   }
 
   // Pause button hit (top-right corner, playing state)
-  if(gameState==='playing' && cx>=W-64&&cx<=W-10&&cy>=0&&cy<=46){ paused=!paused; beep(paused?330:440,paused?280:520,0.07,'sine',0.08); return; }
+  if(gameState==='playing' && cx>=0&&cx<=66&&cy>=H-136&&cy<=H-72){ paused=!paused; beep(paused?330:440,paused?280:520,0.07,'sine',0.08); return; }
   if(paused) return;
   flap();
 }
