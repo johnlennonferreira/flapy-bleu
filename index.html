@@ -809,21 +809,48 @@ var unlockedSkins=JSON.parse(localStorage.getItem('bleuSkins')||'[0]');
 var chestType='normal';
 
 // ─── WALLET ──────────────────────────────────────────────────
-var walletAddress    = localStorage.getItem('bleuWallet') || null;
-var walletShort      = walletAddress ? walletAddress.slice(0,6)+'...'+walletAddress.slice(-4) : null;
+var walletAddress    = null;
+var walletShort      = null;
 var walletConnecting = false;
 var walletScores     = JSON.parse(localStorage.getItem('bleuWalletScores')||'[]');
+
+// Restore saved wallet — silently verify it's still authorized (no popup)
+(function() {
+  var saved = localStorage.getItem('bleuWallet');
+  if(!saved) return;
+  if(window.ethereum) {
+    // eth_accounts = silent check, NO popup — only returns already-approved accounts
+    window.ethereum.request({method:'eth_accounts'}).then(function(accounts){
+      if(accounts && accounts.some(function(a){ return a.toLowerCase()===saved.toLowerCase(); })){
+        walletAddress = saved;
+        walletShort   = saved.slice(0,6)+'...'+saved.slice(-4);
+      } else {
+        // Wallet revoked permission — clear stored address
+        localStorage.removeItem('bleuWallet');
+      }
+    }).catch(function(){ localStorage.removeItem('bleuWallet'); });
+  } else {
+    // No ethereum provider (mobile/no extension) — keep address for display only
+    walletAddress = saved;
+    walletShort   = saved.slice(0,6)+'...'+saved.slice(-4);
+  }
+})();
 
 function connectWallet() {
   if(walletConnecting) return;
   if(!window.ethereum) {
-    // Mobile sem extensão — abre Coinbase Wallet DApp Browser
     var url = encodeURIComponent('https://flapy-bleu.vercel.app');
     window.open('https://go.cb-w.com/dapp?cb_url='+url, '_blank');
     return;
   }
   walletConnecting = true;
-  window.ethereum.request({method:'eth_requestAccounts'}).then(function(accounts){
+  // wallet_requestPermissions forces the popup every time, even if already connected
+  window.ethereum.request({
+    method: 'wallet_requestPermissions',
+    params: [{ eth_accounts: {} }]
+  }).then(function(){
+    return window.ethereum.request({method:'eth_requestAccounts'});
+  }).then(function(accounts){
     walletConnecting = false;
     if(accounts && accounts.length>0){
       walletAddress = accounts[0];
@@ -833,7 +860,20 @@ function connectWallet() {
       [659,784,1047].forEach(function(f,i){setTimeout(function(){beep(f,f*1.5,0.12,'sine',0.12);},i*80);});
       if(navigator.vibrate) navigator.vibrate([30,20,60]);
     }
-  }).catch(function(){ walletConnecting = false; });
+  }).catch(function(err){
+    walletConnecting = false;
+    // Fallback: wallet_requestPermissions not supported — try direct
+    if(err && err.code === 4200){
+      window.ethereum.request({method:'eth_requestAccounts'}).then(function(accounts){
+        if(accounts && accounts.length>0){
+          walletAddress = accounts[0];
+          walletShort   = walletAddress.slice(0,6)+'...'+walletAddress.slice(-4);
+          localStorage.setItem('bleuWallet', walletAddress);
+          beep(523,1047,0.22,'sine',0.15);
+        }
+      }).catch(function(){});
+    }
+  });
 }
 
 function disconnectWallet() {
