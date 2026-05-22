@@ -986,21 +986,25 @@ function drawBleu(x, y, flapAnim, angle) {
   ctx.globalAlpha = 1;
   ctx.restore();
 
-  // WING — 3 discrete frames (up/mid/down)
+  // BACK WING — drawn before body, slightly darker, offset right/down
   ctx.save();
-  ctx.translate(2, -4 + wf);
-  ctx.rotate(wingAngles[wingFrame]);
-  var wGrad = ctx.createLinearGradient(0, 0, 0, -28);
-  wGrad.addColorStop(0, cBody); wGrad.addColorStop(1, cBodyLt);
+  ctx.translate(8, 2 + wf * 0.8);
+  ctx.rotate(wingAngles[wingFrame] + 0.12);
+  var wGradBack = ctx.createLinearGradient(0, 0, 0, -26);
+  wGradBack.addColorStop(0, cShadow);
+  wGradBack.addColorStop(0.5, cBody);
+  wGradBack.addColorStop(1, cBodyLt);
+  ctx.globalAlpha = 0.72;
   ctx.beginPath();
   ctx.moveTo(0, 0);
-  ctx.bezierCurveTo(-6, -14, 4, -28, 12, -22);
-  ctx.bezierCurveTo(16, -18, 14, -8, 0, 0);
-  ctx.fillStyle = wGrad; ctx.fill();
-  ctx.lineWidth = 1.5; ctx.strokeStyle = cOutline; ctx.stroke();
-  ctx.lineWidth = 0.8; ctx.strokeStyle = cShadow; ctx.globalAlpha = 0.5;
-  ctx.beginPath(); ctx.moveTo(0,0); ctx.bezierCurveTo(2,-10,8,-18,11,-20); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(0,0); ctx.bezierCurveTo(-2,-10,5,-20,10,-22); ctx.stroke();
+  ctx.bezierCurveTo(-4, -10, 2, -22, 14, -18);
+  ctx.bezierCurveTo(18, -14, 16, -6, 0, 0);
+  ctx.fillStyle = wGradBack; ctx.fill();
+  ctx.lineWidth = 1.2; ctx.strokeStyle = cOutline; ctx.stroke();
+  // feather detail lines
+  ctx.lineWidth = 0.7; ctx.strokeStyle = cShadow; ctx.globalAlpha = 0.35;
+  ctx.beginPath(); ctx.moveTo(0,0); ctx.bezierCurveTo(3,-8,9,-14,12,-16); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0,0); ctx.bezierCurveTo(-1,-8,5,-16,11,-18); ctx.stroke();
   ctx.globalAlpha = 1;
   ctx.restore();
 
@@ -1061,6 +1065,29 @@ function drawBleu(x, y, flapAnim, angle) {
   // SMILE
   ctx.beginPath(); ctx.arc(4, -12, 7, 0.15, Math.PI - 0.15);
   ctx.lineWidth = 1.8; ctx.strokeStyle = cOutline; ctx.stroke();
+
+  // FRONT WING — drawn on top of body for depth
+  ctx.save();
+  ctx.translate(-1, -2 + wf);
+  ctx.rotate(wingAngles[wingFrame]);
+  var wGradFront = ctx.createLinearGradient(0, 0, 6, -32);
+  wGradFront.addColorStop(0, cBody);
+  wGradFront.addColorStop(0.4, cBodyLt);
+  wGradFront.addColorStop(1, '#ffffff');
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.bezierCurveTo(-7, -12, 2, -30, 14, -24);
+  ctx.bezierCurveTo(19, -20, 17, -9, 0, 0);
+  ctx.fillStyle = wGradFront; ctx.fill();
+  ctx.lineWidth = 1.6; ctx.strokeStyle = cOutline; ctx.stroke();
+  // feather highlights
+  ctx.lineWidth = 0.9; ctx.strokeStyle = '#ffffff'; ctx.globalAlpha = 0.45;
+  ctx.beginPath(); ctx.moveTo(0,0); ctx.bezierCurveTo(2,-9,9,-18,12,-21); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(1,-3); ctx.bezierCurveTo(4,-11,11,-20,13,-23); ctx.stroke();
+  ctx.lineWidth = 0.7; ctx.strokeStyle = cShadow; ctx.globalAlpha = 0.3;
+  ctx.beginPath(); ctx.moveTo(0,0); ctx.bezierCurveTo(-2,-10,4,-22,10,-24); ctx.stroke();
+  ctx.globalAlpha = 1;
+  ctx.restore();
 
   // GLOW (no shadowBlur — use alpha only for performance)
   if(scoreGlow > 0) {
@@ -3258,35 +3285,57 @@ function loop(ts) {
       drawCharacter(bleu.x, bleu.y + Math.sin(frame*.045)*8, frame*.22, 0);
       ctx.textAlign = 'center';
 
-      // ── Title ──
-      ctx.font = 'bold 34px Courier New';
-      var tg = ctx.createLinearGradient(W/2-80, 0, W/2+80, 0);
-      tg.addColorStop(0,'#0052FF'); tg.addColorStop(0.5,'#00D4FF'); tg.addColorStop(1,'#FFD700');
-      ctx.fillStyle = tg; ctx.shadowColor = '#0052FF'; ctx.shadowBlur = 28;
-      ctx.fillText('FLAPY BLEU', W/2, H/2-82); ctx.shadowBlur = 0;
+      // ── Title shadow layer ──
+      ctx.font = 'bold 38px Courier New';
+      ctx.fillStyle = '#001AFF44';
+      ctx.fillText('FLAPY BLEU', W/2+3, H/2-79);
+      // ── Title gradient ──
+      var tg = ctx.createLinearGradient(W/2-90, 0, W/2+90, 0);
+      tg.addColorStop(0,'#0052FF'); tg.addColorStop(0.45,'#00D4FF'); tg.addColorStop(1,'#FFD700');
+      ctx.fillStyle = tg;
+      ctx.shadowColor = '#0066FF'; ctx.shadowBlur = 32;
+      ctx.fillText('FLAPY BLEU', W/2, H/2-82);
+      ctx.shadowBlur = 0;
 
       // ── WEB3 GAME pill badge ──
-      var badgePulse = 0.92+0.08*Math.sin(frame*0.07);
-      ctx.save(); ctx.translate(W/2, H/2-62); ctx.scale(badgePulse, badgePulse);
+      var badgePulse = 0.94+0.06*Math.sin(frame*0.07);
+      ctx.save(); ctx.translate(W/2, H/2-58); ctx.scale(badgePulse, badgePulse);
       ctx.font='bold 9px Courier New';
       var _bw = ctx.measureText('⬡  WEB3 GAME  ·  BASE NETWORK').width;
       var _bpad = 14;
-      ctx.fillStyle='#0052FF33'; ctx.strokeStyle='#0052FFaa'; ctx.lineWidth=1;
+      ctx.fillStyle='#0052FF44'; ctx.strokeStyle='#00D4FFcc'; ctx.lineWidth=1.5;
       ctx.beginPath(); ctx.roundRect(-_bw/2-_bpad,-11,_bw+_bpad*2,22,11); ctx.fill(); ctx.stroke();
-      ctx.fillStyle='#00D4FF'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillStyle='#00EEFF'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.shadowColor='#00D4FF'; ctx.shadowBlur=8;
       ctx.fillText('⬡  WEB3 GAME  ·  BASE NETWORK', 0, 0);
-      ctx.textBaseline='alphabetic'; ctx.restore();
+      ctx.shadowBlur=0; ctx.textBaseline='alphabetic'; ctx.restore();
 
-      // ── Sub tagline ──
-      ctx.fillStyle = '#ffffff66'; ctx.font = '11px Courier New';
-      ctx.fillText('tap / SPACE to fly  ·  dodge the candles', W/2, H/2-30);
+      // ── Tagline ──
+      ctx.fillStyle = '#ffffff55'; ctx.font = '11px Courier New';
+      ctx.fillText('tap · SPACE · dodge the candles', W/2, H/2-26);
 
       // ── BEST score ──
       if(highScore > 0){
-        ctx.fillStyle = '#FFD700'; ctx.font = 'bold 13px Courier New';
-        ctx.shadowColor = '#FFD700'; ctx.shadowBlur = 12;
-        ctx.fillText('BEST: ' + highScore, W/2, H/2+44); ctx.shadowBlur = 0;
+        ctx.fillStyle = '#FFD700'; ctx.font = 'bold 14px Courier New';
+        ctx.shadowColor = '#FFD700'; ctx.shadowBlur = 18;
+        ctx.fillText('🏆  BEST: ' + highScore, W/2, H/2+44);
+        ctx.shadowBlur = 0;
       }
+
+      // ── TAP TO START pulsing button ──
+      var _sp = 0.96 + 0.04*Math.sin(frame*0.12);
+      ctx.save(); ctx.translate(W/2, H/2+62); ctx.scale(_sp, _sp);
+      var _sg = ctx.createLinearGradient(-88,0,88,0);
+      _sg.addColorStop(0,'#0044DD'); _sg.addColorStop(0.5,'#0066FF'); _sg.addColorStop(1,'#0044DD');
+      ctx.fillStyle = _sg;
+      ctx.shadowColor='#0052FF'; ctx.shadowBlur=22;
+      ctx.beginPath(); ctx.roundRect(-88,-18,176,36,12); ctx.fill();
+      ctx.strokeStyle='#00D4FFaa'; ctx.lineWidth=1.5; ctx.stroke();
+      ctx.shadowBlur=0;
+      ctx.fillStyle='#ffffff'; ctx.font='bold 14px Courier New';
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText('▶  TAP TO START', 0, 0);
+      ctx.textBaseline='alphabetic'; ctx.restore();
 
       drawCharSelect();
 
@@ -3553,22 +3602,27 @@ function loop(ts) {
     drawPhaseBanner();
     drawNFTBanner();
 
-    // HUD — score card
+    // HUD — score card (polished)
     ctx.textAlign = 'center';
-    // Card background
-    ctx.fillStyle='#00000033'; ctx.strokeStyle=pv.glowColor+'44'; ctx.lineWidth=1;
-    ctx.beginPath(); ctx.roundRect(W/2-38, 26, 76, 36, 8); ctx.fill(); ctx.stroke();
+    // Card background — glassy
+    ctx.fillStyle='rgba(0,5,20,0.52)'; ctx.strokeStyle=pv.glowColor+'66'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.roundRect(W/2-46, 22, 92, 44, 10); ctx.fill(); ctx.stroke();
+    // inner shimmer
+    ctx.fillStyle='rgba(255,255,255,0.04)';
+    ctx.beginPath(); ctx.roundRect(W/2-44, 23, 88, 16, 8); ctx.fill();
     // Score number
-    var _ps = scorePop>0 ? 1+(scorePop/12)*0.6 : 1;
-    ctx.save(); ctx.translate(W/2,50); ctx.scale(_ps,_ps);
-    ctx.font = 'bold 26px Courier New';
-    ctx.fillStyle = pv.glowColor;
+    var _ps = scorePop>0 ? 1+(scorePop/12)*0.55 : 1;
+    ctx.save(); ctx.translate(W/2, 52); ctx.scale(_ps,_ps);
+    ctx.font = 'bold 28px Courier New';
+    ctx.shadowColor = pv.glowColor; ctx.shadowBlur = scorePop>0 ? 18 : 8;
+    ctx.fillStyle = '#ffffff';
     ctx.fillText(score, 0, 0);
+    ctx.shadowBlur=0;
     ctx.restore();
     if(scorePop>0) scorePop--;
     // Phase label below score
-    ctx.fillStyle = pv.glowColor+'88'; ctx.font = 'bold 7px Courier New';
-    ctx.fillText(ph.label, W/2, 66);
+    ctx.fillStyle = pv.glowColor+'aa'; ctx.font = 'bold 7px Courier New';
+    ctx.fillText(ph.label, W/2, 68);
     // Pause button — bottom-left, large circle, semi-transparent
     var pbx=34, pby=H-108, pbr=22;
     ctx.save();
@@ -3747,24 +3801,35 @@ function loop(ts) {
       ctx.fillText('NEW RECORD!', W/2, H/2-92);
       ctx.shadowBlur = 0;
     }
-    // ── painel principal ──
-    ctx.fillStyle = 'rgba(0,5,20,0.80)';
-    ctx.beginPath(); ctx.roundRect(W/2-118, H/2-88, 236, 268, 14); ctx.fill();
-    ctx.strokeStyle = '#0052FF44'; ctx.lineWidth = 1.5;
-    ctx.stroke();
+    // ── painel principal — glassy card ──
+    ctx.fillStyle = 'rgba(0,5,20,0.86)';
+    ctx.beginPath(); ctx.roundRect(W/2-120, H/2-92, 240, 272, 16); ctx.fill();
+    // border glow
+    ctx.strokeStyle = '#FF174466'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.roundRect(W/2-120, H/2-92, 240, 272, 16); ctx.stroke();
+    ctx.strokeStyle = '#0052FF33'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.roundRect(W/2-118, H/2-90, 236, 268, 15); ctx.stroke();
+    // shimmer top edge
+    ctx.fillStyle='rgba(255,255,255,0.06)';
+    ctx.beginPath(); ctx.roundRect(W/2-116, H/2-90, 232, 18, 8); ctx.fill();
 
-    // REKT
-    ctx.font = 'bold 30px Courier New';
-    ctx.shadowColor = '#FF1744'; ctx.shadowBlur = 22;
-    ctx.fillStyle = '#FF1744'; ctx.textAlign = 'center';
+    // REKT — big impactful text
+    ctx.font = 'bold 36px Courier New';
+    ctx.shadowColor = '#FF1744'; ctx.shadowBlur = 32;
+    ctx.fillStyle = '#FF3355'; ctx.textAlign = 'center';
+    ctx.fillText('REKT', W/2+2, H/2-52+2); // shadow
+    ctx.fillStyle = '#FF1744';
     ctx.fillText('REKT', W/2, H/2-54);
     ctx.shadowBlur = 0;
 
-    // Score grande
-    ctx.fillStyle = '#fff'; ctx.font = 'bold 26px Courier New';
-    ctx.fillText(score, W/2, H/2-22);
-    ctx.fillStyle = '#ffffff55'; ctx.font = '10px Courier New';
-    ctx.fillText('SCORE', W/2, H/2-8);
+    // Score grande + glow
+    ctx.font = 'bold 32px Courier New';
+    ctx.shadowColor = '#ffffff'; ctx.shadowBlur = newRecord ? 18 : 6;
+    ctx.fillStyle = newRecord ? '#FFD700' : '#fff';
+    ctx.fillText(score, W/2, H/2-18);
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#ffffff44'; ctx.font = 'bold 9px Courier New';
+    ctx.fillText('SCORE', W/2, H/2-5);
 
     // Fase alcançada esta run
     var phaseName = PHASE_VISUALS[runPhase] ? PHASE_VISUALS[runPhase].name : PHASE_VISUALS[0].name;
