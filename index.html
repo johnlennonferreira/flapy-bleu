@@ -395,9 +395,9 @@ function drawAwardScreen() {
 
 // ─── IDLE TABS ───────────────────────────────────────────────
 function drawIdleTabs() {
-  var labels=['PLAY','SHOP','SKINS','RANK'], keys=['play','shop','skins','leaderboard'];
-  var icons=['▶','🛒','🎨','🏆'];
-  var tw=82, th=44, gap=5, total=labels.length*(tw+gap)-gap;
+  var labels=['PLAY','SHOP','RANK'], keys=['play','shop','leaderboard'];
+  var icons=['▶','🛒','🏆'];
+  var tw=110, th=44, gap=6, total=labels.length*(tw+gap)-gap;
   var tx0=W/2-total/2, ty=H-58;
   ctx.textAlign='center';
   for(var ti=0;ti<labels.length;ti++) {
@@ -460,13 +460,16 @@ function drawShopTab() {
   ctx.font='bold 15px Courier New'; ctx.fillStyle='#FFD700';
   ctx.shadowColor='#FFD700'; ctx.shadowBlur=10;
   ctx.fillText('SHOP', W/2, 36); ctx.shadowBlur=0;
+  // Coins + owned count
   ctx.font='11px Courier New'; ctx.fillStyle='#FFD700';
-  ctx.fillText('🐉 '+coinCount+' coins', W/2, 54);
+  ctx.fillText('🐉 '+coinCount+' coins', W/2-40, 54);
+  ctx.fillStyle='#00D4FF88'; ctx.font='9px Courier New';
+  ctx.fillText('owned: '+unlockedSkins.length+'/'+SKINS.length, W/2+44, 54);
 
   // ── SKINS section ──
   ctx.textAlign='left';
   ctx.font='bold 8px Courier New'; ctx.fillStyle='#00D4FFaa';
-  ctx.fillText('💎 SKINS — buy with dragon coins', 16, 70);
+  ctx.fillText('💎 SKINS — tap to buy or equip', 16, 70);
   ctx.textAlign='center';
   drawShopCards(76, false);
 
@@ -3289,8 +3292,6 @@ function loop(ts) {
       ctx.fillText('powered by Base Network', W/2, H-82);
     } else if(idleTab==='shop'){
       drawShopTab();
-    } else if(idleTab==='skins'){
-      drawSkinsTab();
     } else if(idleTab==='leaderboard'){
       drawLeaderboardTab();
     }
@@ -3927,29 +3928,12 @@ function handleClick(ex, ey) {
         if(cx>=W/2-30&&cx<=W/2+30&&cy>=wy3+38&&cy<=wy3+54){ disconnectWallet(); return; }
       }
     }
-    var labels=['play','shop','skins','leaderboard'], tw=82, th=44, gap=5;
-    var total=4*(tw+gap)-gap, tx0=W/2-total/2, ty=H-58;
+    var labels=['play','shop','leaderboard'], tw=110, th=44, gap=6;
+    var total=3*(tw+gap)-gap, tx0=W/2-total/2, ty=H-58;
     for(var ti=0;ti<labels.length;ti++) {
       var tx=tx0+ti*(tw+gap);
       if(cx>=tx&&cx<=tx+tw&&cy>=ty&&cy<=ty+th) {
         idleTab=labels[ti]; beep(440,660,0.08,'sine',0.1); return;
-      }
-    }
-    // Skins tab: click to equip (only owned skins shown)
-    if(idleTab==='skins') {
-      var owned2=unlockedSkins.slice().sort(function(a,b){return a-b;});
-      if(owned2.length===0) owned2=[0];
-      var cols2=3,tw3=78,th3=92,gapX2=8,totalW3=cols2*(tw3+gapX2)-gapX2,startX2=W/2-totalW3/2;
-      for(var ii2=0;ii2<owned2.length;ii2++) {
-        var si2=owned2[ii2];
-        var col2=ii2%cols2,row2=Math.floor(ii2/cols2);
-        var sx2=startX2+col2*(tw3+gapX2)+tw3/2, sy2=H/2-100+row2*(th3+gapX2);
-        if(cx>=sx2-tw3/2&&cx<=sx2+tw3/2&&cy>=sy2&&cy<=sy2+th3) {
-          activeSkin=si2;
-          localStorage.setItem('bleuSkin',''+si2);
-          beep(440+si2*55, 880+si2*55, 0.1,'sine',0.12);
-          return;
-        }
       }
     }
     // Play tab — wallet button
