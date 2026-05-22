@@ -390,195 +390,195 @@ function drawIdleTabs() {
     ctx.fillText(labels[ti], tx+tw/2, ty+32); ctx.shadowBlur=0;
   }
 }
-function drawShopCards(yStart, compact) {
-  var cols=3, tw=76, th=compact?82:80, gapX=8, gapY=compact?4:5;
-  var startX=W/2-((cols*(tw+gapX)-gapX)/2);
-  for(var si=1;si<SKINS.length;si++){
-    var idx2=si-1, col=idx2%cols, row=Math.floor(idx2/cols);
-    var sx=startX+col*(tw+gapX)+tw/2, sy=yStart+row*(th+gapY);
-    var sk=SKINS[si], owned=unlockedSkins.indexOf(si)>=0, equipped=activeSkin===si&&owned;
-    var canBuy=!owned&&coinCount>=sk.price;
-    // card bg
-    ctx.fillStyle=equipped?sk.body+'44':owned?sk.body+'1a':'#ffffff08';
-    ctx.strokeStyle=equipped?sk.body:owned?sk.body+'66':canBuy?sk.glow+'66':'#ffffff18';
-    ctx.lineWidth=equipped?2:1;
-    ctx.beginPath(); ctx.roundRect(sx-tw/2,sy,tw,th,6); ctx.fill(); ctx.stroke();
-    // character preview
-    var prevSkin=activeSkin; activeSkin=si;
-    ctx.save(); ctx.translate(sx,sy+(compact?28:28)); ctx.scale(.44,.44);
-    drawBleu(0,0,frame*.28,0); ctx.restore(); activeSkin=prevSkin;
-    // name
-    ctx.textAlign='center'; ctx.font='bold 8px Courier New';
-    ctx.fillStyle=owned?'#fff':'#ffffffaa'; ctx.fillText(sk.name,sx,sy+th-18);
-    // buy/equip button
-    var btnY=sy+th-12;
-    if(owned){
-      ctx.fillStyle=equipped?sk.body+'33':'#ffffff0a';
-      ctx.strokeStyle=equipped?sk.body:'#ffffff22'; ctx.lineWidth=1;
-      ctx.beginPath(); ctx.roundRect(sx-tw/2+4,btnY,tw-8,10,3); ctx.fill(); ctx.stroke();
-      ctx.font='6px Courier New'; ctx.fillStyle=equipped?sk.body:'#ffffff66';
-      ctx.fillText(equipped?'✓ EQUIPPED':'EQUIP',sx,btnY+7);
-    } else {
-      ctx.fillStyle=canBuy?'#FFD70020':'#ff000018';
-      ctx.strokeStyle=canBuy?'#FFD700':'#ff4444'; ctx.lineWidth=1;
-      ctx.beginPath(); ctx.roundRect(sx-tw/2+4,btnY,tw-8,10,3); ctx.fill(); ctx.stroke();
-      ctx.font='6px Courier New'; ctx.fillStyle=canBuy?'#FFD700':'#ff6666';
-      ctx.fillText('🐉 '+sk.price,sx,btnY+7);
-    }
-  }
+// ─── SHOP HELPERS ────────────────────────────────────────────────────
+var FAN_ANGLES = [-160,-120,-90,-60,-20]; // degrees
+var FAN_RADIUS = 90;
+var CHAR_PREVIEW_Y = 265;
+
+function isColorOwned(charIdx, colorIdx) {
+  if(colorIdx===0) return true;
+  if(charIdx===0) return unlockedColorsBleu.indexOf(colorIdx)>=0;
+  if(charIdx===1) return gengarUnlocked && unlockedColorsGengar.indexOf(colorIdx)>=0;
+  return false;
+}
+function isColorEquipped(charIdx, colorIdx) {
+  if(charIdx===0) return activeChar===0 && activeColorBleu===colorIdx;
+  if(charIdx===1) return activeChar===1 && activeColorGengar===colorIdx;
+  return false;
+}
+function shopBuyOrEquip() {
+  var colors = shopChar===0 ? BLEU_COLORS : GENGAR_COLORS;
+  var color  = colors[shopSelColor];
+  if(!color) return;
+  var owned    = isColorOwned(shopChar, shopSelColor);
+  var equipped = isColorEquipped(shopChar, shopSelColor);
+  if(equipped) return;
+  if(owned || shopSelColor===0) {
+    // equip
+    activeChar = shopChar;
+    if(shopChar===0){ activeColorBleu=shopSelColor; localStorage.setItem('bleuColorB',''+shopSelColor); }
+    else            { activeColorGengar=shopSelColor; localStorage.setItem('bleuColorG',''+shopSelColor); }
+    localStorage.setItem('bleuChar',''+activeChar);
+    beep(523,1047,0.18,'sine',0.12);
+  } else if(coinCount>=color.price) {
+    // buy + auto-equip
+    coinCount-=color.price; if(coinCount<0) coinCount=0;
+    localStorage.setItem('bleuCoins',coinCount);
+    if(shopChar===0){ unlockedColorsBleu.push(shopSelColor); localStorage.setItem('bleuColsB',JSON.stringify(unlockedColorsBleu)); activeColorBleu=shopSelColor; localStorage.setItem('bleuColorB',''+shopSelColor); }
+    else            { unlockedColorsGengar.push(shopSelColor); localStorage.setItem('bleuColsG',JSON.stringify(unlockedColorsGengar)); activeColorGengar=shopSelColor; localStorage.setItem('bleuColorG',''+shopSelColor); }
+    activeChar=shopChar; localStorage.setItem('bleuChar',''+activeChar);
+    beep(523,1047,0.28,'sine',0.15);
+    [659,784,1047].forEach(function(f,ii){setTimeout(function(){beep(f,f,0.12,'sine',0.1);},ii*70);});
+    spawnParticles(W/2,H/2,'#FFD700',14);
+  } else { beep(220,150,0.12,'sawtooth',0.08); hitFlash=3; }
 }
 function drawShopTab() {
   ctx.textAlign='center';
-  // Header
-  ctx.font='bold 15px Courier New'; ctx.fillStyle='#FFD700';
-  ctx.shadowColor='#FFD700'; ctx.shadowBlur=10;
-  ctx.fillText('SHOP', W/2, 36); ctx.shadowBlur=0;
-  // Coins + owned count
+  // ── Header ──
+  ctx.font='bold 16px Courier New';
+  var _shg=ctx.createLinearGradient(W/2-60,0,W/2+60,0);
+  _shg.addColorStop(0,'#FFD700'); _shg.addColorStop(1,'#00D4FF');
+  ctx.fillStyle=_shg; ctx.shadowColor='#FFD700'; ctx.shadowBlur=10;
+  ctx.fillText('SHOP', W/2, 32); ctx.shadowBlur=0;
   ctx.font='11px Courier New'; ctx.fillStyle='#FFD700';
-  ctx.fillText('🐉 '+coinCount+' coins', W/2-40, 54);
-  ctx.fillStyle='#00D4FF88'; ctx.font='9px Courier New';
-  ctx.fillText('owned: '+unlockedSkins.length+'/'+SKINS.length, W/2+44, 54);
+  ctx.fillText('🐉 '+coinCount.toLocaleString()+' / 100,000', W/2, 50);
 
-  // ── SKINS section ──
-  ctx.textAlign='left';
-  ctx.font='bold 8px Courier New'; ctx.fillStyle='#00D4FFaa';
-  ctx.fillText('💎 SKINS — tap to buy or equip', 16, 70);
-  ctx.textAlign='center';
-  drawShopCards(76, false);
-
-  // ── POÇÕES section (below 4 rows of skins = 76 + 4*82 = 404) ──
-  var py = 410;
-  ctx.textAlign='left';
-  ctx.font='bold 8px Courier New'; ctx.fillStyle='#aa44ffaa';
-  ctx.fillText('⚗️ POTIONS', 16, py);
-  var potions=[{icon:'💊',name:'Vida Extra',sub:'em breve'},{icon:'⚡',name:'Speed+',sub:'em breve'},{icon:'🛡️',name:'Shield',sub:'em breve'}];
-  for(var pi2=0;pi2<3;pi2++){
-    var px2=16+pi2*126, py2=py+5;
-    ctx.fillStyle='#ffffff04'; ctx.strokeStyle='#aa44ff22'; ctx.lineWidth=1;
-    ctx.beginPath(); ctx.roundRect(px2,py2,118,38,5); ctx.fill(); ctx.stroke();
-    ctx.font='14px Courier New'; ctx.textAlign='center'; ctx.fillStyle='#ffffff22';
-    ctx.fillText(potions[pi2].icon, px2+18, py2+23);
-    ctx.font='7px Courier New'; ctx.fillStyle='#ffffff44';
-    ctx.fillText(potions[pi2].name, px2+66, py2+14);
-    ctx.font='bold 7px Courier New'; ctx.fillStyle='#aa44ff55';
-    ctx.fillText('COMING SOON',px2+66, py2+28);
+  // ── Character selector tabs ──
+  var ctw=118, cgap=10, ctx0=W/2-(ctw+cgap/2);
+  var charNames=['BLEU','GENGAR'], charLock=[false,!gengarUnlocked];
+  for(var _ci=0; _ci<2; _ci++){
+    var _cx=ctx0+_ci*(ctw+cgap);
+    var _isAct=shopChar===_ci;
+    ctx.fillStyle=_isAct?'#0052FF33':'#ffffff08';
+    ctx.strokeStyle=_isAct?'#0052FF':'#ffffff22'; ctx.lineWidth=_isAct?2:1;
+    ctx.beginPath(); ctx.roundRect(_cx,58,ctw,28,8); ctx.fill(); ctx.stroke();
+    ctx.fillStyle=_isAct?'#00D4FF':'#ffffff55';
+    ctx.font='bold 11px Courier New'; ctx.textAlign='center';
+    ctx.fillText((charLock[_ci]?'🔒 ':'')+charNames[_ci], _cx+ctw/2, 58+18);
   }
 
-  // ── ITENS ESPECIAIS ──
-  var iy = py+52;
-  ctx.textAlign='left';
-  ctx.font='bold 8px Courier New'; ctx.fillStyle='#FFD700aa';
-  ctx.fillText('🗡️ SPECIAL ITEMS', 16, iy);
-  var items2=[{icon:'🧲',name:'Moeda x2',sub:'em breve'},{icon:'💫',name:'Auto-Flip',sub:'em breve'},{icon:'🎯',name:'Aim+',sub:'em breve'}];
-  for(var ii3=0;ii3<3;ii3++){
-    var ix2=16+ii3*126, iy2=iy+5;
-    ctx.fillStyle='#ffffff04'; ctx.strokeStyle='#FFD70022'; ctx.lineWidth=1;
-    ctx.beginPath(); ctx.roundRect(ix2,iy2,118,38,5); ctx.fill(); ctx.stroke();
-    ctx.font='14px Courier New'; ctx.textAlign='center'; ctx.fillStyle='#ffffff22';
-    ctx.fillText(items2[ii3].icon, ix2+18, iy2+23);
-    ctx.font='7px Courier New'; ctx.fillStyle='#ffffff44';
-    ctx.fillText(items2[ii3].name, ix2+66, iy2+14);
-    ctx.font='bold 7px Courier New'; ctx.fillStyle='#FFD70044';
-    ctx.fillText('COMING SOON',ix2+66, iy2+28);
-  }
-  ctx.textAlign='center';
-}
-function drawShopOverlay() {
-  ctx.fillStyle='rgba(0,5,20,.92)'; ctx.fillRect(0,0,W,H);
-  ctx.textAlign='center';
-  ctx.font='bold 14px Courier New';
-  var sg=ctx.createLinearGradient(W/2-70,0,W/2+70,0);
-  sg.addColorStop(0,'#FFD700'); sg.addColorStop(1,'#00D4FF');
-  ctx.fillStyle=sg; ctx.shadowColor='#FFD700'; ctx.shadowBlur=14;
-  ctx.fillText('SHOP — PHASE '+(completedPhase+1)+' COMPLETE', W/2, 36); ctx.shadowBlur=0;
-  ctx.font='11px Courier New'; ctx.fillStyle='#FFD700';
-  ctx.fillText('🐉 '+coinCount+' coins available', W/2, 56);
-  ctx.font='bold 8px Courier New'; ctx.fillStyle='#00D4FFaa';
-  ctx.textAlign='left'; ctx.fillText('💎 SKINS — buy with coins', 16, 72); ctx.textAlign='center';
-  drawShopCards(76, true);
-  // future items row placeholder
-  ctx.fillStyle='#ffffff06'; ctx.strokeStyle='#ffffff11'; ctx.lineWidth=1;
-  ctx.fillRect(W/2-118,H-118,236,32); ctx.strokeRect(W/2-118,H-118,236,32);
-  ctx.font='9px Courier New'; ctx.fillStyle='#ffffff33';
-  ctx.fillText('⚗️ potions  •  🗡️ power-ups  •  🃏 items  — coming soon', W/2, H-99);
-  // continue button
-  ctx.fillStyle='#0052FF'; ctx.strokeStyle='#00D4FF'; ctx.lineWidth=2;
-  ctx.fillRect(W/2-80,H-74,160,36); ctx.strokeRect(W/2-80,H-74,160,36);
-  ctx.font='bold 12px Courier New'; ctx.fillStyle='#fff';
-  ctx.shadowColor='#00D4FF'; ctx.shadowBlur=8;
-  ctx.fillText('KEEP PLAYING', W/2, H-50); ctx.shadowBlur=0;
-}
-function drawSkinsTab() {
-  ctx.textAlign='center';
-  // Title
-  ctx.font='bold 13px Courier New'; ctx.fillStyle='#00D4FF';
-  ctx.shadowColor='#00D4FF'; ctx.shadowBlur=10;
-  ctx.fillText('MY SKINS', W/2, H/2-134); ctx.shadowBlur=0;
-  ctx.font='10px Courier New'; ctx.fillStyle='#FFD700';
-  ctx.fillText('🐉 '+coinCount+' coins', W/2, H/2-116);
+  // ── Character preview ──
+  var _prevY = CHAR_PREVIEW_Y;
+  var _savedCB=activeColorBleu, _savedCG=activeColorGengar;
+  activeColorBleu = (shopChar===0) ? shopSelColor : activeColorBleu;
+  activeColorGengar= (shopChar===1) ? shopSelColor : activeColorGengar;
+  ctx.save(); ctx.translate(W/2, _prevY); ctx.scale(1.9,1.9);
+  ctx.globalAlpha = (shopChar===1&&!gengarUnlocked) ? 0.35 : 1;
+  if(shopChar===0) drawBleu(0,0,frame*0.28,0);
+  else             drawGengar(0,0,frame*0.28,0);
+  ctx.globalAlpha=1; ctx.restore();
+  activeColorBleu=_savedCB; activeColorGengar=_savedCG;
 
-  // Filter: only show skins the player owns
-  var owned = unlockedSkins.slice().sort(function(a,b){return a-b;});
-  if(owned.length===0){ owned=[0]; }
-
-  var cols=3, tw2=78, th2=92, gapX=8, gapY=6;
-  var totalW2=cols*(tw2+gapX)-gapX, startX=W/2-totalW2/2;
-  for(var ii=0;ii<owned.length;ii++){
-    var si=owned[ii];
-    var col=ii%cols, row=Math.floor(ii/cols);
-    var sx2=startX+col*(tw2+gapX)+tw2/2, sy2=H/2-100+row*(th2+gapY);
-    var equipped=activeSkin===si;
-    var sk2=SKINS[si];
-    // card bg
-    ctx.fillStyle=equipped?sk2.body+'44':'#ffffff0a';
-    ctx.strokeStyle=equipped?sk2.body:sk2.body+'55';
-    ctx.lineWidth=equipped?2:1;
-    ctx.beginPath(); ctx.roundRect(sx2-tw2/2,sy2,tw2,th2,6); ctx.fill(); ctx.stroke();
-    // character preview
-    var prevSkin=activeSkin; activeSkin=si;
-    ctx.save(); ctx.translate(sx2,sy2+38); ctx.scale(.52,.52);
-    drawBleu(0,0,frame*.28,0);
-    ctx.restore(); activeSkin=prevSkin;
-    // name
-    ctx.font='bold 8px Courier New'; ctx.fillStyle='#fff'; ctx.textAlign='center';
-    ctx.fillText(sk2.name, sx2, sy2+th2-18);
-    ctx.font='7px Courier New'; ctx.fillStyle='#ffffff55';
-    ctx.fillText(sk2.rarity||'DEFAULT', sx2, sy2+th2-8);
-    // equipped badge
-    if(equipped){
-      ctx.fillStyle=sk2.body; ctx.font='bold 7px Courier New';
-      ctx.fillText('✓ IN USE', sx2, sy2+10);
-    }
+  // ── Fan connector lines ──
+  ctx.strokeStyle='#ffffff11'; ctx.lineWidth=1;
+  for(var _fi=0; _fi<5; _fi++){
+    var _fa=FAN_ANGLES[_fi]*Math.PI/180;
+    ctx.beginPath(); ctx.moveTo(W/2,_prevY);
+    ctx.lineTo(W/2+(FAN_RADIUS-20)*Math.cos(_fa), _prevY+(FAN_RADIUS-20)*Math.sin(_fa));
+    ctx.stroke();
   }
 
-  // Empty state
-  if(owned.length<=1){
-    ctx.font='9px Courier New'; ctx.fillStyle='#ffffff33';
-    ctx.fillText('buy more skins in the Shop 🛒', W/2, H/2+100);
+  // ── Fan orbs ──
+  var _fanColors = shopChar===0 ? BLEU_COLORS : GENGAR_COLORS;
+  for(var _fi2=0; _fi2<5; _fi2++){
+    var _fa2=FAN_ANGLES[_fi2]*Math.PI/180;
+    var _fx=W/2+FAN_RADIUS*Math.cos(_fa2), _fy=_prevY+FAN_RADIUS*Math.sin(_fa2);
+    var _fc=_fanColors[_fi2];
+    var _fOwned=isColorOwned(shopChar,_fi2), _fSel=shopSelColor===_fi2;
+    var _orbR=_fSel?20:15;
+    // shadow
+    ctx.beginPath(); ctx.arc(_fx+2,_fy+2,_orbR,0,Math.PI*2);
+    ctx.fillStyle='#00000066'; ctx.fill();
+    // orb
+    ctx.beginPath(); ctx.arc(_fx,_fy,_orbR,0,Math.PI*2);
+    ctx.fillStyle=_fc.body; ctx.fill();
+    ctx.lineWidth=_fSel?3:1.5;
+    ctx.strokeStyle=_fSel?'#ffffff':(_fOwned?_fc.glow+'cc':'#ffffff33');
+    ctx.stroke();
+    // glow ring on selected
+    if(_fSel){ ctx.beginPath(); ctx.arc(_fx,_fy,_orbR+4,0,Math.PI*2); ctx.strokeStyle=_fc.glow+'55'; ctx.lineWidth=2; ctx.stroke(); }
+    // icon
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    if(isColorEquipped(shopChar,_fi2)){ ctx.font='bold 11px Arial'; ctx.fillStyle='#ffffff'; ctx.fillText('✓',_fx,_fy); }
+    else if(!_fOwned&&_fi2>0){         ctx.font='9px Arial';         ctx.fillStyle='#ffffffaa'; ctx.fillText('🔒',_fx,_fy); }
+    ctx.textBaseline='alphabetic';
+    // shine
+    ctx.beginPath(); ctx.arc(_fx-_orbR*0.3,_fy-_orbR*0.3,_orbR*0.28,0,Math.PI*2);
+    ctx.fillStyle='#ffffff44'; ctx.fill();
+  }
+
+  // ── Selected color info ──
+  var _selC = _fanColors[shopSelColor];
+  var _selOwned=isColorOwned(shopChar,shopSelColor), _selEq=isColorEquipped(shopChar,shopSelColor);
+  ctx.font='bold 15px Courier New'; ctx.textAlign='center';
+  ctx.fillStyle=_selC.body; ctx.shadowColor=_selC.glow; ctx.shadowBlur=12;
+  ctx.fillText(_selC.name, W/2, _prevY+112); ctx.shadowBlur=0;
+  if(!_selOwned&&shopSelColor>0){
+    ctx.font='11px Courier New'; ctx.fillStyle='#FFD700aa';
+    ctx.fillText('🐉 '+_selC.price+' coins', W/2, _prevY+130);
+  } else if(_selEq){
+    ctx.font='11px Courier New'; ctx.fillStyle='#00FF88';
+    ctx.fillText('✓ equipped', W/2, _prevY+130);
   } else {
-    ctx.font='9px Courier New'; ctx.fillStyle='#ffffff33';
-    ctx.fillText('tap a skin to equip', W/2, H/2+100);
+    ctx.font='11px Courier New'; ctx.fillStyle='#00D4FF88';
+    ctx.fillText(_selOwned?'owned — tap EQUIP':'free — tap EQUIP', W/2, _prevY+130);
   }
+
+  // ── Action button ──
+  var _btnY=_prevY+146;
+  var _canAfford=coinCount>=(_selC.price||0);
+  if(!_selEq){
+    var _bLabel, _bCol, _bStroke;
+    if(_selOwned||shopSelColor===0){ _bLabel='EQUIP'; _bCol='#00FF8822'; _bStroke='#00FF88'; }
+    else if(_canAfford){             _bLabel='BUY  🐉 '+_selC.price; _bCol='#FFD70022'; _bStroke='#FFD700'; }
+    else{                            _bLabel='🐉 '+_selC.price+' needed'; _bCol='#ff444422'; _bStroke='#ff4444'; }
+    ctx.fillStyle=_bCol; ctx.strokeStyle=_bStroke; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.roundRect(W/2-76,_btnY,152,34,10); ctx.fill(); ctx.stroke();
+    ctx.fillStyle=_bStroke; ctx.font='bold 13px Courier New';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(_bLabel, W/2, _btnY+17); ctx.textBaseline='alphabetic';
+  }
+
+  // ── Gengar unlock overlay ──
+  if(shopChar===1&&!gengarUnlocked){
+    ctx.fillStyle='rgba(0,5,20,0.88)';
+    ctx.beginPath(); ctx.roundRect(W/2-122,93,244,430,14); ctx.fill();
+    ctx.strokeStyle='#9933ff55'; ctx.lineWidth=1.5; ctx.stroke();
+    ctx.save(); ctx.translate(W/2,240); ctx.scale(2,2); ctx.globalAlpha=0.6;
+    drawGengar(0,0,frame*0.22,0); ctx.globalAlpha=1; ctx.restore();
+    ctx.font='bold 15px Courier New'; ctx.fillStyle='#aa44ff';
+    ctx.shadowColor='#aa44ff'; ctx.shadowBlur=14;
+    ctx.fillText('🔒 GENGAR', W/2, 310); ctx.shadowBlur=0;
+    ctx.font='10px Courier New'; ctx.fillStyle='#ffffff55';
+    ctx.fillText('the ghost of Base Network', W/2, 328);
+    var _canUnlock=coinCount>=500;
+    ctx.fillStyle=_canUnlock?'#aa44ff22':'#ffffff08';
+    ctx.strokeStyle=_canUnlock?'#aa44ff':'#ffffff22'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.roundRect(W/2-82,344,164,38,10); ctx.fill(); ctx.stroke();
+    ctx.fillStyle=_canUnlock?'#cc88ff':'#ffffff44'; ctx.font='bold 13px Courier New';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('UNLOCK  🐉 500', W/2, 363); ctx.textBaseline='alphabetic';
+  }
+  ctx.textAlign='center';
 }
 
 
 
-// ─── SKINS ────────────────────────────────────────────────────────────
-const SKINS = [
-  // 0 – padrão (grátis)
-  { name:'DEFAULT',   rarity:'COMMON', price:0,   body:'#3b8fff', bodyLt:'#6ab4ff', shadow:'#1a5fcc', belly:'#d6eeff', outline:'#1a4fa0', glow:'#4499ff' },
-  // 1-5 original skins
-  { name:'NEON',      rarity:'COMMON', price:80,  body:'#00e5ff', bodyLt:'#88f8ff', shadow:'#007a99', belly:'#ccfeff', outline:'#005577', glow:'#00e5ff' },
-  { name:'GOLDEN',    rarity:'COMMON', price:180, body:'#FFD700', bodyLt:'#FFE866', shadow:'#B8860B', belly:'#FFF5CC', outline:'#8B6914', glow:'#FFD700' },
-  { name:'CYBERPUNK', rarity:'COMMON', price:200, body:'#ff0080', bodyLt:'#ff66bb', shadow:'#880040', belly:'#ffccee', outline:'#660030', glow:'#ff00ff' },
-  { name:'MEME',      rarity:'COMMON', price:80,  body:'#ff6600', bodyLt:'#ff9944', shadow:'#cc4400', belly:'#ffddcc', outline:'#882200', glow:'#ff8800' },
-  { name:'BASE',      rarity:'COMMON', price:250, body:'#0052FF', bodyLt:'#4488ff', shadow:'#002299', belly:'#cce0ff', outline:'#001a99', glow:'#0052FF' },
-  // 6-10 new skins
-  { name:'PURPLE',    rarity:'COMMON', price:80,  body:'#9933ff', bodyLt:'#cc88ff', shadow:'#5500cc', belly:'#eeccff', outline:'#3d0099', glow:'#aa44ff' },
-  { name:'GREEN',     rarity:'COMMON', price:80,  body:'#00cc44', bodyLt:'#44ff88', shadow:'#006622', belly:'#ccffdd', outline:'#004d1a', glow:'#00dd55' },
-  { name:'RED',       rarity:'COMMON', price:100, body:'#ff2233', bodyLt:'#ff7788', shadow:'#aa0011', belly:'#ffcccc', outline:'#880011', glow:'#ff3344' },
-  { name:'PINK',      rarity:'COMMON', price:100, body:'#ff66cc', bodyLt:'#ffaaee', shadow:'#cc2299', belly:'#ffddff', outline:'#990077', glow:'#ff44cc' },
-  { name:'BLACK',     rarity:'COMMON', price:150, body:'#222233', bodyLt:'#444466', shadow:'#111122', belly:'#aaaacc', outline:'#000011', glow:'#5555aa' }
+// ─── BLEU COLOR PALETTES (5 colors) ─────────────────────────────────
+const BLEU_COLORS = [
+  { name:'OCEAN',    price:0,   body:'#3b8fff', bodyLt:'#6ab4ff', shadow:'#1a5fcc', belly:'#d6eeff', outline:'#1a4fa0', glow:'#4499ff' },
+  { name:'NEON',     price:80,  body:'#00e5ff', bodyLt:'#88f8ff', shadow:'#007a99', belly:'#ccfeff', outline:'#005577', glow:'#00e5ff' },
+  { name:'GOLDEN',   price:150, body:'#FFD700', bodyLt:'#FFE866', shadow:'#B8860B', belly:'#FFF5CC', outline:'#8B6914', glow:'#FFD700' },
+  { name:'CYBER',    price:200, body:'#ff0080', bodyLt:'#ff66bb', shadow:'#880040', belly:'#ffccee', outline:'#660030', glow:'#ff00ff' },
+  { name:'BASE',     price:300, body:'#0052FF', bodyLt:'#4488ff', shadow:'#002299', belly:'#cce0ff', outline:'#001a99', glow:'#0052FF' },
+];
+// ─── GENGAR COLOR PALETTES (5 colors) ───────────────────────────────
+const GENGAR_COLORS = [
+  { name:'CLASSIC', price:0,   body:'#7B62A3', bodyLt:'#A98FCC', shadow:'#3D2A6A', belly:'#C4AADF', outline:'#2D1A5A', glow:'#9966CC', eyeColor:'#FF1493' },
+  { name:'SHADOW',  price:100, body:'#2a1a3a', bodyLt:'#4a3a5a', shadow:'#150d1e', belly:'#6a5a7a', outline:'#0d0814', glow:'#6622aa', eyeColor:'#cc00ff' },
+  { name:'SHINY',   price:180, body:'#008fcc', bodyLt:'#44ccee', shadow:'#005577', belly:'#aaddff', outline:'#003d5a', glow:'#00ccff', eyeColor:'#FF5500' },
+  { name:'NEON',    price:220, body:'#cc00ff', bodyLt:'#ee66ff', shadow:'#880099', belly:'#f0ccff', outline:'#550077', glow:'#dd00ff', eyeColor:'#FFFF00' },
+  { name:'GOLDEN',  price:350, body:'#c8a020', bodyLt:'#f0c840', shadow:'#8a6800', belly:'#f5e098', outline:'#5a4400', glow:'#FFD700', eyeColor:'#FF0044' },
 ];
 
 // ─── LEADERBOARD TAB ────────────────────────────────────────────────
@@ -684,11 +684,12 @@ function checkDailyLogin() {
   dailyModal=true;
 }
 function claimDailyReward() {
-  if(dailyReward==='coins') { coinCount+=dailyRewardVal; localStorage.setItem('bleuCoins',coinCount); }
+  if(dailyReward==='coins') { coinCount+=dailyRewardVal; if(coinCount>100000)coinCount=100000; localStorage.setItem('bleuCoins',coinCount); }
   else if(dailyReward==='chest') { /* chest disabled for now */ }
   else if(dailyReward==='skin') {
-    var locked = SKINS.map(function(_,i){return i;}).filter(function(i){return unlockedSkins.indexOf(i)<0;});
-    if(locked.length>0){ var newSk=locked[Math.floor(Math.random()*locked.length)]; unlockedSkins.push(newSk); localStorage.setItem('bleuSkins',JSON.stringify(unlockedSkins)); }
+    // Unlock a random Bleu color as daily reward
+    var _lockedB=BLEU_COLORS.map(function(_,i){return i;}).filter(function(i){return unlockedColorsBleu.indexOf(i)<0;});
+    if(_lockedB.length>0){ var _nsk=_lockedB[Math.floor(Math.random()*_lockedB.length)]; unlockedColorsBleu.push(_nsk); localStorage.setItem('bleuColsB',JSON.stringify(unlockedColorsBleu)); }
   }
   dailyModal=false;
 }
@@ -809,8 +810,13 @@ var runPhase=0; // fase mais longe desta run
 var bestPhaseEver=parseInt(localStorage.getItem('bleuBestPhase')||'0');
 var shareFlash=0; // feedback do botão compartilhar
 const MILESTONES=[5,10,25,50,100];
-var activeSkin=parseInt(localStorage.getItem('bleuSkin')||'0');
-var unlockedSkins=JSON.parse(localStorage.getItem('bleuSkins')||'[0]');
+var activeChar=parseInt(localStorage.getItem('bleuChar')||'0');
+var activeColorBleu=parseInt(localStorage.getItem('bleuColorB')||'0');
+var activeColorGengar=parseInt(localStorage.getItem('bleuColorG')||'0');
+var unlockedColorsBleu=JSON.parse(localStorage.getItem('bleuColsB')||'[0]');
+var unlockedColorsGengar=JSON.parse(localStorage.getItem('bleuColsG')||'[]');
+var gengarUnlocked=localStorage.getItem('bleuGengar')==='1';
+var shopChar=0, shopSelColor=0;
 var chestType='normal';
 
 // ─── WALLET ──────────────────────────────────────────────────
@@ -941,7 +947,7 @@ function drawBleu(x, y, flapAnim, angle) {
   var ff = Math.sin(flapAnim * 3.1);
   var ef = Math.abs(Math.sin(flapAnim * 2.4));
 
-  var sk = SKINS[activeSkin] || SKINS[0];
+  var sk = BLEU_COLORS[activeColorBleu] || BLEU_COLORS[0];
   var cBody    = sk.body;
   var cBodyLt  = sk.bodyLt;
   var cBelly   = sk.belly;
@@ -980,7 +986,7 @@ function drawBleu(x, y, flapAnim, angle) {
   ctx.stroke();
   // "B" Base letter
   ctx.globalAlpha = 0.9;
-  ctx.fillStyle = activeSkin===0 ? '#0052FF' : sk.shadow;
+  ctx.fillStyle = activeColorBleu===0 ? '#0052FF' : sk.shadow;
   ctx.font = 'bold 9px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillText('B', 0.5, 0.5);
   ctx.globalAlpha = 1;
@@ -1113,6 +1119,106 @@ function drawBleu(x, y, flapAnim, angle) {
   ctx.restore();
 }
 
+// ─── GENGAR — ghost character ────────────────────────────────────────
+function drawGengar(x, y, flapAnim, angle) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(angle || 0);
+
+  var _wCycle = Math.floor(flapAnim * 0.22) % 4;
+  var af = (_wCycle === 3) ? 1 : _wCycle; // arm frame 0,1,2
+  var armY = [-9, -3, 5][af];
+  var sf = Math.sin(flapAnim * 1.2) * 1.2;
+
+  var gc = GENGAR_COLORS[activeColorGengar] || GENGAR_COLORS[0];
+  var cB  = gc.body, cBL = gc.bodyLt, cD = gc.shadow, cO = gc.outline;
+  var cEy = gc.eyeColor || '#FF1493';
+  ctx.lineJoin='round'; ctx.lineCap='round';
+
+  // LEFT ARM (back, drawn first)
+  ctx.save(); ctx.translate(-21, armY + sf);
+  ctx.beginPath(); ctx.moveTo(0,0);
+  ctx.bezierCurveTo(-14,-6,-18,6,-13,14);
+  ctx.bezierCurveTo(-8,20,-1,10,0,0);
+  ctx.fillStyle=cD; ctx.globalAlpha=0.75; ctx.fill();
+  ctx.lineWidth=1.5; ctx.strokeStyle=cO; ctx.stroke(); ctx.globalAlpha=1;
+  ctx.restore();
+
+  // MAIN BODY — ghost blob
+  ctx.beginPath();
+  ctx.arc(0, -4, 22, Math.PI, 0);               // top dome
+  ctx.bezierCurveTo(22, 10, 16, 20, 10, 24);    // right side
+  ctx.bezierCurveTo(6, 28, 3, 21, 0, 24);       // bottom spike 1
+  ctx.bezierCurveTo(-3, 21,-6, 28,-10, 24);     // bottom spike 2
+  ctx.bezierCurveTo(-16, 20,-22, 10,-22, -4);   // left side
+  ctx.closePath();
+  var gBodyGrad = ctx.createRadialGradient(-6,-10,2, 0,-2,24);
+  gBodyGrad.addColorStop(0, cBL); gBodyGrad.addColorStop(1, cB);
+  ctx.fillStyle = gBodyGrad; ctx.fill();
+  ctx.lineWidth = 2; ctx.strokeStyle = cO; ctx.stroke();
+
+  // Body highlight
+  ctx.beginPath(); ctx.ellipse(-7,-10, 9,7, -0.3, 0, Math.PI*2);
+  ctx.fillStyle=cBL; ctx.globalAlpha=0.38; ctx.fill(); ctx.globalAlpha=1;
+
+  // LEFT EAR
+  ctx.beginPath();
+  ctx.moveTo(-14,-22); ctx.lineTo(-22,-40); ctx.lineTo(-4,-24);
+  ctx.closePath();
+  ctx.fillStyle=cB; ctx.fill(); ctx.lineWidth=1.5; ctx.strokeStyle=cO; ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(-14,-22); ctx.lineTo(-19,-36); ctx.lineTo(-7,-24);
+  ctx.closePath(); ctx.fillStyle=cBL; ctx.globalAlpha=0.4; ctx.fill(); ctx.globalAlpha=1;
+
+  // RIGHT EAR
+  ctx.beginPath();
+  ctx.moveTo(12,-22); ctx.lineTo(22,-40); ctx.lineTo(4,-24);
+  ctx.closePath();
+  ctx.fillStyle=cB; ctx.fill(); ctx.lineWidth=1.5; ctx.strokeStyle=cO; ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(12,-22); ctx.lineTo(19,-36); ctx.lineTo(7,-24);
+  ctx.closePath(); ctx.fillStyle=cBL; ctx.globalAlpha=0.4; ctx.fill(); ctx.globalAlpha=1;
+
+  // LEFT EYE
+  ctx.beginPath(); ctx.ellipse(-9,-4,6,5,0,0,Math.PI*2);
+  ctx.fillStyle=cEy; ctx.fill(); ctx.lineWidth=1; ctx.strokeStyle=cO; ctx.stroke();
+  ctx.beginPath(); ctx.arc(-8,-5,2.2,0,Math.PI*2);
+  ctx.fillStyle='#ffffff'; ctx.globalAlpha=0.55; ctx.fill(); ctx.globalAlpha=1;
+
+  // RIGHT EYE
+  ctx.beginPath(); ctx.ellipse(9,-4,6,5,0,0,Math.PI*2);
+  ctx.fillStyle=cEy; ctx.fill(); ctx.lineWidth=1; ctx.strokeStyle=cO; ctx.stroke();
+  ctx.beginPath(); ctx.arc(10,-5,2.2,0,Math.PI*2);
+  ctx.fillStyle='#ffffff'; ctx.globalAlpha=0.55; ctx.fill(); ctx.globalAlpha=1;
+
+  // MOUTH — wide evil grin
+  ctx.beginPath();
+  ctx.moveTo(-15, 6); ctx.bezierCurveTo(-12,18, 12,18, 15,6);
+  ctx.fillStyle=cD; ctx.fill(); ctx.lineWidth=1.5; ctx.strokeStyle=cO; ctx.stroke();
+  // Teeth
+  ctx.fillStyle='#ffffff'; ctx.lineWidth=0.8; ctx.strokeStyle=cO;
+  var tx2=[-10,-5,0,5,10];
+  for(var _ti=0; _ti<5; _ti++){
+    ctx.beginPath(); ctx.moveTo(tx2[_ti]-2,7); ctx.lineTo(tx2[_ti],13); ctx.lineTo(tx2[_ti]+2,7);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+  }
+
+  // RIGHT ARM (front)
+  ctx.save(); ctx.translate(21, armY + sf);
+  ctx.beginPath(); ctx.moveTo(0,0);
+  ctx.bezierCurveTo(14,-6,18,6,13,14);
+  ctx.bezierCurveTo(8,20,1,10,0,0);
+  var aGrad = ctx.createLinearGradient(0,0,14,10);
+  aGrad.addColorStop(0,cB); aGrad.addColorStop(1,cBL);
+  ctx.fillStyle=aGrad; ctx.fill(); ctx.lineWidth=1.5; ctx.strokeStyle=cO; ctx.stroke();
+  ctx.restore();
+
+  // Wallet glow
+  if(walletAddress){
+    ctx.save(); var _wg=0.08+0.05*Math.sin(frame*0.06); ctx.globalAlpha=_wg;
+    ctx.fillStyle='#00FF88'; ctx.beginPath(); ctx.arc(0,0,30,0,Math.PI*2); ctx.fill();
+    ctx.globalAlpha=1; ctx.restore();
+  }
+  ctx.restore();
+}
 // ─── BRETT — coming soon ──
 function drawBrett(x, y, flapAnim, vy) { drawBleu(x, y, flapAnim, vy); }
 function drawBrett_ORIG(x, y, flapAnim, vy) {
@@ -1271,8 +1377,9 @@ function drawBrett_ORIG(x, y, flapAnim, vy) {
 }
 
 // ─── CHARACTER DISPATCHER ────────────────────
-function drawCharacter(x, y, flap, vy) {
-  drawBleu(x, y, flap, vy);
+function drawCharacter(x, y, flap, angle) {
+  if(activeChar===1 && gengarUnlocked) drawGengar(x, y, flap, angle);
+  else drawBleu(x, y, flap, angle);
 }
 
 // ─── COLLECTIBLE COIN ────────────────────────
@@ -3552,7 +3659,7 @@ function loop(ts) {
             var _base=(chestType==='rare'?60:chestType==='gold'?35:15);
             var _pc=_base+Math.floor(Math.random()*10);
             awardCoins=_pc; awardCoinAnim=0;
-            coinCount+=_pc; localStorage.setItem('bleuCoins',coinCount);
+            coinCount+=_pc; if(coinCount>100000)coinCount=100000; localStorage.setItem('bleuCoins',coinCount);
             spawnParticles(W/2,H/2,'#FFD700',14); spawnParticles(W/2,H/2,'#fff',6);
             if(navigator.vibrate) navigator.vibrate([40,20,80]);
             gameState='award'; bleu.vy=0; }
@@ -3986,27 +4093,7 @@ function flap() {
 }
 
 
-function hitShopCard(cx, cy, yStart, compact) {
-  var cols=3, tw=76, th=compact?82:80, gapX=8, gapY=compact?4:5;
-  var startX=W/2-((cols*(tw+gapX)-gapX)/2);
-  for(var si=1;si<SKINS.length;si++){
-    var idx2=si-1, col=idx2%cols, row=Math.floor(idx2/cols);
-    var sx=startX+col*(tw+gapX)+tw/2, sy=yStart+row*(th+gapY);
-    if(cx>=sx-tw/2&&cx<=sx+tw/2&&cy>=sy&&cy<=sy+th) return si;
-  }
-  return -1;
-}
-function buySkin(si) {
-  var sk=SKINS[si], owned=unlockedSkins.indexOf(si)>=0;
-  if(owned){ activeSkin=si; localStorage.setItem('bleuSkin',''+si); beep(440+si*50,880+si*50,0.1,'sine',0.12); }
-  else if(coinCount>=sk.price){
-    coinCount-=sk.price; localStorage.setItem('bleuCoins',coinCount);
-    unlockedSkins.push(si); localStorage.setItem('bleuSkins',JSON.stringify(unlockedSkins));
-    activeSkin=si; localStorage.setItem('bleuSkin',''+si);
-    beep(523,1047,0.3,'sine',0.15);
-    [659,784,1047].forEach(function(f,ii){setTimeout(function(){beep(f,f,0.12,'sine',0.1);},ii*70);});
-  } else { beep(220,150,0.12,'sawtooth',0.08); hitFlash=3; }
-}
+// hitShopCard and buySkin replaced by new fan-based shop system above
 function handleClick(ex, ey) {
   var rect = canvas.getBoundingClientRect();
   var scaleX = W/rect.width, scaleY = H/rect.height;
@@ -4068,7 +4155,38 @@ function handleClick(ex, ey) {
 
   // ── IDLE tabs click
   if(gameState === 'idle') {
-    if(idleTab==='shop'){ var si3=hitShopCard(cx,cy,76,false); if(si3>=0){ buySkin(si3); return; } }
+    if(idleTab==='shop'){
+      // Char selector tabs
+      var _ctw=118,_cgap=10,_ctx0=W/2-(_ctw+_cgap/2);
+      for(var _ci2=0;_ci2<2;_ci2++){
+        var _cx2=_ctx0+_ci2*(_ctw+_cgap);
+        if(cx>=_cx2&&cx<=_cx2+_ctw&&cy>=58&&cy<=86){ shopChar=_ci2; shopSelColor=0; beep(440,880,0.06,'sine',0.08); return; }
+      }
+      // Fan orbs
+      for(var _fi3=0;_fi3<5;_fi3++){
+        var _fa3=FAN_ANGLES[_fi3]*Math.PI/180;
+        var _fx3=W/2+FAN_RADIUS*Math.cos(_fa3), _fy3=CHAR_PREVIEW_Y+FAN_RADIUS*Math.sin(_fa3);
+        if(Math.sqrt((cx-_fx3)*(cx-_fx3)+(cy-_fy3)*(cy-_fy3))<=24){ shopSelColor=_fi3; beep(440,880,0.05,'sine',0.07); return; }
+      }
+      // Action button
+      var _btnY2=CHAR_PREVIEW_Y+146;
+      if(cx>=W/2-76&&cx<=W/2+76&&cy>=_btnY2&&cy<=_btnY2+34){ shopBuyOrEquip(); return; }
+      // Gengar unlock button
+      if(shopChar===1&&!gengarUnlocked&&cx>=W/2-82&&cx<=W/2+82&&cy>=344&&cy<=382){
+        if(coinCount>=500){
+          coinCount-=500; localStorage.setItem('bleuCoins',coinCount);
+          gengarUnlocked=true; localStorage.setItem('bleuGengar','1');
+          unlockedColorsGengar=[0]; localStorage.setItem('bleuColsG',JSON.stringify(unlockedColorsGengar));
+          activeChar=1; activeColorGengar=0;
+          localStorage.setItem('bleuChar','1'); localStorage.setItem('bleuColorG','0');
+          beep(523,1047,0.35,'sine',0.18);
+          [659,784,880,1047].forEach(function(f,i){setTimeout(function(){beep(f,f*1.5,0.15,'sine',0.12);},i*90);});
+          spawnParticles(W/2,H/2,'#aa44ff',20); spawnParticles(W/2,H/2,'#ffffff',8);
+          if(navigator.vibrate) navigator.vibrate([30,20,60,20,100]);
+        } else { beep(220,150,0.12,'sawtooth',0.08); hitFlash=3; }
+        return;
+      }
+    }
     // Leaderboard tab: botão wallet
     if(idleTab==='leaderboard'){
       var wy3=H/2+104;
