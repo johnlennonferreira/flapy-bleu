@@ -931,10 +931,11 @@ function drawBleu(x, y, flapAnim, angle) {
     : Math.max(-0.35, Math.min(1.35, angle));
   ctx.rotate(rotAngle);
 
-  // 3-frame wing animation: up (0) → mid (1) → down (2)
-  var wingFrame = Math.floor(Math.abs(Math.sin(flapAnim * 2.4)) * 3) % 3;
-  var wingAngles = [-0.55 * Math.PI, -0.2 * Math.PI, 0.08 * Math.PI]; // up/mid/down
-  var wingY      = [-6, -2, 4];                     // vertical offset per frame
+  // 3-frame wing animation: up→mid→down→mid ping-pong, even distribution
+  var _wCycle = Math.floor(flapAnim * 0.22) % 4;   // 0,1,2,3 → map to 0,1,2,1
+  var wingFrame = (_wCycle === 3) ? 1 : _wCycle;
+  var wingAngles = [-0.52 * Math.PI, -0.18 * Math.PI, 0.10 * Math.PI]; // up/mid/down
+  var wingY      = [-7, -2, 5];                     // vertical offset per frame
   var wf = wingY[wingFrame];
   var sf = Math.sin(flapAnim * 1.2) * 1.2;
   var ff = Math.sin(flapAnim * 3.1);
