@@ -1019,8 +1019,8 @@ function resetGame() {
   combo = 0; comboFlash = 0; coinsThisRun = 0; milestoneIdx = 0; recFlash = 0;
   lives = 3; invincible = 0; starPower = 0; stars = [];
   deadChest={active:false,opened:false,coins:0,anim:0,clicks:0};
-  // Apply purchased shield stock
-  if(shieldStock>0){ shield=1; shieldStock--; localStorage.setItem('bleuShieldStock',shieldStock); }
+  // Apply purchased shield stock — ALL charges activate for this run
+  if(shieldStock>0){ shield=shieldStock; shieldStock=0; localStorage.setItem('bleuShieldStock',0); }
   else { shield = 0; }
   shieldItems = []; shieldBreak = 0;
   runPhase = 0; shareFlash = 0; bleuAngle = 0; bleuFlapTimer = 0; phantomFartParticles = [];
@@ -3395,6 +3395,10 @@ function drawLivesHUD() {
     ctx.fillStyle='#00FF88'; ctx.font='bold 18px Arial';
     ctx.textAlign='left'; ctx.textBaseline='middle';
     ctx.fillText('🛡️', 8, 44);
+    if(shield>1){
+      ctx.font='bold 11px Courier New'; ctx.fillStyle='#00FF88';
+      ctx.globalAlpha=1; ctx.fillText('x'+shield, 30, 44);
+    }
     ctx.globalAlpha=1; ctx.textBaseline='alphabetic';
     // flash vermelho ao quebrar
     if(shieldBreak>0){
@@ -4079,7 +4083,7 @@ function loop(ts) {
     if(gameState==='playing' && (_hitBounds || _hitPipes)){
       // Escudo absorve QUALQUER batida — nunca perde escudo E vida ao mesmo tempo
       if(shield>0){
-        shield=0; shieldBreak=10; invincible=140;
+        shield--; shieldBreak=10; invincible=140;
         if(_hitBounds){ bleu.y=H/2; bleu.vy=-3; } // tira do limite
         spawnParticles(bleu.x,bleu.y,'#00FF88',12);
         spawnParticles(bleu.x,bleu.y,'#ffffff',8);
