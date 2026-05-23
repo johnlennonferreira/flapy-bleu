@@ -425,15 +425,17 @@ function isColorOwned(charIdx, colorIdx) {
   if(colorIdx===0) return true;
   if(charIdx===0) return unlockedColorsBleu.indexOf(colorIdx)>=0;
   if(charIdx===1) return gengarUnlocked && unlockedColorsGengar.indexOf(colorIdx)>=0;
+  if(charIdx===2) return specterUnlocked && unlockedColorsSpecter.indexOf(colorIdx)>=0;
   return false;
 }
 function isColorEquipped(charIdx, colorIdx) {
   if(charIdx===0) return activeChar===0 && activeColorBleu===colorIdx;
   if(charIdx===1) return activeChar===1 && activeColorGengar===colorIdx;
+  if(charIdx===2) return activeChar===2 && activeColorSpecter===colorIdx;
   return false;
 }
 function shopBuyOrEquip() {
-  var colors = shopChar===0 ? BLEU_COLORS : PHANTOM_COLORS;
+  var colors = shopChar===0 ? BLEU_COLORS : shopChar===1 ? PHANTOM_COLORS : SPECTER_COLORS;
   var color  = colors[shopSelColor];
   if(!color) return;
   var owned    = isColorOwned(shopChar, shopSelColor);
@@ -443,7 +445,8 @@ function shopBuyOrEquip() {
     // equip
     activeChar = shopChar;
     if(shopChar===0){ activeColorBleu=shopSelColor; localStorage.setItem('bleuColorB',''+shopSelColor); }
-    else            { activeColorGengar=shopSelColor; localStorage.setItem('bleuColorG',''+shopSelColor); }
+    else if(shopChar===1){ activeColorGengar=shopSelColor; localStorage.setItem('bleuColorG',''+shopSelColor); }
+    else { activeColorSpecter=shopSelColor; localStorage.setItem('bleuColorS',''+shopSelColor); }
     localStorage.setItem('bleuChar',''+activeChar);
     beep(523,1047,0.18,'sine',0.12);
   } else if(coinCount>=color.price) {
@@ -451,7 +454,8 @@ function shopBuyOrEquip() {
     coinCount-=color.price; if(coinCount<0) coinCount=0;
     localStorage.setItem('bleuCoins',coinCount);
     if(shopChar===0){ unlockedColorsBleu.push(shopSelColor); localStorage.setItem('bleuColsB',JSON.stringify(unlockedColorsBleu)); activeColorBleu=shopSelColor; localStorage.setItem('bleuColorB',''+shopSelColor); }
-    else            { unlockedColorsGengar.push(shopSelColor); localStorage.setItem('bleuColsG',JSON.stringify(unlockedColorsGengar)); activeColorGengar=shopSelColor; localStorage.setItem('bleuColorG',''+shopSelColor); }
+    else if(shopChar===1){ unlockedColorsGengar.push(shopSelColor); localStorage.setItem('bleuColsG',JSON.stringify(unlockedColorsGengar)); activeColorGengar=shopSelColor; localStorage.setItem('bleuColorG',''+shopSelColor); }
+    else { unlockedColorsSpecter.push(shopSelColor); localStorage.setItem('bleuColsS',JSON.stringify(unlockedColorsSpecter)); activeColorSpecter=shopSelColor; localStorage.setItem('bleuColorS',''+shopSelColor); }
     activeChar=shopChar; localStorage.setItem('bleuChar',''+activeChar);
     beep(523,1047,0.28,'sine',0.15);
     [659,784,1047].forEach(function(f,ii){setTimeout(function(){beep(f,f,0.12,'sine',0.1);},ii*70);});
@@ -470,9 +474,9 @@ function drawShopTab() {
   ctx.fillText('🐉 '+coinCount.toLocaleString()+' / 100,000', W/2, 50);
 
   // ── Character selector tabs ──
-  var ctw=118, cgap=10, ctx0=W/2-(ctw+cgap/2);
-  var charNames=['BLEU','PHANTOM'], charLock=[false,!gengarUnlocked];
-  for(var _ci=0; _ci<2; _ci++){
+  var ctw=118, cgap=10, ctx0=W/2-Math.round((3*(ctw+cgap)-cgap)/2);
+  var charNames=['BLEU','PHANTOM','SPECTER'], charLock=[false,!gengarUnlocked,!specterUnlocked];
+  for(var _ci=0; _ci<3; _ci++){
     var _cx=ctx0+_ci*(ctw+cgap);
     var _isAct=shopChar===_ci;
     ctx.fillStyle=_isAct?'#0052FF33':'#ffffff08';
@@ -485,15 +489,17 @@ function drawShopTab() {
 
   // ── Character preview ──
   var _prevY = CHAR_PREVIEW_Y;
-  var _savedCB=activeColorBleu, _savedCG=activeColorGengar;
-  activeColorBleu = (shopChar===0) ? shopSelColor : activeColorBleu;
-  activeColorGengar= (shopChar===1) ? shopSelColor : activeColorGengar;
+  var _savedCB=activeColorBleu, _savedCG=activeColorGengar, _savedCS=activeColorSpecter;
+  activeColorBleu    = (shopChar===0) ? shopSelColor : activeColorBleu;
+  activeColorGengar  = (shopChar===1) ? shopSelColor : activeColorGengar;
+  activeColorSpecter = (shopChar===2) ? shopSelColor : activeColorSpecter;
   ctx.save(); ctx.translate(W/2, _prevY); ctx.scale(1.9,1.9);
-  ctx.globalAlpha = (shopChar===1&&!gengarUnlocked) ? 0.35 : 1;
+  ctx.globalAlpha = ((shopChar===1&&!gengarUnlocked)||(shopChar===2&&!specterUnlocked)) ? 0.35 : 1;
   if(shopChar===0) drawBleu(0,0,frame*0.28,0);
-  else             drawPhantom(0,0,frame*0.28,0);
+  else if(shopChar===1) drawPhantom(0,0,frame*0.28,0);
+  else             drawSpecter(0,0,frame*0.28,0);
   ctx.globalAlpha=1; ctx.restore();
-  activeColorBleu=_savedCB; activeColorGengar=_savedCG;
+  activeColorBleu=_savedCB; activeColorGengar=_savedCG; activeColorSpecter=_savedCS;
 
   // ── Fan connector lines ──
   ctx.strokeStyle='#ffffff11'; ctx.lineWidth=1;
@@ -505,7 +511,7 @@ function drawShopTab() {
   }
 
   // ── Fan orbs ──
-  var _fanColors = shopChar===0 ? BLEU_COLORS : PHANTOM_COLORS;
+  var _fanColors = shopChar===0 ? BLEU_COLORS : shopChar===1 ? PHANTOM_COLORS : SPECTER_COLORS;
   for(var _fi2=0; _fi2<5; _fi2++){
     var _fa2=FAN_ANGLES[_fi2]*Math.PI/180;
     var _fx=W/2+FAN_RADIUS*Math.cos(_fa2), _fy=_prevY+FAN_RADIUS*Math.sin(_fa2);
@@ -585,10 +591,30 @@ function drawShopTab() {
     ctx.textAlign='center'; ctx.textBaseline='middle';
     ctx.fillText('UNLOCK  🐉 500', W/2, 363); ctx.textBaseline='alphabetic';
   }
+  // ── Specter unlock overlay ──
+  if(shopChar===2&&!specterUnlocked){
+    ctx.fillStyle='rgba(0,2,10,0.90)';
+    ctx.beginPath(); ctx.roundRect(W/2-122,93,244,430,14); ctx.fill();
+    ctx.strokeStyle='#6600cc55'; ctx.lineWidth=1.5; ctx.stroke();
+    ctx.save(); ctx.translate(W/2,240); ctx.scale(2,2); ctx.globalAlpha=0.65;
+    drawSpecter(0,0,frame*0.22,0); ctx.globalAlpha=1; ctx.restore();
+    ctx.font='bold 15px Courier New'; ctx.fillStyle='#aa33ff';
+    ctx.shadowColor='#aa33ff'; ctx.shadowBlur=16;
+    ctx.fillText('🔒 SPECTER', W/2, 310); ctx.shadowBlur=0;
+    ctx.font='10px Courier New'; ctx.fillStyle='#ffffff44';
+    ctx.fillText('specter of the shadow realm', W/2, 328);
+    var _canUnlockS=coinCount>=800;
+    ctx.fillStyle=_canUnlockS?'#6600cc22':'#ffffff08';
+    ctx.strokeStyle=_canUnlockS?'#aa33ff':'#ffffff22'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.roundRect(W/2-82,344,164,38,10); ctx.fill(); ctx.stroke();
+    ctx.fillStyle=_canUnlockS?'#cc88ff':'#ffffff44'; ctx.font='bold 13px Courier New';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('UNLOCK  🐉 800', W/2, 363); ctx.textBaseline='alphabetic';
+  }
   ctx.textAlign='center';
 
   // ── SHIELD CARD — left side of shop, aligned with character preview ──
-  if(shopChar!==1||gengarUnlocked){
+  if((shopChar===0)||((shopChar===1)&&gengarUnlocked)||((shopChar===2)&&specterUnlocked)){
     var _sc = { x:6, y:190, w:108, h:115 };
     var _shdCanBuy = (coinCount>=80) && (shieldStock<3);
     // Card background
@@ -665,6 +691,14 @@ const BLEU_COLORS = [
   { name:'GOLDEN',   price:150, body:'#FFD700', bodyLt:'#FFE866', shadow:'#B8860B', belly:'#FFF5CC', outline:'#8B6914', glow:'#FFD700' },
   { name:'CYBER',    price:200, body:'#ff0080', bodyLt:'#ff66bb', shadow:'#880040', belly:'#ffccee', outline:'#660030', glow:'#ff00ff' },
   { name:'BASE',     price:300, body:'#0052FF', bodyLt:'#4488ff', shadow:'#002299', belly:'#cce0ff', outline:'#001a99', glow:'#0052FF' },
+];
+// ─── SPECTER COLOR PALETTES (5 colors) ─────────────────────────────
+const SPECTER_COLORS = [
+  { name:'SPECTER',  price:0,   body:'#2e1055', bodyLt:'#7744cc', shadow:'#160828', outline:'#0d041a', glow:'#aa33ff', eyeColor:'#00FFFF', cape:'#1a0840', capeInner:'#7733bb' },
+  { name:'INFERNO',  price:130, body:'#3d0808', bodyLt:'#bb2211', shadow:'#1e0303', outline:'#110202', glow:'#ff3300', eyeColor:'#FFCC00', cape:'#280606', capeInner:'#cc2200' },
+  { name:'VOID',     price:200, body:'#0c0c12', bodyLt:'#2a2a3a', shadow:'#060608', outline:'#040406', glow:'#8888aa', eyeColor:'#EEEEFF', cape:'#080810', capeInner:'#404055' },
+  { name:'TOXIN',    price:260, body:'#0a2810', bodyLt:'#22aa44', shadow:'#050f07', outline:'#030804', glow:'#00ff55', eyeColor:'#aaff00', cape:'#071508', capeInner:'#228833' },
+  { name:'ABYSS',    price:420, body:'#001830', bodyLt:'#0055bb', shadow:'#000c1a', outline:'#000910', glow:'#0077ff', eyeColor:'#00EEFF', cape:'#000e20', capeInner:'#0044aa' },
 ];
 // ─── PHANTOM COLOR PALETTES (5 colors) ─────────────────────────────
 const PHANTOM_COLORS = [
@@ -911,9 +945,12 @@ const MILESTONES=[5,10,25,50,100];
 var activeChar=parseInt(localStorage.getItem('bleuChar')||'0');
 var activeColorBleu=parseInt(localStorage.getItem('bleuColorB')||'0');
 var activeColorGengar=parseInt(localStorage.getItem('bleuColorG')||'0');
+var activeColorSpecter=parseInt(localStorage.getItem('bleuColorS')||'0');
 var unlockedColorsBleu=JSON.parse(localStorage.getItem('bleuColsB')||'[0]');
 var unlockedColorsGengar=JSON.parse(localStorage.getItem('bleuColsG')||'[]');
+var unlockedColorsSpecter=JSON.parse(localStorage.getItem('bleuColsS')||'[]');
 var gengarUnlocked=localStorage.getItem('bleuGengar')==='1';
+var specterUnlocked=localStorage.getItem('bleuSpecter')==='1';
 var shopChar=0, shopSelColor=0;
 var shieldStock=parseInt(localStorage.getItem('bleuShieldStock')||'0'); // purchasable shields
 var chestType='normal';
@@ -1483,6 +1520,244 @@ function drawPhantomFarts() {
     ctx.globalAlpha=1; ctx.restore();
   }
 }
+// ─── SPECTER — spectral ghost warrior with hero cape ──────────────────
+function drawSpecter(x, y, flapAnim, angle) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(typeof angle === 'number' ? angle : 0);
+
+  // ── Animation drivers ──
+  var _ft   = (typeof bleuFlapTimer !== 'undefined') ? bleuFlapTimer : 0;
+  var _ftp  = (_ft > 0) ? (1 - _ft / 18) : 0;       // 0→1 flap progress
+  var _idle = Math.sin(frame * 0.040);                // -1→1 gentle float
+  var _pulse= 0.5 + 0.5 * Math.sin(frame * 0.055);   // 0→1 aura pulse
+  var _flap = _ft > 0;
+
+  var sc = SPECTER_COLORS[activeColorSpecter] || SPECTER_COLORS[0];
+  var cB = sc.body, cBL = sc.bodyLt, cD = sc.shadow, cO = sc.outline;
+  var cGl = sc.glow, cEy = sc.eyeColor;
+  var cCape = sc.cape || cD, cCapeLn = sc.capeInner || cBL;
+  ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+
+  // ── Wing/flap animation angle ──
+  var _wa = 0;
+  if (_ft > 0) {
+    _wa = _ftp < 0.28 ? 1.0 * (_ftp / 0.28) : 1.0 * (1 - (_ftp - 0.28) / 0.72);
+  } else {
+    _wa = Math.sin(frame * 0.044) * 0.06;
+  }
+
+  // Cape physics: billows forward on flap, trails behind on fall, sways idle
+  var _capeRot = (typeof angle === 'number' ? angle * 0.7 : 0)
+               + (_flap ? -0.55 : 0.12)
+               + _idle * 0.07;
+
+  // ── 1. OUTER SPECTRAL AURA (drawn first, behind everything) ──
+  var _aR = 34 + _pulse * 5;
+  var _ag = ctx.createRadialGradient(0, -2, 5, 0, -2, _aR);
+  _ag.addColorStop(0,   cGl + '00');
+  _ag.addColorStop(0.45, cGl + '1a');
+  _ag.addColorStop(1,   cGl + '00');
+  ctx.globalAlpha = 0.55 + _pulse * 0.3;
+  ctx.beginPath(); ctx.arc(0, -2, _aR, 0, Math.PI*2);
+  ctx.fillStyle = _ag; ctx.fill(); ctx.globalAlpha = 1;
+
+  // ── 2. CAPE (behind body — drawn before body) ──
+  ctx.save();
+  ctx.translate(-8, -10);       // cape root: upper-back shoulder
+  ctx.rotate(_capeRot);
+  // Outer cape shape — large heroic drape
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.bezierCurveTo(-3, 5,  -14, 10, -24, 18);   // upper edge flows left-down
+  ctx.bezierCurveTo(-30, 24, -28, 38, -18, 38);  // lower sweep
+  ctx.bezierCurveTo(-12, 38,  -6, 30, -2, 22);   // inner lower
+  ctx.bezierCurveTo( 0,  14,   1,  6,  0,  0);   // back to root
+  ctx.closePath();
+  // Cape gradient
+  var _cgr = ctx.createLinearGradient(-30, 0, 0, 40);
+  _cgr.addColorStop(0, cCape);
+  _cgr.addColorStop(1, cD);
+  ctx.fillStyle = _cgr; ctx.globalAlpha = 0.92; ctx.fill();
+  ctx.globalAlpha = 0.55; ctx.strokeStyle = cO; ctx.lineWidth = 1.4; ctx.stroke();
+  // Cape inner lining — hero signature
+  ctx.beginPath();
+  ctx.moveTo(-1, 1);
+  ctx.bezierCurveTo(-2, 6, -10, 12, -18, 20);
+  ctx.bezierCurveTo(-22, 26, -20, 34, -14, 34);
+  ctx.lineWidth = 1.2; ctx.strokeStyle = cCapeLn; ctx.globalAlpha = 0.5; ctx.stroke();
+  // Cape top-edge highlight
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.bezierCurveTo(-3, 5, -14, 10, -24, 18);
+  ctx.lineWidth = 1.8; ctx.strokeStyle = cBL; ctx.globalAlpha = 0.35; ctx.stroke();
+  ctx.globalAlpha = 1;
+  ctx.restore();
+
+  // ── 3. GHOSTLY WINGS / TENDRILS — spectral energy wisps ──
+  // Two wisp tendrils from the back-upper area (like ethereal wings)
+  var _wRootX = -10, _wRootY = -8;
+  // Upper wisp
+  ctx.save();
+  ctx.translate(_wRootX, _wRootY);
+  ctx.rotate(_wa + _idle * 0.05);
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.bezierCurveTo(-3, -5, -10, -12, -17, -8);
+  ctx.bezierCurveTo(-20, -4, -18,  4, -11,  6);
+  ctx.bezierCurveTo(-6,  6,  -1,  3,   0,  0);
+  ctx.closePath();
+  ctx.fillStyle = cBL; ctx.globalAlpha = 0.28; ctx.fill();
+  ctx.strokeStyle = cGl; ctx.lineWidth = 0.9; ctx.globalAlpha = 0.2; ctx.stroke();
+  ctx.globalAlpha = 1;
+  ctx.restore();
+
+  // ── 4. SPECTRAL BODY — hooded ghost form ──
+  // Side-view: head flows into elongated body, wider at top
+  ctx.beginPath();
+  // Hood peak (upper-back)
+  ctx.moveTo(-6, -24);
+  // Arch over head
+  ctx.bezierCurveTo( 0, -30, 12, -28,  16, -20);
+  // Face-right side: eye ridge then chin area
+  ctx.bezierCurveTo( 20, -10, 20,   4,  16,  14);
+  // Lower body right side
+  ctx.bezierCurveTo( 14,  20, 10,  22,  4,   20);
+  // Bottom (straight across)
+  ctx.bezierCurveTo( -2, 22, -8,  20, -12,  16);
+  // Left side back up
+  ctx.bezierCurveTo(-18,  8, -18,  -6, -14, -16);
+  // Shroud shoulder to hood peak
+  ctx.bezierCurveTo(-12, -22, -8, -26,  -6, -24);
+  ctx.closePath();
+  // Body gradient — bright top, dark bottom
+  var _bodyGr = ctx.createLinearGradient(-18, -28, 18, 22);
+  _bodyGr.addColorStop(0,  cBL + 'dd');
+  _bodyGr.addColorStop(0.35, cB + 'ee');
+  _bodyGr.addColorStop(1,  cD + 'cc');
+  ctx.fillStyle = _bodyGr; ctx.globalAlpha = 0.92; ctx.fill();
+  ctx.globalAlpha = 0.7; ctx.strokeStyle = cO; ctx.lineWidth = 1.8; ctx.stroke();
+  ctx.globalAlpha = 1;
+
+  // Body surface shimmer highlight (upper-left shine)
+  ctx.beginPath(); ctx.ellipse(-3, -12, 6, 5, -0.5, 0, Math.PI*2);
+  ctx.fillStyle = cBL; ctx.globalAlpha = 0.32; ctx.fill(); ctx.globalAlpha = 1;
+
+  // ── 5. HOOD / FACE SHADOW — dark interior of hood ──
+  ctx.beginPath();
+  // Interior shadow: egg-shaped dark zone inside the head
+  ctx.ellipse(4, -17, 10, 11, 0.1, 0, Math.PI*2);
+  ctx.fillStyle = cD; ctx.globalAlpha = 0.55; ctx.fill(); ctx.globalAlpha = 1;
+
+  // ── 6. HOLLOW GLOWING EYES ──
+  // Two hollow eyes — spectral rings of light
+  // Far eye (partially obscured)
+  ctx.save();
+  ctx.translate(0, -18);
+  ctx.beginPath(); ctx.ellipse(0, 0, 4, 5.5, -0.05, 0, Math.PI*2);
+  ctx.fillStyle = cEy; ctx.globalAlpha = 0.32; ctx.fill(); ctx.globalAlpha = 1;
+  ctx.beginPath(); ctx.ellipse(0, 0, 2.5, 3.5, 0, 0, Math.PI*2);
+  ctx.fillStyle = '#000000'; ctx.fill();
+  // Hollow ring glow
+  ctx.strokeStyle = cEy; ctx.lineWidth = 1.3; ctx.globalAlpha = 0.4; ctx.stroke(); ctx.globalAlpha = 1;
+  ctx.restore();
+
+  // Near eye (main, brighter)
+  ctx.save();
+  ctx.translate(9, -17);
+  // Outer glow corona
+  var _eyG = ctx.createRadialGradient(0, 0, 0, 0, 0, 12);
+  _eyG.addColorStop(0,   cEy + 'bb');
+  _eyG.addColorStop(0.45, cEy + '55');
+  _eyG.addColorStop(1,   cEy + '00');
+  ctx.globalAlpha = 0.7 + _pulse * 0.2;
+  ctx.beginPath(); ctx.arc(0, 0, 12, 0, Math.PI*2);
+  ctx.fillStyle = _eyG; ctx.fill(); ctx.globalAlpha = 1;
+  // White-hot ring
+  ctx.beginPath(); ctx.ellipse(0, 0, 6, 7, -0.05, 0, Math.PI*2);
+  ctx.fillStyle = cEy; ctx.globalAlpha = 0.9; ctx.fill(); ctx.globalAlpha = 1;
+  ctx.lineWidth = 1.5; ctx.strokeStyle = '#ffffff'; ctx.globalAlpha = 0.6; ctx.stroke(); ctx.globalAlpha = 1;
+  // Black pupil void
+  ctx.beginPath(); ctx.ellipse(0, 0, 3.8, 4.8, 0, 0, Math.PI*2);
+  ctx.fillStyle = '#000000'; ctx.fill();
+  // Inner spark
+  ctx.beginPath(); ctx.arc(-1.5, -1.8, 1.3, 0, Math.PI*2);
+  ctx.fillStyle = '#ffffff'; ctx.globalAlpha = 0.8; ctx.fill(); ctx.globalAlpha = 1;
+  ctx.restore();
+
+  // ── 7. WISPY BOTTOM TENDRILS ──
+  // 3 ghostly wisps fading out from body base
+  var _tf = frame * 0.058;
+  for (var _ti = 0; _ti < 3; _ti++) {
+    var _twx = -4 + _ti * 6;
+    var _tph = _tf + _ti * 1.15;
+    var _twa = 3 - _ti * 0.8;           // taper width
+    ctx.beginPath();
+    ctx.moveTo(_twx, 20);
+    ctx.quadraticCurveTo(
+      _twx + Math.sin(_tph) * 4,   27 + _ti * 3,
+      _twx + Math.sin(_tph * 0.6) * 5, 34 + _ti * 4
+    );
+    ctx.lineWidth = _twa;
+    ctx.strokeStyle = cBL;
+    ctx.globalAlpha = 0.40 - _ti * 0.10;
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+
+  // ── 8. GHOSTLY FORWARD CLAW — ethereal hand ──
+  var _clIdleY = _idle * 3;
+  ctx.save();
+  ctx.translate(20, _clIdleY);
+  ctx.rotate(_flap ? -0.3 : 0.1);
+  // Hand orb glow
+  var _hgr = ctx.createRadialGradient(0, 0, 1, 0, 0, 12);
+  _hgr.addColorStop(0, cBL + 'cc'); _hgr.addColorStop(1, cBL + '00');
+  ctx.globalAlpha = 0.5; ctx.beginPath(); ctx.arc(0, 0, 12, 0, Math.PI*2);
+  ctx.fillStyle = _hgr; ctx.fill(); ctx.globalAlpha = 1;
+  // Knuckle base
+  ctx.beginPath(); ctx.arc(0, 0, 6, 0, Math.PI*2);
+  ctx.fillStyle = cBL; ctx.globalAlpha = 0.75; ctx.fill();
+  ctx.strokeStyle = cO; ctx.lineWidth = 1.2; ctx.stroke(); ctx.globalAlpha = 1;
+  // Three spectral fingers
+  var _fAngles = [-0.42, 0, 0.42];
+  _fAngles.forEach(function(fa) {
+    var _fx1 = Math.cos(fa) * 5, _fy1 = Math.sin(fa) * 5;
+    var _fx2 = Math.cos(fa) * 14, _fy2 = Math.sin(fa) * 14;
+    ctx.beginPath(); ctx.moveTo(_fx1, _fy1); ctx.lineTo(_fx2, _fy2);
+    ctx.lineWidth = 2.2; ctx.strokeStyle = cBL; ctx.globalAlpha = 0.65; ctx.stroke();
+    // Claw tip
+    ctx.beginPath(); ctx.arc(_fx2, _fy2, 2.2, 0, Math.PI*2);
+    ctx.fillStyle = cEy; ctx.globalAlpha = 0.7; ctx.fill();
+    ctx.restore(); ctx.save(); ctx.translate(20, _clIdleY);
+    ctx.rotate(_flap ? -0.3 : 0.1);
+  });
+  ctx.globalAlpha = 1; ctx.restore();
+
+  // ── 9. SPECTRAL PARTICLES (idle wisps drifting up-left) ──
+  if (_pulse > 0.7) {
+    var _spX = -14 + Math.sin(frame * 0.07) * 8;
+    var _spY = -20 + Math.cos(frame * 0.11) * 5;
+    ctx.beginPath(); ctx.arc(_spX, _spY, 2 + _pulse * 1.5, 0, Math.PI*2);
+    ctx.fillStyle = cGl; ctx.globalAlpha = (_pulse - 0.7) * 0.6; ctx.fill(); ctx.globalAlpha = 1;
+  }
+
+  // ── Score flash glow ──
+  if(typeof scoreGlow !== 'undefined' && scoreGlow > 0) {
+    ctx.globalAlpha = Math.min(0.42, scoreGlow/15*0.48);
+    ctx.fillStyle = cGl;
+    ctx.beginPath(); ctx.arc(0, -2, 34, 0, Math.PI*2); ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+  // ── Wallet glow ──
+  if(typeof walletAddress !== 'undefined' && walletAddress) {
+    var _wg = 0.07 + 0.04 * Math.sin(frame * 0.06);
+    ctx.globalAlpha = _wg; ctx.fillStyle = '#00FF88';
+    ctx.beginPath(); ctx.arc(0, 0, 36, 0, Math.PI*2); ctx.fill(); ctx.globalAlpha = 1;
+  }
+  ctx.restore();
+}
+
 // ─── BRETT — coming soon ──
 function drawBrett(x, y, flapAnim, vy) { drawBleu(x, y, flapAnim, vy); }
 function drawBrett_ORIG(x, y, flapAnim, vy) {
@@ -1642,7 +1917,8 @@ function drawBrett_ORIG(x, y, flapAnim, vy) {
 
 // ─── CHARACTER DISPATCHER ────────────────────
 function drawCharacter(x, y, flap, angle) {
-  if(activeChar===1 && gengarUnlocked) drawPhantom(x, y, flap, angle);
+  if(activeChar===2 && specterUnlocked) drawSpecter(x, y, flap, angle);
+  else if(activeChar===1 && gengarUnlocked) drawPhantom(x, y, flap, angle);
   else drawBleu(x, y, flap, angle);
 }
 
@@ -1731,12 +2007,14 @@ function drawNFTBanner() {
   ctx.fillText('New playable character unlocked!', W/2, H/2+0);
   ctx.fillStyle = '#00D4FFaa'; ctx.font = '9px Courier New';
   ctx.fillText('Change character on the home screen', W/2, H/2+16);
-  // Mini Brett preview
+  // Mini character preview
   ctx.globalAlpha = alpha * 0.9;
   ctx.restore();
   ctx.save();
   ctx.globalAlpha = alpha;
-  drawBrett(W/2, H/2+52, frame*0.22, 0);
+  if(activeChar===2 && specterUnlocked) drawSpecter(W/2, H/2+52, frame*0.22, 0);
+  else if(activeChar===1 && gengarUnlocked) drawPhantom(W/2, H/2+52, frame*0.22, 0);
+  else drawBleu(W/2, H/2+52, frame*0.22, 0);
   ctx.restore();
 }
 
@@ -4576,8 +4854,8 @@ function handleClick(ex, ey) {
   if(gameState === 'idle') {
     if(idleTab==='shop'){
       // Char selector tabs
-      var _ctw=118,_cgap=10,_ctx0=W/2-(_ctw+_cgap/2);
-      for(var _ci2=0;_ci2<2;_ci2++){
+      var _ctw=118,_cgap=10,_ctx0=W/2-Math.round((3*(_ctw+_cgap)-_cgap)/2);
+      for(var _ci2=0;_ci2<3;_ci2++){
         var _cx2=_ctx0+_ci2*(_ctw+_cgap);
         if(cx>=_cx2&&cx<=_cx2+_ctw&&cy>=58&&cy<=86){ shopChar=_ci2; shopSelColor=0; beep(440,880,0.06,'sine',0.08); return; }
       }
@@ -4591,7 +4869,7 @@ function handleClick(ex, ey) {
       var _btnY2=CHAR_PREVIEW_Y+146;
       if(cx>=W/2-76&&cx<=W/2+76&&cy>=_btnY2&&cy<=_btnY2+34){ shopBuyOrEquip(); return; }
       // Shield purchase — left card (x:6, y:190, w:108, buy button at y:287)
-      if((shopChar!==1||gengarUnlocked)&&cx>=6&&cx<=114&&cy>=190&&cy<=315){
+      if(((shopChar===0)||((shopChar===1)&&gengarUnlocked)||((shopChar===2)&&specterUnlocked))&&cx>=6&&cx<=114&&cy>=190&&cy<=315){
         if(shieldStock>=3){ beep(220,150,0.1,'sawtooth',0.06); return; }
         if(coinCount>=80){
           coinCount-=80; if(coinCount<0)coinCount=0; localStorage.setItem('bleuCoins',coinCount);
@@ -4614,6 +4892,21 @@ function handleClick(ex, ey) {
           [659,784,880,1047].forEach(function(f,i){setTimeout(function(){beep(f,f*1.5,0.15,'sine',0.12);},i*90);});
           spawnParticles(W/2,H/2,'#aa44ff',20); spawnParticles(W/2,H/2,'#ffffff',8);
           if(navigator.vibrate) navigator.vibrate([30,20,60,20,100]);
+        } else { beep(220,150,0.12,'sawtooth',0.08); hitFlash=3; }
+        return;
+      }
+      // Specter unlock button
+      if(shopChar===2&&!specterUnlocked&&cx>=W/2-82&&cx<=W/2+82&&cy>=344&&cy<=382){
+        if(coinCount>=800){
+          coinCount-=800; localStorage.setItem('bleuCoins',coinCount);
+          specterUnlocked=true; localStorage.setItem('bleuSpecter','1');
+          unlockedColorsSpecter=[0]; localStorage.setItem('bleuColsS',JSON.stringify(unlockedColorsSpecter));
+          activeChar=2; activeColorSpecter=0;
+          localStorage.setItem('bleuChar','2'); localStorage.setItem('bleuColorS','0');
+          beep(440,880,0.35,'sine',0.18);
+          [554,659,784,1047].forEach(function(f,i){setTimeout(function(){beep(f,f*1.5,0.15,'sine',0.12);},i*90);});
+          spawnParticles(W/2,H/2,'#aa33ff',22); spawnParticles(W/2,H/2,'#00ffff',10);
+          if(navigator.vibrate) navigator.vibrate([40,20,80,20,120]);
         } else { beep(220,150,0.12,'sawtooth',0.08); hitFlash=3; }
         return;
       }
