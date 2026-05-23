@@ -1034,17 +1034,6 @@ function drawBleu(x, y, flapAnim, angle) {
   ctx.translate(x, y);
   ctx.rotate(typeof angle === 'number' ? angle : 0);
 
-  // ── wing frame: ping-pong 0→1→2→1
-  var _wCycle = Math.floor(flapAnim * 0.22) % 4;
-  var wingFrame = (_wCycle === 3) ? 1 : _wCycle; // 0=up  1=mid  2=down
-
-  // Asa ancorada no TOPO do corpo (dorsal/costas em side-view).
-  // Para ponto (-8,-11) a rotação POSITIVA (horário) sobe a ponta da asa.
-  // frame 0 = batida para CIMA  (+0.55 rad)
-  // frame 1 = repouso           (+0.05 rad, levemente acima do horizontal)
-  // frame 2 = batida para BAIXO (-0.42 rad)
-  var _wAngle = [Math.PI*0.55, Math.PI*0.05, -Math.PI*0.42][wingFrame];
-
   var sf = Math.sin(flapAnim * 1.2) * 1.2;          // body gentle bob
   var ef = Math.abs(Math.sin(flapAnim * 2.4));       // blink driver
 
@@ -1055,29 +1044,50 @@ function drawBleu(x, y, flapAnim, angle) {
   ctx.lineJoin = 'round'; ctx.lineCap = 'round';
 
   // ══════════════════════════════════════════
-  //  FAR WING — atrás do corpo
-  //  Âncora: topo-esquerdo do oval = "costas" do pássaro em side-view
-  //  Body ellipse(0,4,rx20,ry16): contorno superior em x=-8 ≈ y=-10
+  //  CAPA SUPERMAN — flui atrás do pássaro
+  //  Âncora: pescoço/costas (onde cabeça encontra o corpo)
   // ══════════════════════════════════════════
-  ctx.save();
-  ctx.translate(-8, -11);           // contorno dorsal, levemente à esquerda do topo
-  ctx.rotate(_wAngle - 0.20);       // asa traseira um pouco mais fechada
-  var _wgB = ctx.createLinearGradient(0, 0, -20, -6);
-  _wgB.addColorStop(0, cShadow);
-  _wgB.addColorStop(0.55, cBody+'99');
-  _wgB.addColorStop(1, cShadow+'44');
-  ctx.globalAlpha = 0.50;
+  var _cWave  = Math.sin(frame * 0.07) * 4;                        // ondulação lenta
+  var _cBust  = bleuFlapTimer > 0 ? Math.sin(frame * 0.22) * 6 : 0; // infla ao bater
+
+  // Gradiente vermelho com volume
+  var _cg = ctx.createLinearGradient(-4, -12, -26, 24);
+  _cg.addColorStop(0,    '#FF3311');
+  _cg.addColorStop(0.30, '#DD1100');
+  _cg.addColorStop(0.70, '#AA0D00');
+  _cg.addColorStop(1,    '#6B0800');
+
+  // ─ Parte traseira da capa (shadow fold — atrás do corpo) ─
   ctx.beginPath();
-  // Forma compacta — ponta fica na área superior, trailing não desce à barriga
-  ctx.moveTo(0, 0);
-  ctx.bezierCurveTo(-3, -5, -12, -11, -19,  -7);   // bordo líder → ponta
-  ctx.bezierCurveTo(-23, -2, -19,   5, -12,   7);   // ponta → base do trailing
-  ctx.bezierCurveTo( -5,  7,  -1,   3,   0,   0);   // trailing → raiz
+  ctx.moveTo(-3, -9);
+  ctx.bezierCurveTo(-6, -13, -11, -13, -14, -9);          // ombro traseiro
+  ctx.bezierCurveTo(-19, -4, -24, 6 + _cWave, -26, 18 + _cWave + _cBust);
+  ctx.bezierCurveTo(-26, 26 + _cBust, -20, 28, -16, 24 + _cWave * 0.4);
+  ctx.bezierCurveTo(-12, 18, -8, 8, -5, 2);
+  ctx.bezierCurveTo(-4, -1, -3, -5, -3, -9);
   ctx.closePath();
-  ctx.fillStyle = _wgB; ctx.fill();
-  ctx.lineWidth = 1.1; ctx.strokeStyle = cOutline+'77'; ctx.stroke();
-  ctx.globalAlpha = 1;
-  ctx.restore();
+  ctx.fillStyle = '#7A0A00'; ctx.globalAlpha = 0.65;
+  ctx.fill(); ctx.globalAlpha = 1;
+
+  // ─ Corpo principal da capa ─
+  ctx.beginPath();
+  ctx.moveTo(-2, -8);
+  ctx.bezierCurveTo(-4, -13, -9, -15, -13, -12);          // colarinho → ombro
+  ctx.bezierCurveTo(-17, -8, -21, 0, -23, 9 + _cWave + _cBust);   // ombro → corpo
+  ctx.bezierCurveTo(-24, 18 + _cBust, -22, 26 + _cWave, -18, 27 + _cWave); // arco externo
+  ctx.bezierCurveTo(-14, 28, -8, 22, -5, 14 + _cWave * 0.5);       // ponta → borda interna
+  ctx.bezierCurveTo(-3, 6, -2, 0, -2, -8);                          // borda interna → colarinho
+  ctx.closePath();
+  ctx.fillStyle = _cg; ctx.fill();
+  ctx.lineWidth = 1.3; ctx.strokeStyle = '#330000'; ctx.stroke();
+
+  // ─ Reflexo/destaque no topo da capa ─
+  ctx.beginPath();
+  ctx.moveTo(-3, -9);
+  ctx.bezierCurveTo(-5, -13, -10, -14, -13, -11);
+  ctx.bezierCurveTo(-16, -8, -19, -3, -20, 3 + _cWave * 0.3);
+  ctx.lineWidth = 1.8; ctx.strokeStyle = '#FF7755'; ctx.globalAlpha = 0.55;
+  ctx.stroke(); ctx.globalAlpha = 1;
 
   // ══════════════════════════════════════════
   //  BODY
@@ -1147,35 +1157,19 @@ function drawBleu(x, y, flapAnim, angle) {
   ctx.lineWidth=1.8; ctx.strokeStyle=cOutline; ctx.stroke();
 
   // ══════════════════════════════════════════
-  //  NEAR WING — à frente do corpo, claramente visível
-  //  Mesma âncora dorsal, ângulo completo de batida
+  //  COLARINHO — dobra da capa visível na frente do pescoço
   // ══════════════════════════════════════════
-  ctx.save();
-  ctx.translate(-8, -11);           // mesmo ponto dorsal
-  ctx.rotate(_wAngle);
-  var _wgF = ctx.createLinearGradient(0, 0, -20, -8);
-  _wgF.addColorStop(0,    cBody);
-  _wgF.addColorStop(0.40, cBodyLt);
-  _wgF.addColorStop(1,    '#ffffffdd');
   ctx.beginPath();
-  // Asa principal — mesma forma compacta mas ligeiramente maior
-  ctx.moveTo(0, 0);
-  ctx.bezierCurveTo(-4, -6, -14, -13, -22,  -8);   // bordo líder → ponta
-  ctx.bezierCurveTo(-26, -1, -22,   7, -13,   9);   // ponta → base trailing
-  ctx.bezierCurveTo( -5,  8,  -1,   3,   0,   0);   // trailing → raiz
+  ctx.moveTo(-1, -9);
+  ctx.bezierCurveTo(0, -13, -2, -16, -6, -15);
+  ctx.bezierCurveTo(-10, -14, -12, -11, -10, -8);
+  ctx.bezierCurveTo(-8, -6, -4, -7, -1, -9);
   ctx.closePath();
-  ctx.fillStyle = _wgF; ctx.fill();
-  ctx.lineWidth = 1.5; ctx.strokeStyle = cOutline; ctx.stroke();
-  // 3 linhas de penas
-  ctx.lineWidth = 0.85; ctx.strokeStyle = '#ffffff'; ctx.globalAlpha = 0.55;
-  ctx.beginPath();
-  ctx.moveTo(-2, -1); ctx.bezierCurveTo(-7, -6, -14, -10, -18,  -7); ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(-3,  2); ctx.bezierCurveTo(-8, -1, -16,  1, -19,   4); ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(-3,  5); ctx.bezierCurveTo(-7,  4, -13,  5, -15,   7); ctx.stroke();
-  ctx.globalAlpha = 1;
-  ctx.restore();
+  var _colGrad = ctx.createLinearGradient(-1, -9, -10, -14);
+  _colGrad.addColorStop(0, '#FF4422');
+  _colGrad.addColorStop(1, '#CC1100');
+  ctx.fillStyle = _colGrad; ctx.fill();
+  ctx.lineWidth = 1.0; ctx.strokeStyle = '#330000'; ctx.stroke();
 
   // GLOW (no shadowBlur — use alpha only for performance)
   if(scoreGlow > 0) {
