@@ -1042,7 +1042,7 @@ function drawBleu(x, y, flapAnim, angle) {
   //   frame 0 = full beat-up: wing tip high
   //   frame 1 = mid/rest:     wing roughly horizontal
   //   frame 2 = beat-down:    wing tip low
-  var _wAngle = [-Math.PI*0.52, -Math.PI*0.06, Math.PI*0.28][wingFrame];
+  var _wAngle = [-Math.PI*0.60, -Math.PI*0.10, Math.PI*0.32][wingFrame];
 
   var sf = Math.sin(flapAnim * 1.2) * 1.2;          // body gentle bob
   var ef = Math.abs(Math.sin(flapAnim * 2.4));       // blink driver
@@ -1055,11 +1055,10 @@ function drawBleu(x, y, flapAnim, angle) {
 
   // ══════════════════════════════════════════
   //  FAR WING — drawn first (behind body)
-  //  Anchor: left edge of body at shoulder height
-  //  This is the bird's OTHER wing, seen through/past the body
+  //  Anchor: top-back of body (dorsal/costas), not belly
   // ══════════════════════════════════════════
   ctx.save();
-  ctx.translate(-14, -1);          // shoulder on left side of body
+  ctx.translate(-5, -10);          // topo do corpo, lado das costas
   ctx.rotate(_wAngle - 0.18);      // slightly more folded than near wing
   var _wgB = ctx.createLinearGradient(0,0,-22,4);
   _wgB.addColorStop(0, cShadow);
@@ -1150,10 +1149,10 @@ function drawBleu(x, y, flapAnim, angle) {
 
   // ══════════════════════════════════════════
   //  NEAR WING — drawn LAST (in front of body+head)
-  //  This is the bird's near-side wing, clearly visible
+  //  Anchor: top-back of body (dorsal/costas)
   // ══════════════════════════════════════════
   ctx.save();
-  ctx.translate(-14, -1);          // same shoulder anchor as far wing
+  ctx.translate(-5, -10);          // mesmo ponto dorsal da asa traseira
   ctx.rotate(_wAngle);             // full rotation (more dramatic than far wing)
   var _wgF = ctx.createLinearGradient(0, 0, -24, 6);
   _wgF.addColorStop(0, cBody);
