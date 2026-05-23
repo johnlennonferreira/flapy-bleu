@@ -1044,49 +1044,44 @@ function drawBleu(x, y, flapAnim, angle) {
   ctx.lineJoin = 'round'; ctx.lineCap = 'round';
 
   // ══════════════════════════════════════════
-  //  CAPA SUPERMAN — flui atrás do pássaro
-  //  Âncora: pescoço/costas (onde cabeça encontra o corpo)
+  //  CAPA SUPER-HERÓI
+  //  Âncora: (-11, -6) = costas do pescoço
+  //  Fica inteiramente em x < -6  →  não toca rosto nem barriga
   // ══════════════════════════════════════════
-  var _cWave  = Math.sin(frame * 0.07) * 4;                        // ondulação lenta
-  var _cBust  = bleuFlapTimer > 0 ? Math.sin(frame * 0.22) * 6 : 0; // infla ao bater
+  var _cIdle = Math.sin(frame * 0.055) * 2.5;               // flutter suave idle
+  var _cT    = Math.min(1, bleuFlapTimer / 14);             // 0→1 ao apertar botão
+  var _cBow  = _cT * 9;                                     // barriga da capa infla
+  var _cHang = _cT * 7;                                     // ponta desce mais
 
-  // Gradiente vermelho com volume
-  var _cg = ctx.createLinearGradient(-4, -12, -26, 24);
-  _cg.addColorStop(0,    '#FF3311');
-  _cg.addColorStop(0.30, '#DD1100');
-  _cg.addColorStop(0.70, '#AA0D00');
-  _cg.addColorStop(1,    '#6B0800');
-
-  // ─ Parte traseira da capa (shadow fold — atrás do corpo) ─
+  // Sombra (fold traseiro — mais escuro, levemente deslocado)
   ctx.beginPath();
-  ctx.moveTo(-3, -9);
-  ctx.bezierCurveTo(-6, -13, -11, -13, -14, -9);          // ombro traseiro
-  ctx.bezierCurveTo(-19, -4, -24, 6 + _cWave, -26, 18 + _cWave + _cBust);
-  ctx.bezierCurveTo(-26, 26 + _cBust, -20, 28, -16, 24 + _cWave * 0.4);
-  ctx.bezierCurveTo(-12, 18, -8, 8, -5, 2);
-  ctx.bezierCurveTo(-4, -1, -3, -5, -3, -9);
+  ctx.moveTo(-11, -5);
+  ctx.bezierCurveTo(-14, 0,   -20 - _cBow*0.7,  7 + _cIdle, -22 - _cBow*0.5, 17 + _cIdle + _cHang);
+  ctx.bezierCurveTo(-21 - _cBow*0.3, 23 + _cHang, -15, 23, -12, 19);
+  ctx.bezierCurveTo(-10, 12,  -10,  4, -11, -5);
   ctx.closePath();
-  ctx.fillStyle = '#7A0A00'; ctx.globalAlpha = 0.65;
-  ctx.fill(); ctx.globalAlpha = 1;
+  ctx.fillStyle = '#550800'; ctx.globalAlpha = 0.55; ctx.fill(); ctx.globalAlpha = 1;
 
-  // ─ Corpo principal da capa ─
+  // Corpo principal
+  var _cg = ctx.createLinearGradient(-11, -6, -22, 20);
+  _cg.addColorStop(0,   '#FF4422');
+  _cg.addColorStop(0.35,'#DD1100');
+  _cg.addColorStop(1,   '#881000');
   ctx.beginPath();
-  ctx.moveTo(-2, -8);
-  ctx.bezierCurveTo(-4, -13, -9, -15, -13, -12);          // colarinho → ombro
-  ctx.bezierCurveTo(-17, -8, -21, 0, -23, 9 + _cWave + _cBust);   // ombro → corpo
-  ctx.bezierCurveTo(-24, 18 + _cBust, -22, 26 + _cWave, -18, 27 + _cWave); // arco externo
-  ctx.bezierCurveTo(-14, 28, -8, 22, -5, 14 + _cWave * 0.5);       // ponta → borda interna
-  ctx.bezierCurveTo(-3, 6, -2, 0, -2, -8);                          // borda interna → colarinho
+  ctx.moveTo(-11, -6);                                             // âncora costas
+  ctx.bezierCurveTo(-13, -1,  -19 - _cBow,  5 + _cIdle, -21 - _cBow, 15 + _cIdle + _cHang);
+  ctx.bezierCurveTo(-21 - _cBow*0.4, 22 + _cHang, -15, 23 + _cHang*0.4, -12, 19 + _cIdle*0.3);
+  ctx.bezierCurveTo(-10, 12,  -9,  4,  -9,  -2);                  // borda interna sobe
+  ctx.bezierCurveTo( -9, -4, -10, -6, -11, -6);                   // fecha no âncora
   ctx.closePath();
   ctx.fillStyle = _cg; ctx.fill();
-  ctx.lineWidth = 1.3; ctx.strokeStyle = '#330000'; ctx.stroke();
+  ctx.lineWidth = 1.4; ctx.strokeStyle = '#2a0400'; ctx.stroke();
 
-  // ─ Reflexo/destaque no topo da capa ─
+  // Reflexo topo da capa
   ctx.beginPath();
-  ctx.moveTo(-3, -9);
-  ctx.bezierCurveTo(-5, -13, -10, -14, -13, -11);
-  ctx.bezierCurveTo(-16, -8, -19, -3, -20, 3 + _cWave * 0.3);
-  ctx.lineWidth = 1.8; ctx.strokeStyle = '#FF7755'; ctx.globalAlpha = 0.55;
+  ctx.moveTo(-11, -6);
+  ctx.bezierCurveTo(-14,  0, -18 - _cBow*0.5,  5 + _cIdle, -20 - _cBow*0.4, 12 + _cIdle);
+  ctx.lineWidth = 1.6; ctx.strokeStyle = '#FF7755'; ctx.globalAlpha = 0.50;
   ctx.stroke(); ctx.globalAlpha = 1;
 
   // ══════════════════════════════════════════
@@ -1156,20 +1151,14 @@ function drawBleu(x, y, flapAnim, angle) {
   ctx.beginPath(); ctx.arc(4,-12,7,0.15,Math.PI-0.15);
   ctx.lineWidth=1.8; ctx.strokeStyle=cOutline; ctx.stroke();
 
-  // ══════════════════════════════════════════
-  //  COLARINHO — dobra da capa visível na frente do pescoço
-  // ══════════════════════════════════════════
+  // ── Clip/fecho da capa no pescoço (pequeno, só no lado das costas) ──
   ctx.beginPath();
-  ctx.moveTo(-1, -9);
-  ctx.bezierCurveTo(0, -13, -2, -16, -6, -15);
-  ctx.bezierCurveTo(-10, -14, -12, -11, -10, -8);
-  ctx.bezierCurveTo(-8, -6, -4, -7, -1, -9);
+  ctx.moveTo(-9, -5);
+  ctx.bezierCurveTo(-10, -8, -13, -9, -14, -7);
+  ctx.bezierCurveTo(-14, -4, -11, -3, -9, -5);
   ctx.closePath();
-  var _colGrad = ctx.createLinearGradient(-1, -9, -10, -14);
-  _colGrad.addColorStop(0, '#FF4422');
-  _colGrad.addColorStop(1, '#CC1100');
-  ctx.fillStyle = _colGrad; ctx.fill();
-  ctx.lineWidth = 1.0; ctx.strokeStyle = '#330000'; ctx.stroke();
+  ctx.fillStyle = '#FF5533'; ctx.fill();
+  ctx.lineWidth = 0.8; ctx.strokeStyle = '#2a0400'; ctx.stroke();
 
   // GLOW (no shadowBlur — use alpha only for performance)
   if(scoreGlow > 0) {
