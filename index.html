@@ -892,7 +892,7 @@ var phantomFartParticles=[]; // gas puff particles for Phantom character
 var deadChest={active:false,opened:false,coins:0,anim:0};
 var idleTab='play';
 var totalScore=parseInt(localStorage.getItem('bleuTotal')||'0');
-var shopOverlay=false, paused=false;
+var shopOverlay=false, paused=false, phaseShopPending=false;
 var _bgGrad=null, _bgGradPhase=-1;
 var _gndGrad=null, _gndGradPhase=-1;
 var _heavenMist=null, _dungeonMist=null;
@@ -1019,9 +1019,8 @@ function resetGame() {
   combo = 0; comboFlash = 0; coinsThisRun = 0; milestoneIdx = 0; recFlash = 0;
   lives = 3; invincible = 0; starPower = 0; stars = [];
   deadChest={active:false,opened:false,coins:0,anim:0,clicks:0};
-  // Apply purchased shield stock — ALL charges activate for this run
-  if(shieldStock>0){ shield=shieldStock; shieldStock=0; localStorage.setItem('bleuShieldStock',0); }
-  else { shield = 0; }
+  shield = 0; // shields are bought between phases, not at game start
+  phaseShopPending = false;
   shieldItems = []; shieldBreak = 0;
   runPhase = 0; shareFlash = 0; bleuAngle = 0; bleuFlapTimer = 0; phantomFartParticles = [];
 }
@@ -3508,6 +3507,96 @@ function drawBg() {
   ctx.fillText(pv.name, W-10, H-62);
 }
 
+// ─── LOJA ENTRE FASES (mid-game shop overlay) ─────────────────────────
+function drawMidGameShop() {
+  // dim the frozen game scene
+  ctx.fillStyle = 'rgba(0,2,20,0.86)';
+  ctx.fillRect(0, 0, W, H);
+
+  var _pi  = getPhaseIdx();
+  var _pv  = PHASE_VISUALS[Math.max(0, _pi - 1)] || PHASE_VISUALS[0];
+  var _canBuy = (coinCount >= 80) && (shieldStock < 3);
+
+  // ── Header ──
+  ctx.textAlign = 'center';
+  ctx.font = 'bold 20px Courier New';
+  ctx.fillStyle = '#FFD700';
+  ctx.fillText('⭐ FASE ' + _pi + ' COMPLETA!', W/2, 68);
+  ctx.font = '11px Courier New';
+  ctx.fillStyle = '#00D4FF';
+  ctx.fillText(_pv.name || 'BASE NETWORK', W/2, 88);
+
+  // Coins display
+  ctx.font = 'bold 13px Courier New';
+  ctx.fillStyle = '#FFD700';
+  ctx.fillText('💎 ' + coinCount, W/2, 112);
+
+  // ── Shield card (centered) ──
+  var _cx = W/2 - 65, _cy = 132, _cw = 130, _ch = 158;
+  ctx.fillStyle = shieldStock > 0 ? '#00FF8812' : '#ffffff07';
+  ctx.strokeStyle = shieldStock > 0 ? '#00FF8855' : '#ffffff1a';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.roundRect(_cx, _cy, _cw, _ch, 10); ctx.fill(); ctx.stroke();
+
+  // Shield icon
+  ctx.save();
+  ctx.translate(W/2, _cy + 52);
+  var _ir = 18;
+  ctx.globalAlpha = 0.18 + 0.08 * Math.sin(frame * 0.12);
+  ctx.fillStyle = shieldStock > 0 ? '#00FF88' : '#44aaff';
+  ctx.beginPath(); ctx.arc(0, 0, _ir * 1.55, 0, Math.PI * 2); ctx.fill();
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = shieldStock > 0 ? '#00CC66' : '#2277cc';
+  ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.8;
+  ctx.beginPath();
+  ctx.moveTo(0,-_ir); ctx.bezierCurveTo(_ir,-_ir,_ir,0,0,_ir);
+  ctx.bezierCurveTo(-_ir,0,-_ir,-_ir,0,-_ir); ctx.closePath();
+  ctx.fill(); ctx.stroke();
+  ctx.strokeStyle = '#ffffff88'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(0,-_ir*0.7); ctx.lineTo(0,_ir*0.7); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(-_ir*0.55,0); ctx.lineTo(_ir*0.55,0); ctx.stroke();
+  ctx.fillStyle = shieldStock > 0 ? '#001a0f' : '#ffffff';
+  ctx.font = 'bold ' + (shieldStock>0?'13':'11') + 'px Arial';
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText(shieldStock > 0 ? shieldStock : '✦', 0, 1);
+  ctx.textBaseline = 'alphabetic'; ctx.restore();
+
+  // Labels
+  ctx.textAlign = 'center';
+  ctx.font = 'bold 10px Courier New';
+  ctx.fillStyle = shieldStock > 0 ? '#00FF88' : '#88ccff';
+  ctx.fillText('SHIELD', W/2, _cy + 87);
+  ctx.font = '8px Courier New'; ctx.fillStyle = '#ffffff55';
+  ctx.fillText(shieldStock >= 3 ? 'MAX 3/3' : shieldStock + '/3', W/2, _cy + 100);
+
+  // Buy button inside card
+  if(shieldStock < 3){
+    var _bby = _cy + 113;
+    ctx.fillStyle = _canBuy ? '#FFD70022' : '#ff444418';
+    ctx.strokeStyle = _canBuy ? '#FFD700' : '#ff4444';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.roundRect(_cx+10, _bby, _cw-20, 26, 7); ctx.fill(); ctx.stroke();
+    ctx.font = 'bold 11px Courier New';
+    ctx.fillStyle = _canBuy ? '#FFD700' : '#ff6644';
+    ctx.fillText('80 💎', W/2, _bby + 16);
+  }
+
+  ctx.font = '9px Courier New'; ctx.fillStyle = '#ffffff33';
+  ctx.fillText('toque no card para comprar (máx 3)', W/2, _cy + _ch + 14);
+
+  // ── CONTINUAR button ──
+  var _btnY = H - 78;
+  var _bp = 1 + 0.05 * Math.sin(frame * 0.1);
+  ctx.save();
+  ctx.translate(W/2, _btnY); ctx.scale(_bp, _bp);
+  ctx.fillStyle = '#0052FF'; ctx.strokeStyle = '#00D4FF'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.roundRect(-92, -19, 184, 38, 10); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 14px Courier New';
+  ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
+  ctx.fillText('▶  CONTINUAR', 0, 0);
+  ctx.textBaseline = 'alphabetic'; ctx.restore();
+}
+
 // ─── BANNER DE FASE — animação dramática ──────
 function drawPhaseBanner() {
   // banner só existe enquanto o jogo estiver congelado
@@ -3764,8 +3853,11 @@ function loop(ts) {
 
     // ── Física congelada durante transição de fase ──
     if(phasePaused){
-      // desbloqueia quando animação entra no fade-out (phaseFlash < 80) ou player toca
-      if(phaseFlash < 80){ phasePaused = false; phaseFlash = 0; }
+      // quando animação termina (phaseFlash < 80): abre loja se veio de mudança de fase
+      if(phaseFlash < 80 && !shopOverlay){
+        if(phaseShopPending){ shopOverlay = true; phaseShopPending = false; }
+        else { phasePaused = false; phaseFlash = 0; }
+      }
     } else {
       bleu.vy   += 0.42;                          // gravity
       if(bleu.vy > 11) bleu.vy = 11;             // terminal velocity
@@ -3899,6 +3991,7 @@ function loop(ts) {
           lastPhaseIdx = newPI;
           phaseFlash   = 190;
           phasePaused  = true;
+          phaseShopPending = true; // open shop when banner animation finishes
           if(newPI > runPhase) runPhase = newPI;
           bleu.vy = 0;
           bleu.y  = H / 2;
@@ -4131,6 +4224,15 @@ function loop(ts) {
     }
   }
 
+  // ── MID-GAME SHOP OVERLAY (entre fases) ──
+  if(gameState === 'playing' && shopOverlay){
+    for(var _soi=0;_soi<pipes.length;_soi++) drawObstacle(pipes[_soi]);
+    drawPhantomFarts();
+    drawCharacter(bleu.x, bleu.y, bleu.flap, bleuAngle);
+    updateParticles();
+    drawMidGameShop();
+  }
+
   // ── AWARD ──
   // ── HURT — perdeu uma vida, aguarda toque ──
   if(gameState === 'hurt'){
@@ -4351,7 +4453,7 @@ function loop(ts) {
 function flap() {
   if(gameState==='idle')         { gameState='playing'; startMusic(getPhaseIdx()); combo=0; comboFlash=0; coinsThisRun=0; milestoneIdx=0; recFlash=0; phaseFlash=190; phasePaused=true; bleu.vy=0; bleu.y=H/2; }
   else if(gameState==='playing') {
-    if(phasePaused){ phasePaused=false; phaseFlash=0; bleu.vy=-4; bleuSquish=6; return; } // pula animação
+    if(phasePaused){ if(shopOverlay) return; phasePaused=false; phaseFlash=0; bleu.vy=-4; bleuSquish=6; return; } // pula animação
     bleu.vy=-7.5; bleu.flap=0; bleuSquish=8; bleuFlapTimer=18;
     if(activeChar===1 && gengarUnlocked) {
       // PHANTOM: fart propulsion instead of wing flap
@@ -4384,6 +4486,31 @@ function handleClick(ex, ey) {
   if(dailyModal){
     if(cx>=W/2-65&&cx<=W/2+65&&cy>=H/2+78&&cy<=H/2+112){ claimDailyReward(); beep(523,1047,0.2,'sine',0.14); }
     return;
+  }
+
+  // ── MID-GAME SHOP (loja entre fases) ──
+  if(gameState==='playing' && shopOverlay){
+    var _mgClose = function(){
+      shopOverlay = false;
+      if(shieldStock>0){ shield=shieldStock; shieldStock=0; localStorage.setItem('bleuShieldStock',0); }
+      phasePaused = false; phaseFlash = 0;
+      startMusic(getPhaseIdx());
+    };
+    // CONTINUAR button: centered at H-78
+    if(cy >= H-97 && cy <= H-59){ _mgClose(); return; }
+    // Shield card: _cx=W/2-65, _cy=132, _cw=130, _ch=158
+    if(cx >= W/2-65 && cx <= W/2+65 && cy >= 132 && cy <= 290){
+      if(shieldStock>=3){ beep(220,150,0.1,'sawtooth',0.06); return; }
+      if(coinCount>=80){
+        coinCount-=80; if(coinCount<0)coinCount=0; localStorage.setItem('bleuCoins',coinCount);
+        shieldStock++; localStorage.setItem('bleuShieldStock',shieldStock);
+        beep(523,1047,0.22,'sine',0.13);
+        [659,784].forEach(function(f,i){setTimeout(function(){beep(f,f,0.1,'sine',0.09);},i*60);});
+        spawnParticles(bleu.x, bleu.y, '#00FF88', 8);
+      } else { beep(220,150,0.1,'sawtooth',0.06); }
+      return;
+    }
+    return; // consume all other clicks on overlay
   }
 
   // ── HURT — qualquer toque retoma
@@ -4535,7 +4662,7 @@ document.addEventListener('keydown', function(e){
     e.preventDefault();
     if(gameState==='award'){ handleClick(canvas.getBoundingClientRect().left + W/2, canvas.getBoundingClientRect().top + H/2); return; }
     if(paused){ paused=false; return; }
-    if(shopOverlay){ shopOverlay=false; gameState='playing'; startMusic(getPhaseIdx()); return; }
+    if(shopOverlay){ shopOverlay=false; if(shieldStock>0){shield=shieldStock;shieldStock=0;localStorage.setItem('bleuShieldStock',0);} phasePaused=false; phaseFlash=0; startMusic(getPhaseIdx()); return; }
     flap();
   }
   if(e.code==='KeyP' && (gameState==='playing'||paused)){ paused=!paused; }
