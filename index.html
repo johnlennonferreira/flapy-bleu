@@ -1033,198 +1033,151 @@ resetGame();
 function drawBleu(x, y, flapAnim, angle) {
   ctx.save();
   ctx.translate(x, y);
-  // angle is pre-calculated smooth bleuAngle (or raw vy*0.028 for non-gameplay uses)
-  var rotAngle = (typeof angle === 'number' && Math.abs(angle) > 0.001)
-    ? angle                                        // pre-smoothed angle
-    : Math.max(-0.35, Math.min(1.35, angle));
-  ctx.rotate(rotAngle);
+  ctx.rotate(typeof angle === 'number' ? angle : 0);
 
-  // 3-frame wing animation: up→mid→down→mid ping-pong, even distribution
-  var _wCycle = Math.floor(flapAnim * 0.22) % 4;   // 0,1,2,3 → map to 0,1,2,1
-  var wingFrame = (_wCycle === 3) ? 1 : _wCycle;
-  var wingAngles = [-0.52 * Math.PI, -0.18 * Math.PI, 0.10 * Math.PI]; // up/mid/down
-  var wingY      = [-7, -2, 5];                     // vertical offset per frame
-  var wf = wingY[wingFrame];
-  var sf = Math.sin(flapAnim * 1.2) * 1.2;
-  var ff = Math.sin(flapAnim * 3.1);
-  var ef = Math.abs(Math.sin(flapAnim * 2.4));
+  // ── wing frame: ping-pong 0→1→2→1
+  var _wCycle = Math.floor(flapAnim * 0.22) % 4;
+  var wingFrame = (_wCycle === 3) ? 1 : _wCycle; // 0=up  1=mid  2=down
 
-  var sk = BLEU_COLORS[activeColorBleu] || BLEU_COLORS[0];
-  var cBody    = sk.body;
-  var cBodyLt  = sk.bodyLt;
-  var cBelly   = sk.belly;
-  var cShadow  = sk.shadow;
-  var cBlush   = 'rgba(255,160,160,0.55)';
-  var cEye     = '#ffffff';
-  var cPupil   = '#111111';
-  var cOutline = sk.outline;
+  // Angle the whole wing rotates around its root (back-of-body attachment)
+  //   frame 0 = full beat-up: wing tip high
+  //   frame 1 = mid/rest:     wing roughly horizontal
+  //   frame 2 = beat-down:    wing tip low
+  var _wAngle = [-Math.PI*0.52, -Math.PI*0.06, Math.PI*0.28][wingFrame];
 
-  ctx.lineJoin = 'round';
-  ctx.lineCap  = 'round';
+  var sf = Math.sin(flapAnim * 1.2) * 1.2;          // body gentle bob
+  var ef = Math.abs(Math.sin(flapAnim * 2.4));       // blink driver
 
-  // BODY
+  var sk      = BLEU_COLORS[activeColorBleu] || BLEU_COLORS[0];
+  var cBody   = sk.body, cBodyLt = sk.bodyLt, cBelly = sk.belly;
+  var cShadow = sk.shadow, cOutline = sk.outline;
+  var cBlush  = 'rgba(255,160,160,0.55)';
+  ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+
+  // ══════════════════════════════════════════
+  //  FAR WING — drawn first (behind body)
+  //  Anchor: left edge of body at shoulder height
+  //  This is the bird's OTHER wing, seen through/past the body
+  // ══════════════════════════════════════════
+  ctx.save();
+  ctx.translate(-14, -1);          // shoulder on left side of body
+  ctx.rotate(_wAngle - 0.18);      // slightly more folded than near wing
+  var _wgB = ctx.createLinearGradient(0,0,-22,4);
+  _wgB.addColorStop(0, cShadow);
+  _wgB.addColorStop(0.6, cBody+'bb');
+  _wgB.addColorStop(1, cShadow+'55');
+  ctx.globalAlpha = 0.55;
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.bezierCurveTo(-4, -5, -14, -12, -22, -7);   // leading edge → tip
+  ctx.bezierCurveTo(-26, -1, -22,  8, -14, 10);   // tip → trailing base
+  ctx.bezierCurveTo( -7,  9,  -2,  4,   0,  0);   // trailing → root
+  ctx.closePath();
+  ctx.fillStyle = _wgB; ctx.fill();
+  ctx.lineWidth = 1.2; ctx.strokeStyle = cOutline+'88'; ctx.stroke();
+  // subtle feather groove
+  ctx.lineWidth = 0.7; ctx.strokeStyle = '#ffffff33';
+  ctx.beginPath();
+  ctx.moveTo(-2,-1); ctx.bezierCurveTo(-8,-7,-15,-10,-19,-7); ctx.stroke();
+  ctx.globalAlpha = 1;
+  ctx.restore();
+
+  // ══════════════════════════════════════════
+  //  BODY
+  // ══════════════════════════════════════════
   ctx.beginPath();
   ctx.ellipse(0, 4 + sf, 20, 16, -0.1, 0, Math.PI * 2);
   ctx.fillStyle = cBody; ctx.fill();
   ctx.lineWidth = 1.8; ctx.strokeStyle = cOutline; ctx.stroke();
-  // highlight
+  // body highlight
   ctx.beginPath(); ctx.ellipse(-5, sf-2, 8, 6, -0.3, 0, Math.PI*2);
-  ctx.fillStyle = cBodyLt; ctx.globalAlpha=0.45; ctx.fill(); ctx.globalAlpha=1;
+  ctx.fillStyle = cBodyLt; ctx.globalAlpha = 0.42; ctx.fill(); ctx.globalAlpha = 1;
 
-  // Belly — BASE hexagon logo
-  ctx.save();
-  ctx.translate(5, 8 + sf);
-  // Hex background
-  ctx.globalAlpha = 0.82;
-  ctx.fillStyle = cBelly;
+  // belly BASE hexagon
+  ctx.save(); ctx.translate(5, 8 + sf);
+  ctx.globalAlpha = 0.82; ctx.fillStyle = cBelly;
   ctx.beginPath();
   for(var _hi=0; _hi<6; _hi++){
     var _ha = (_hi*Math.PI/3) - Math.PI/6;
-    var _hx = Math.cos(_ha)*10, _hy = Math.sin(_ha)*8;
-    if(_hi===0) ctx.moveTo(_hx,_hy); else ctx.lineTo(_hx,_hy);
+    if(_hi===0) ctx.moveTo(Math.cos(_ha)*10, Math.sin(_ha)*8);
+    else        ctx.lineTo(Math.cos(_ha)*10, Math.sin(_ha)*8);
   }
   ctx.closePath(); ctx.fill();
-  ctx.globalAlpha = 0.35; ctx.strokeStyle = sk.outline; ctx.lineWidth = 1;
-  ctx.stroke();
-  // "B" Base letter
+  ctx.globalAlpha = 0.35; ctx.strokeStyle = cOutline; ctx.lineWidth = 1; ctx.stroke();
   ctx.globalAlpha = 0.9;
-  ctx.fillStyle = activeColorBleu===0 ? '#0052FF' : sk.shadow;
-  ctx.font = 'bold 9px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = activeColorBleu===0 ? '#0052FF' : cShadow;
+  ctx.font = 'bold 9px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
   ctx.fillText('B', 0.5, 0.5);
-  ctx.globalAlpha = 1;
-  ctx.restore();
-
-  // ── TWO WINGS — upper and lower, beat on flap, drawn BEFORE head ──
-  // Wing angles per frame: [up-beat, mid, down-fold]
-  var _wAngles = [Math.PI*0.38, 0, -Math.PI*0.22];
-  var _wA = _wAngles[wingFrame];
-
-  // UPPER WING (back) — anchored at top-left of body, above junction
-  ctx.save();
-  ctx.translate(-7, -5); // top-left of body/head area
-  ctx.rotate(-_wA);      // negative: upper wing beats UPWARD on flap
-  var wGradUp = ctx.createLinearGradient(0,0,-19,0);
-  wGradUp.addColorStop(0, cShadow+'cc'); wGradUp.addColorStop(1, cBody);
-  ctx.globalAlpha = 0.72;
-  ctx.beginPath();
-  ctx.moveTo(0,0);
-  ctx.bezierCurveTo(-2,-3,-9,-13,-17,-8);
-  ctx.bezierCurveTo(-20,-3,-16,4,0,0);
-  ctx.fillStyle = wGradUp; ctx.fill();
-  ctx.lineWidth = 1.3; ctx.strokeStyle = cOutline; ctx.stroke();
-  // feather lines
-  ctx.lineWidth=0.7; ctx.strokeStyle='#ffffff66';
-  ctx.beginPath(); ctx.moveTo(-1,-1); ctx.bezierCurveTo(-4,-4,-10,-9,-14,-7); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(-1,1); ctx.bezierCurveTo(-5,-1,-12,-4,-16,-2); ctx.stroke();
   ctx.globalAlpha = 1; ctx.restore();
 
-  // LOWER WING (back) — anchored at bottom-left of body, below junction
-  ctx.save();
-  ctx.translate(-7, 9);  // bottom-left of body
-  ctx.rotate(_wA);       // positive: lower wing beats DOWNWARD on flap
-  var wGradDn = ctx.createLinearGradient(0,0,-19,0);
-  wGradDn.addColorStop(0, cShadow+'bb'); wGradDn.addColorStop(1, cBody);
-  ctx.globalAlpha = 0.60;
-  ctx.beginPath();
-  ctx.moveTo(0,0);
-  ctx.bezierCurveTo(-2,3,-9,13,-17,8);
-  ctx.bezierCurveTo(-20,3,-16,-4,0,0);
-  ctx.fillStyle = wGradDn; ctx.fill();
-  ctx.lineWidth = 1.2; ctx.strokeStyle = cOutline; ctx.stroke();
-  ctx.lineWidth=0.7; ctx.strokeStyle='#ffffff55';
-  ctx.beginPath(); ctx.moveTo(-1,1); ctx.bezierCurveTo(-4,4,-10,9,-14,7); ctx.stroke();
-  ctx.globalAlpha = 1; ctx.restore();
-
-  // HEAD
+  // ══════════════════════════════════════════
+  //  HEAD
+  // ══════════════════════════════════════════
   ctx.beginPath();
   ctx.arc(4, -18, 17, 0, Math.PI * 2);
   ctx.fillStyle = cBody; ctx.fill();
   ctx.lineWidth = 1.8; ctx.strokeStyle = cOutline; ctx.stroke();
-  // highlight
   ctx.beginPath(); ctx.ellipse(-2, -24, 7, 5, -0.4, 0, Math.PI*2);
-  ctx.fillStyle = cBodyLt; ctx.globalAlpha=0.45; ctx.fill(); ctx.globalAlpha=1;
+  ctx.fillStyle = cBodyLt; ctx.globalAlpha = 0.45; ctx.fill(); ctx.globalAlpha = 1;
 
-  // EARS
-  ctx.beginPath();
-  ctx.ellipse(-7, -33, 5, 7, -0.3, 0, Math.PI * 2);
-  ctx.fillStyle = cBody; ctx.fill();
-  ctx.lineWidth = 1.4; ctx.strokeStyle = cOutline; ctx.stroke();
-  ctx.beginPath();
-  ctx.ellipse(8, -33, 4, 6, 0.3, 0, Math.PI * 2);
+  // ears
+  ctx.beginPath(); ctx.ellipse(-7, -33, 5, 7, -0.3, 0, Math.PI*2);
+  ctx.fillStyle = cBody; ctx.fill(); ctx.lineWidth=1.4; ctx.strokeStyle=cOutline; ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(8, -33, 4, 6, 0.3, 0, Math.PI*2);
   ctx.fillStyle = cBody; ctx.fill(); ctx.stroke();
-  ctx.beginPath();
-  ctx.ellipse(-7, -33, 2.5, 4, -0.3, 0, Math.PI * 2);
-  ctx.fillStyle = 'rgba(255,180,200,0.7)'; ctx.fill();
-  ctx.beginPath();
-  ctx.ellipse(8, -33, 2, 3.5, 0.3, 0, Math.PI * 2);
-  ctx.fillStyle = 'rgba(255,180,200,0.7)'; ctx.fill();
+  ctx.beginPath(); ctx.ellipse(-7,-33,2.5,4,-0.3,0,Math.PI*2);
+  ctx.fillStyle='rgba(255,180,200,0.7)'; ctx.fill();
+  ctx.beginPath(); ctx.ellipse(8,-33,2,3.5,0.3,0,Math.PI*2);
+  ctx.fillStyle='rgba(255,180,200,0.7)'; ctx.fill();
 
-  // EYES
+  // eyes
   var eyeScaleY = ef < 0.08 ? 0.2 : 1;
+  ctx.save(); ctx.translate(-3,-20); ctx.scale(1,eyeScaleY);
+  ctx.beginPath(); ctx.ellipse(0,0,6.5,7,0,0,Math.PI*2);
+  ctx.fillStyle='#ffffff'; ctx.fill(); ctx.lineWidth=1.2; ctx.strokeStyle=cOutline; ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(0.5,0.5,4,4.5,0,0,Math.PI*2); ctx.fillStyle='#111'; ctx.fill();
+  ctx.beginPath(); ctx.arc(-1.5,-2,1.8,0,Math.PI*2); ctx.fillStyle='#fff'; ctx.fill(); ctx.restore();
+  ctx.save(); ctx.translate(10,-20); ctx.scale(1,eyeScaleY);
+  ctx.beginPath(); ctx.ellipse(0,0,5.5,6.5,0,0,Math.PI*2);
+  ctx.fillStyle='#ffffff'; ctx.fill(); ctx.lineWidth=1.2; ctx.strokeStyle=cOutline; ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(0.5,0.5,3.5,4,0,0,Math.PI*2); ctx.fillStyle='#111'; ctx.fill();
+  ctx.beginPath(); ctx.arc(-1,-2,1.5,0,Math.PI*2); ctx.fillStyle='#fff'; ctx.fill(); ctx.restore();
+
+  // blush + smile
+  ctx.beginPath(); ctx.ellipse(-10,-14,5,3,0,0,Math.PI*2); ctx.fillStyle=cBlush; ctx.fill();
+  ctx.beginPath(); ctx.ellipse(16,-14,4.5,3,0,0,Math.PI*2); ctx.fillStyle=cBlush; ctx.fill();
+  ctx.beginPath(); ctx.arc(4,-12,7,0.15,Math.PI-0.15);
+  ctx.lineWidth=1.8; ctx.strokeStyle=cOutline; ctx.stroke();
+
+  // ══════════════════════════════════════════
+  //  NEAR WING — drawn LAST (in front of body+head)
+  //  This is the bird's near-side wing, clearly visible
+  // ══════════════════════════════════════════
   ctx.save();
-  ctx.translate(-3, -20); ctx.scale(1, eyeScaleY);
-  ctx.beginPath(); ctx.ellipse(0, 0, 6.5, 7, 0, 0, Math.PI * 2);
-  ctx.fillStyle = cEye; ctx.fill();
-  ctx.lineWidth = 1.2; ctx.strokeStyle = cOutline; ctx.stroke();
-  ctx.beginPath(); ctx.ellipse(0.5, 0.5, 4, 4.5, 0, 0, Math.PI * 2);
-  ctx.fillStyle = cPupil; ctx.fill();
-  ctx.beginPath(); ctx.arc(-1.5, -2, 1.8, 0, Math.PI * 2);
-  ctx.fillStyle = '#ffffff'; ctx.fill();
-  ctx.restore();
-
-  ctx.save();
-  ctx.translate(10, -20); ctx.scale(1, eyeScaleY);
-  ctx.beginPath(); ctx.ellipse(0, 0, 5.5, 6.5, 0, 0, Math.PI * 2);
-  ctx.fillStyle = cEye; ctx.fill();
-  ctx.lineWidth = 1.2; ctx.strokeStyle = cOutline; ctx.stroke();
-  ctx.beginPath(); ctx.ellipse(0.5, 0.5, 3.5, 4, 0, 0, Math.PI * 2);
-  ctx.fillStyle = cPupil; ctx.fill();
-  ctx.beginPath(); ctx.arc(-1, -2, 1.5, 0, Math.PI * 2);
-  ctx.fillStyle = '#ffffff'; ctx.fill();
-  ctx.restore();
-
-  // BLUSH
-  ctx.beginPath(); ctx.ellipse(-10, -14, 5, 3, 0, 0, Math.PI * 2);
-  ctx.fillStyle = cBlush; ctx.fill();
-  ctx.beginPath(); ctx.ellipse(16, -14, 4.5, 3, 0, 0, Math.PI * 2);
-  ctx.fillStyle = cBlush; ctx.fill();
-
-  // SMILE
-  ctx.beginPath(); ctx.arc(4, -12, 7, 0.15, Math.PI - 0.15);
-  ctx.lineWidth = 1.8; ctx.strokeStyle = cOutline; ctx.stroke();
-
-  // UPPER WING (front) — drawn after head, brighter, slightly smaller
-  ctx.save();
-  ctx.translate(-7, -5);
-  ctx.rotate(-_wA);
-  var wGradFront = ctx.createLinearGradient(0,0,-17,0);
-  wGradFront.addColorStop(0, cBody); wGradFront.addColorStop(0.5, cBodyLt); wGradFront.addColorStop(1, '#ffffffbb');
+  ctx.translate(-14, -1);          // same shoulder anchor as far wing
+  ctx.rotate(_wAngle);             // full rotation (more dramatic than far wing)
+  var _wgF = ctx.createLinearGradient(0, 0, -24, 6);
+  _wgF.addColorStop(0, cBody);
+  _wgF.addColorStop(0.45, cBodyLt);
+  _wgF.addColorStop(1, '#ffffffcc');
   ctx.beginPath();
-  ctx.moveTo(0,0);
-  ctx.bezierCurveTo(-1,-4,-10,-13,-16,-7);
-  ctx.bezierCurveTo(-18,-2,-13,5,0,0);
-  ctx.fillStyle = wGradFront; ctx.fill();
-  ctx.lineWidth = 1.5; ctx.strokeStyle = cOutline; ctx.stroke();
-  ctx.lineWidth=0.8; ctx.strokeStyle='#ffffff'; ctx.globalAlpha=0.55;
-  ctx.beginPath(); ctx.moveTo(-1,-1); ctx.bezierCurveTo(-3,-5,-9,-10,-13,-7); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(-2,1); ctx.bezierCurveTo(-5,-2,-11,-5,-15,-2); ctx.stroke();
-  ctx.globalAlpha=1; ctx.restore();
-
-  // LOWER WING (front) — bright, slightly smaller, beats down
-  ctx.save();
-  ctx.translate(-7, 9);
-  ctx.rotate(_wA);
-  var wGradFrontDn = ctx.createLinearGradient(0,0,-17,0);
-  wGradFrontDn.addColorStop(0, cBody); wGradFrontDn.addColorStop(0.5, cBodyLt); wGradFrontDn.addColorStop(1, '#ffffffbb');
+  ctx.moveTo(0, 0);
+  ctx.bezierCurveTo(-4, -6, -15, -14, -24, -9);   // leading edge → tip
+  ctx.bezierCurveTo(-28, -2, -24,  9, -15, 12);   // tip → trailing base
+  ctx.bezierCurveTo( -7, 11,  -2,  5,   0,  0);   // trailing → root
+  ctx.closePath();
+  ctx.fillStyle = _wgF; ctx.fill();
+  ctx.lineWidth = 1.6; ctx.strokeStyle = cOutline; ctx.stroke();
+  // feather detail lines
+  ctx.lineWidth = 0.9; ctx.strokeStyle = '#ffffff'; ctx.globalAlpha = 0.52;
   ctx.beginPath();
-  ctx.moveTo(0,0);
-  ctx.bezierCurveTo(-1,4,-10,13,-16,7);
-  ctx.bezierCurveTo(-18,2,-13,-5,0,0);
-  ctx.fillStyle = wGradFrontDn; ctx.fill();
-  ctx.lineWidth = 1.5; ctx.strokeStyle = cOutline; ctx.stroke();
-  ctx.lineWidth=0.8; ctx.strokeStyle='#ffffff'; ctx.globalAlpha=0.55;
-  ctx.beginPath(); ctx.moveTo(-1,1); ctx.bezierCurveTo(-3,5,-9,10,-13,7); ctx.stroke();
-  ctx.globalAlpha=1; ctx.restore();
+  ctx.moveTo(-2,-1); ctx.bezierCurveTo(-7,-7,-15,-11,-20,-8); ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(-3, 3); ctx.bezierCurveTo(-9,-1,-18, 1,-21, 4); ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(-4, 6); ctx.bezierCurveTo(-9, 4,-16, 6,-18, 9); ctx.stroke();
+  ctx.globalAlpha = 1;
+  ctx.restore();
 
   // GLOW (no shadowBlur — use alpha only for performance)
   if(scoreGlow > 0) {
