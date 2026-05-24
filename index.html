@@ -425,33 +425,35 @@ function isColorOwned(charIdx, colorIdx) {
   if(colorIdx===0) return true;
   if(charIdx===0) return unlockedColorsBleu.indexOf(colorIdx)>=0;
   if(charIdx===1) return gengarUnlocked && unlockedColorsGengar.indexOf(colorIdx)>=0;
+  if(charIdx===2) return wormUnlocked && unlockedColorsWorm.indexOf(colorIdx)>=0;
   return false;
 }
 function isColorEquipped(charIdx, colorIdx) {
   if(charIdx===0) return activeChar===0 && activeColorBleu===colorIdx;
   if(charIdx===1) return activeChar===1 && activeColorGengar===colorIdx;
+  if(charIdx===2) return activeChar===2 && activeColorWorm===colorIdx;
   return false;
 }
 function shopBuyOrEquip() {
-  var colors = shopChar===0 ? BLEU_COLORS : PHANTOM_COLORS;
+  var colors = shopChar===0 ? BLEU_COLORS : shopChar===1 ? PHANTOM_COLORS : WORM_COLORS;
   var color  = colors[shopSelColor];
   if(!color) return;
   var owned    = isColorOwned(shopChar, shopSelColor);
   var equipped = isColorEquipped(shopChar, shopSelColor);
   if(equipped) return;
   if(owned || shopSelColor===0) {
-    // equip
     activeChar = shopChar;
-    if(shopChar===0){ activeColorBleu=shopSelColor; localStorage.setItem('bleuColorB',''+shopSelColor); }
-    else            { activeColorGengar=shopSelColor; localStorage.setItem('bleuColorG',''+shopSelColor); }
+    if(shopChar===0)     { activeColorBleu=shopSelColor;   localStorage.setItem('bleuColorB',''+shopSelColor); }
+    else if(shopChar===1){ activeColorGengar=shopSelColor; localStorage.setItem('bleuColorG',''+shopSelColor); }
+    else                 { activeColorWorm=shopSelColor;   localStorage.setItem('bleuColorW',''+shopSelColor); }
     localStorage.setItem('bleuChar',''+activeChar);
     beep(523,1047,0.18,'sine',0.12);
   } else if(coinCount>=color.price) {
-    // buy + auto-equip
     coinCount-=color.price; if(coinCount<0) coinCount=0;
     localStorage.setItem('bleuCoins',coinCount);
-    if(shopChar===0){ unlockedColorsBleu.push(shopSelColor); localStorage.setItem('bleuColsB',JSON.stringify(unlockedColorsBleu)); activeColorBleu=shopSelColor; localStorage.setItem('bleuColorB',''+shopSelColor); }
-    else            { unlockedColorsGengar.push(shopSelColor); localStorage.setItem('bleuColsG',JSON.stringify(unlockedColorsGengar)); activeColorGengar=shopSelColor; localStorage.setItem('bleuColorG',''+shopSelColor); }
+    if(shopChar===0)     { unlockedColorsBleu.push(shopSelColor); localStorage.setItem('bleuColsB',JSON.stringify(unlockedColorsBleu)); activeColorBleu=shopSelColor;   localStorage.setItem('bleuColorB',''+shopSelColor); }
+    else if(shopChar===1){ unlockedColorsGengar.push(shopSelColor); localStorage.setItem('bleuColsG',JSON.stringify(unlockedColorsGengar)); activeColorGengar=shopSelColor; localStorage.setItem('bleuColorG',''+shopSelColor); }
+    else                 { unlockedColorsWorm.push(shopSelColor); localStorage.setItem('bleuColsW',JSON.stringify(unlockedColorsWorm)); activeColorWorm=shopSelColor;   localStorage.setItem('bleuColorW',''+shopSelColor); }
     activeChar=shopChar; localStorage.setItem('bleuChar',''+activeChar);
     beep(523,1047,0.28,'sine',0.15);
     [659,784,1047].forEach(function(f,ii){setTimeout(function(){beep(f,f,0.12,'sine',0.1);},ii*70);});
@@ -470,9 +472,9 @@ function drawShopTab() {
   ctx.fillText('🐉 '+coinCount.toLocaleString()+' / 100,000', W/2, 50);
 
   // ── Character selector tabs ──
-  var ctw=118, cgap=10, ctx0=W/2-(ctw+cgap/2);
-  var charNames=['BLEU','PHANTOM'], charLock=[false,!gengarUnlocked];
-  for(var _ci=0; _ci<2; _ci++){
+  var ctw=118, cgap=10, ctx0=W/2-Math.round((3*(ctw+cgap)-cgap)/2);
+  var charNames=['BLEU','PHANTOM','WORM'], charLock=[false,!gengarUnlocked,!wormUnlocked];
+  for(var _ci=0; _ci<3; _ci++){
     var _cx=ctx0+_ci*(ctw+cgap);
     var _isAct=shopChar===_ci;
     ctx.fillStyle=_isAct?'#0052FF33':'#ffffff08';
@@ -485,15 +487,17 @@ function drawShopTab() {
 
   // ── Character preview ──
   var _prevY = CHAR_PREVIEW_Y;
-  var _savedCB=activeColorBleu, _savedCG=activeColorGengar;
-  activeColorBleu = (shopChar===0) ? shopSelColor : activeColorBleu;
-  activeColorGengar= (shopChar===1) ? shopSelColor : activeColorGengar;
+  var _savedCB=activeColorBleu, _savedCG=activeColorGengar, _savedCW=activeColorWorm;
+  activeColorBleu   = (shopChar===0) ? shopSelColor : activeColorBleu;
+  activeColorGengar = (shopChar===1) ? shopSelColor : activeColorGengar;
+  activeColorWorm   = (shopChar===2) ? shopSelColor : activeColorWorm;
   ctx.save(); ctx.translate(W/2, _prevY); ctx.scale(1.9,1.9);
-  ctx.globalAlpha = (shopChar===1&&!gengarUnlocked) ? 0.35 : 1;
-  if(shopChar===0) drawBleu(0,0,frame*0.28,0);
-  else             drawPhantom(0,0,frame*0.28,0);
+  ctx.globalAlpha = ((shopChar===1&&!gengarUnlocked)||(shopChar===2&&!wormUnlocked)) ? 0.35 : 1;
+  if(shopChar===0)      drawBleu(0,0,frame*0.28,0);
+  else if(shopChar===1) drawPhantom(0,0,frame*0.28,0);
+  else                  drawWorm(0,0,frame*0.28,0);
   ctx.globalAlpha=1; ctx.restore();
-  activeColorBleu=_savedCB; activeColorGengar=_savedCG;
+  activeColorBleu=_savedCB; activeColorGengar=_savedCG; activeColorWorm=_savedCW;
 
   // ── Fan connector lines ──
   ctx.strokeStyle='#ffffff11'; ctx.lineWidth=1;
@@ -505,7 +509,7 @@ function drawShopTab() {
   }
 
   // ── Fan orbs ──
-  var _fanColors = shopChar===0 ? BLEU_COLORS : PHANTOM_COLORS;
+  var _fanColors = shopChar===0 ? BLEU_COLORS : shopChar===1 ? PHANTOM_COLORS : WORM_COLORS;
   for(var _fi2=0; _fi2<5; _fi2++){
     var _fa2=FAN_ANGLES[_fi2]*Math.PI/180;
     var _fx=W/2+FAN_RADIUS*Math.cos(_fa2), _fy=_prevY+FAN_RADIUS*Math.sin(_fa2);
@@ -585,10 +589,30 @@ function drawShopTab() {
     ctx.textAlign='center'; ctx.textBaseline='middle';
     ctx.fillText('UNLOCK  🐉 500', W/2, 363); ctx.textBaseline='alphabetic';
   }
+  // ── Worm unlock overlay ──
+  if(shopChar===2&&!wormUnlocked){
+    ctx.fillStyle='rgba(2,8,2,0.90)';
+    ctx.beginPath(); ctx.roundRect(W/2-122,93,244,430,14); ctx.fill();
+    ctx.strokeStyle='#44aa2255'; ctx.lineWidth=1.5; ctx.stroke();
+    ctx.save(); ctx.translate(W/2,240); ctx.scale(1.9,1.9); ctx.globalAlpha=0.7;
+    drawWorm(0,0,frame*0.22,0); ctx.globalAlpha=1; ctx.restore();
+    ctx.font='bold 15px Courier New'; ctx.fillStyle='#88dd44';
+    ctx.shadowColor='#88dd44'; ctx.shadowBlur=14;
+    ctx.fillText('🔒 WORM', W/2, 310); ctx.shadowBlur=0;
+    ctx.font='10px Courier New'; ctx.fillStyle='#ffffff44';
+    ctx.fillText('the wiggle champion', W/2, 328);
+    var _canUnlockW=coinCount>=500;
+    ctx.fillStyle=_canUnlockW?'#336611':'#ffffff08';
+    ctx.strokeStyle=_canUnlockW?'#88dd44':'#ffffff22'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.roundRect(W/2-82,344,164,38,10); ctx.fill(); ctx.stroke();
+    ctx.fillStyle=_canUnlockW?'#aaffaa':'#ffffff44'; ctx.font='bold 13px Courier New';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('UNLOCK  🐉 500', W/2, 363); ctx.textBaseline='alphabetic';
+  }
   ctx.textAlign='center';
 
   // ── SHIELD CARD — left side of shop, aligned with character preview ──
-  if(shopChar!==1||gengarUnlocked){
+  if((shopChar===0)||((shopChar===1)&&gengarUnlocked)||((shopChar===2)&&wormUnlocked)){
     var _sc = { x:6, y:190, w:108, h:115 };
     var _shdCanBuy = (coinCount>=80) && (shieldStock<3);
     // Card background
@@ -676,6 +700,15 @@ const PHANTOM_COLORS = [
 ];
 // backward-compat alias
 var GENGAR_COLORS = PHANTOM_COLORS;
+
+// ─── WORM COLOR PALETTES (5 skins) ─────────────────────────────────
+const WORM_COLORS = [
+  { name:'EARTHWORM', price:0,   body:'#d4735e', bodyLt:'#f0a888', shadow:'#9a3a28', belly:'#fad0c0', outline:'#7a2e1a', eyeColor:'#2a1008', glow:'#ff9966' },
+  { name:'GARDEN',    price:110, body:'#52aa3c', bodyLt:'#88d860', shadow:'#286618', belly:'#d0f8a8', outline:'#184c0c', eyeColor:'#0a2204', glow:'#66ee22' },
+  { name:'ROYAL',     price:190, body:'#8844cc', bodyLt:'#bb77ff', shadow:'#440088', belly:'#e8ccff', outline:'#2a0055', eyeColor:'#140028', glow:'#bb44ff' },
+  { name:'GOLDEN',    price:260, body:'#cc9a18', bodyLt:'#ffd040', shadow:'#885500', belly:'#fff0bb', outline:'#663300', eyeColor:'#2a1400', glow:'#ffc000' },
+  { name:'ABYSS',     price:400, body:'#1a3a5c', bodyLt:'#3a6ea0', shadow:'#080f1a', belly:'#96c8ee', outline:'#060c16', eyeColor:'#000510', glow:'#44aaff' },
+];
 
 // ─── LEADERBOARD TAB ────────────────────────────────────────────────
 function drawLeaderboardTab() {
@@ -911,9 +944,12 @@ const MILESTONES=[5,10,25,50,100];
 var activeChar=parseInt(localStorage.getItem('bleuChar')||'0');
 var activeColorBleu=parseInt(localStorage.getItem('bleuColorB')||'0');
 var activeColorGengar=parseInt(localStorage.getItem('bleuColorG')||'0');
+var activeColorWorm=parseInt(localStorage.getItem('bleuColorW')||'0');
 var unlockedColorsBleu=JSON.parse(localStorage.getItem('bleuColsB')||'[0]');
 var unlockedColorsGengar=JSON.parse(localStorage.getItem('bleuColsG')||'[]');
+var unlockedColorsWorm=JSON.parse(localStorage.getItem('bleuColsW')||'[]');
 var gengarUnlocked=localStorage.getItem('bleuGengar')==='1';
+var wormUnlocked=localStorage.getItem('bleuWorm')==='1';
 var shopChar=0, shopSelColor=0;
 var shieldStock=parseInt(localStorage.getItem('bleuShieldStock')||'0'); // purchasable shields
 var chestType='normal';
@@ -1483,6 +1519,156 @@ function drawPhantomFarts() {
     ctx.globalAlpha=1; ctx.restore();
   }
 }
+// ─── WORM — segmented wiggly creature ───────────────────────────────
+function drawWorm(x, y, flapAnim, angle) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(typeof angle === 'number' ? angle : 0);
+
+  var _ft  = (typeof bleuFlapTimer !== 'undefined') ? bleuFlapTimer : 0;
+  var _ftp = (_ft > 0) ? (1 - _ft / 18) : 0;   // 0→1 flap progress
+  var _flap = _ft > 0;
+
+  var wc = WORM_COLORS[activeColorWorm] || WORM_COLORS[0];
+  var cB = wc.body, cBL = wc.bodyLt, cBelly = wc.belly, cD = wc.shadow, cO = wc.outline, cEy = wc.eyeColor;
+  ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+
+  // ── Segment layout — tail(left) to head(right), facing RIGHT ──
+  //    [bx=base_x, r=radius]
+  var SD = [
+    { bx: -22, r: 5  },   // 0  tail tip
+    { bx: -14, r: 7  },   // 1  tail body
+    { bx:  -5, r: 9  },   // 2  mid body
+    { bx:   5, r: 10 },   // 3  neck / lower head
+    { bx:  14, r: 11 },   // 4  head
+  ];
+  var NS = SD.length;
+
+  // ── Compute per-segment Y offset ──
+  for (var i = 0; i < NS; i++) {
+    if (_flap) {
+      // Wave rolls from head (i=NS-1) → tail (i=0) with delay
+      var delayI = (NS - 1 - i) * 0.55;
+      var wt = Math.max(0, _ftp * Math.PI * 1.7 - delayI);
+      // amplitude grows toward head so head leads the jump
+      var amp = 7 + i * 0.8;
+      SD[i].dy = -Math.sin(Math.min(Math.PI, wt)) * amp;
+    } else {
+      // Idle gentle sinusoidal wave, head phase leads
+      var phase = frame * 0.065 - (NS - 1 - i) * 0.68;
+      SD[i].dy = Math.sin(phase) * 3;
+    }
+  }
+
+  // ── Draw segments tail → head (head drawn on top) ──
+  for (var si = 0; si < NS; si++) {
+    var s  = SD[si];
+    var sx = s.bx, sy = s.dy, sr = s.r;
+    var isHead = (si === NS - 1);
+
+    // Drop shadow
+    ctx.beginPath(); ctx.arc(sx + 1.2, sy + 2.5, sr * 0.88, 0, Math.PI*2);
+    ctx.fillStyle = cD; ctx.globalAlpha = 0.20; ctx.fill(); ctx.globalAlpha = 1;
+
+    // Main segment body
+    ctx.beginPath(); ctx.arc(sx, sy, sr, 0, Math.PI*2);
+    var _segGr = ctx.createRadialGradient(sx - sr*0.3, sy - sr*0.3, sr*0.05, sx, sy, sr);
+    _segGr.addColorStop(0, isHead ? cBL : cBL);
+    _segGr.addColorStop(0.5, isHead ? cBL : cB);
+    _segGr.addColorStop(1, cD);
+    ctx.fillStyle = _segGr; ctx.fill();
+    ctx.lineWidth = 1.5; ctx.strokeStyle = cO; ctx.stroke();
+
+    // Belly patch — pale oval on lower-front
+    ctx.beginPath();
+    ctx.ellipse(sx + sr*0.18, sy + sr*0.28, sr*0.52, sr*0.38, 0.25, 0, Math.PI*2);
+    ctx.fillStyle = cBelly; ctx.globalAlpha = 0.70; ctx.fill(); ctx.globalAlpha = 1;
+
+    // Segment ring (divider arc on right edge, darker line)
+    if (si < NS - 1) {
+      var nextS = SD[si + 1];
+      var midX = (sx + s.r * 0.7 + nextS.bx - nextS.r * 0.7) * 0.5;
+      ctx.beginPath();
+      ctx.arc(midX, (sy + nextS.dy) * 0.5, Math.min(sr, nextS.r) * 0.55, Math.PI * 0.1, Math.PI * 0.9);
+      ctx.lineWidth = 1.0; ctx.strokeStyle = cD; ctx.globalAlpha = 0.35; ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+
+    // Shine highlight
+    ctx.beginPath(); ctx.arc(sx - sr*0.28, sy - sr*0.32, sr*0.28, 0, Math.PI*2);
+    ctx.fillStyle = cBL; ctx.globalAlpha = 0.40; ctx.fill(); ctx.globalAlpha = 1;
+  }
+
+  // ── HEAD DETAILS (si = 4, bx=14, r=11) ──
+  var H0 = SD[NS-1];
+  var hx = H0.bx, hy = H0.dy, hr = H0.r;
+
+  // Antennae — two thin curved lines from top of head, with dots
+  var _antWave = Math.sin(frame * 0.08) * 1.5;
+  ctx.strokeStyle = cO; ctx.lineWidth = 1.3; ctx.globalAlpha = 0.9;
+  // Left antenna
+  ctx.beginPath();
+  ctx.moveTo(hx - 4, hy - hr + 1);
+  ctx.quadraticCurveTo(hx - 7 + _antWave, hy - hr - 6, hx - 5 + _antWave*0.5, hy - hr - 11);
+  ctx.stroke();
+  ctx.beginPath(); ctx.arc(hx - 5 + _antWave*0.5, hy - hr - 11, 2.2, 0, Math.PI*2);
+  ctx.fillStyle = cBL; ctx.fill(); ctx.strokeStyle = cO; ctx.lineWidth = 1; ctx.stroke();
+  // Right antenna
+  ctx.beginPath();
+  ctx.moveTo(hx + 2, hy - hr + 1);
+  ctx.quadraticCurveTo(hx + 6 - _antWave, hy - hr - 6, hx + 4 - _antWave*0.5, hy - hr - 11);
+  ctx.stroke();
+  ctx.beginPath(); ctx.arc(hx + 4 - _antWave*0.5, hy - hr - 11, 2.2, 0, Math.PI*2);
+  ctx.fillStyle = cBL; ctx.fill(); ctx.strokeStyle = cO; ctx.lineWidth = 1; ctx.stroke();
+  ctx.globalAlpha = 1;
+
+  // Eyes — two round eyes on upper-right face area
+  // Far eye (slight back)
+  ctx.beginPath(); ctx.arc(hx + 2, hy - 5, 3.8, 0, Math.PI*2);
+  ctx.fillStyle = '#ffffff'; ctx.fill();
+  ctx.lineWidth = 1.1; ctx.strokeStyle = cO; ctx.stroke();
+  ctx.beginPath(); ctx.arc(hx + 3, hy - 5, 2.1, 0, Math.PI*2);
+  ctx.fillStyle = cEy; ctx.fill();
+  ctx.beginPath(); ctx.arc(hx + 2.2, hy - 6.2, 0.85, 0, Math.PI*2);
+  ctx.fillStyle = '#ffffff'; ctx.fill();
+
+  // Near eye (front, larger)
+  ctx.beginPath(); ctx.arc(hx + 8, hy - 4, 4.8, 0, Math.PI*2);
+  ctx.fillStyle = '#ffffff'; ctx.fill();
+  ctx.lineWidth = 1.3; ctx.strokeStyle = cO; ctx.stroke();
+  ctx.beginPath(); ctx.arc(hx + 9, hy - 4, 2.8, 0, Math.PI*2);
+  ctx.fillStyle = cEy; ctx.fill();
+  ctx.beginPath(); ctx.arc(hx + 8, hy - 5.5, 1.1, 0, Math.PI*2);
+  ctx.fillStyle = '#ffffff'; ctx.fill();
+
+  // Rosy cheeks
+  ctx.beginPath(); ctx.ellipse(hx + 10, hy + 2, 3.5, 2.2, 0.1, 0, Math.PI*2);
+  ctx.fillStyle = 'rgba(255,140,130,0.55)'; ctx.fill();
+  ctx.beginPath(); ctx.ellipse(hx + 2, hy + 2, 2.8, 1.8, 0, 0, Math.PI*2);
+  ctx.fillStyle = 'rgba(255,140,130,0.40)'; ctx.fill();
+
+  // Smile
+  ctx.beginPath();
+  ctx.arc(hx + 7, hy + 3, 4.5, 0.15, Math.PI - 0.15);
+  ctx.lineWidth = 1.6; ctx.strokeStyle = cO; ctx.stroke();
+
+  // ── Score flash glow ──
+  if (typeof scoreGlow !== 'undefined' && scoreGlow > 0) {
+    ctx.globalAlpha = Math.min(0.38, scoreGlow / 15 * 0.42);
+    ctx.fillStyle = wc.glow;
+    ctx.beginPath(); ctx.arc(0, 0, 28, 0, Math.PI*2); ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+  // ── Wallet glow ──
+  if (typeof walletAddress !== 'undefined' && walletAddress) {
+    var _wg = 0.07 + 0.04 * Math.sin(frame * 0.06);
+    ctx.globalAlpha = _wg; ctx.fillStyle = '#00FF88';
+    ctx.beginPath(); ctx.arc(0, 0, 32, 0, Math.PI*2); ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+  ctx.restore();
+}
+
 // ─── BRETT — coming soon ──
 function drawBrett(x, y, flapAnim, vy) { drawBleu(x, y, flapAnim, vy); }
 function drawBrett_ORIG(x, y, flapAnim, vy) {
@@ -1642,7 +1828,8 @@ function drawBrett_ORIG(x, y, flapAnim, vy) {
 
 // ─── CHARACTER DISPATCHER ────────────────────
 function drawCharacter(x, y, flap, angle) {
-  if(activeChar===1 && gengarUnlocked) drawPhantom(x, y, flap, angle);
+  if(activeChar===2 && wormUnlocked)   drawWorm(x, y, flap, angle);
+  else if(activeChar===1 && gengarUnlocked) drawPhantom(x, y, flap, angle);
   else drawBleu(x, y, flap, angle);
 }
 
@@ -1731,12 +1918,14 @@ function drawNFTBanner() {
   ctx.fillText('New playable character unlocked!', W/2, H/2+0);
   ctx.fillStyle = '#00D4FFaa'; ctx.font = '9px Courier New';
   ctx.fillText('Change character on the home screen', W/2, H/2+16);
-  // Mini Brett preview
+  // Mini character preview
   ctx.globalAlpha = alpha * 0.9;
   ctx.restore();
   ctx.save();
   ctx.globalAlpha = alpha;
-  drawBrett(W/2, H/2+52, frame*0.22, 0);
+  if(activeChar===2 && wormUnlocked)        drawWorm(W/2, H/2+52, frame*0.22, 0);
+  else if(activeChar===1 && gengarUnlocked) drawPhantom(W/2, H/2+52, frame*0.22, 0);
+  else                                       drawBleu(W/2, H/2+52, frame*0.22, 0);
   ctx.restore();
 }
 
@@ -4576,8 +4765,8 @@ function handleClick(ex, ey) {
   if(gameState === 'idle') {
     if(idleTab==='shop'){
       // Char selector tabs
-      var _ctw=118,_cgap=10,_ctx0=W/2-(_ctw+_cgap/2);
-      for(var _ci2=0;_ci2<2;_ci2++){
+      var _ctw=118,_cgap=10,_ctx0=W/2-Math.round((3*(_ctw+_cgap)-_cgap)/2);
+      for(var _ci2=0;_ci2<3;_ci2++){
         var _cx2=_ctx0+_ci2*(_ctw+_cgap);
         if(cx>=_cx2&&cx<=_cx2+_ctw&&cy>=58&&cy<=86){ shopChar=_ci2; shopSelColor=0; beep(440,880,0.06,'sine',0.08); return; }
       }
@@ -4591,7 +4780,7 @@ function handleClick(ex, ey) {
       var _btnY2=CHAR_PREVIEW_Y+146;
       if(cx>=W/2-76&&cx<=W/2+76&&cy>=_btnY2&&cy<=_btnY2+34){ shopBuyOrEquip(); return; }
       // Shield purchase — left card (x:6, y:190, w:108, buy button at y:287)
-      if((shopChar!==1||gengarUnlocked)&&cx>=6&&cx<=114&&cy>=190&&cy<=315){
+      if(((shopChar===0)||((shopChar===1)&&gengarUnlocked)||((shopChar===2)&&wormUnlocked))&&cx>=6&&cx<=114&&cy>=190&&cy<=315){
         if(shieldStock>=3){ beep(220,150,0.1,'sawtooth',0.06); return; }
         if(coinCount>=80){
           coinCount-=80; if(coinCount<0)coinCount=0; localStorage.setItem('bleuCoins',coinCount);
@@ -4599,6 +4788,21 @@ function handleClick(ex, ey) {
           beep(523,1047,0.22,'sine',0.13);
           [659,784].forEach(function(f,i){setTimeout(function(){beep(f,f,0.1,'sine',0.09);},i*60);});
           spawnParticles(W/2,H/2,'#00FF88',10);
+        } else { beep(220,150,0.12,'sawtooth',0.08); hitFlash=3; }
+        return;
+      }
+      // Worm unlock button
+      if(shopChar===2&&!wormUnlocked&&cx>=W/2-82&&cx<=W/2+82&&cy>=344&&cy<=382){
+        if(coinCount>=500){
+          coinCount-=500; localStorage.setItem('bleuCoins',coinCount);
+          wormUnlocked=true; localStorage.setItem('bleuWorm','1');
+          unlockedColorsWorm=[0]; localStorage.setItem('bleuColsW',JSON.stringify(unlockedColorsWorm));
+          activeChar=2; activeColorWorm=0;
+          localStorage.setItem('bleuChar','2'); localStorage.setItem('bleuColorW','0');
+          beep(523,880,0.3,'sine',0.16);
+          [440,660,880].forEach(function(f,i){setTimeout(function(){beep(f,f*1.2,0.12,'sine',0.1);},i*80);});
+          spawnParticles(W/2,H/2,'#88dd44',18); spawnParticles(W/2,H/2,'#ffffff',8);
+          if(navigator.vibrate) navigator.vibrate([30,15,60,15,100]);
         } else { beep(220,150,0.12,'sawtooth',0.08); hitFlash=3; }
         return;
       }
