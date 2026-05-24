@@ -1599,58 +1599,120 @@ function drawWorm(x, y, flapAnim, angle) {
     ctx.fillStyle = cBL; ctx.globalAlpha = 0.40; ctx.fill(); ctx.globalAlpha = 1;
   }
 
-  // ── HEAD DETAILS (si = 4, bx=14, r=11) ──
+  // ══ HEAD DETAILS — premium face ══
   var H0 = SD[NS-1];
   var hx = H0.bx, hy = H0.dy, hr = H0.r;
 
-  // Antennae — two thin curved lines from top of head, with dots
-  var _antWave = Math.sin(frame * 0.08) * 1.5;
-  ctx.strokeStyle = cO; ctx.lineWidth = 1.3; ctx.globalAlpha = 0.9;
-  // Left antenna
-  ctx.beginPath();
-  ctx.moveTo(hx - 4, hy - hr + 1);
-  ctx.quadraticCurveTo(hx - 7 + _antWave, hy - hr - 6, hx - 5 + _antWave*0.5, hy - hr - 11);
-  ctx.stroke();
-  ctx.beginPath(); ctx.arc(hx - 5 + _antWave*0.5, hy - hr - 11, 2.2, 0, Math.PI*2);
-  ctx.fillStyle = cBL; ctx.fill(); ctx.strokeStyle = cO; ctx.lineWidth = 1; ctx.stroke();
-  // Right antenna
-  ctx.beginPath();
-  ctx.moveTo(hx + 2, hy - hr + 1);
-  ctx.quadraticCurveTo(hx + 6 - _antWave, hy - hr - 6, hx + 4 - _antWave*0.5, hy - hr - 11);
-  ctx.stroke();
-  ctx.beginPath(); ctx.arc(hx + 4 - _antWave*0.5, hy - hr - 11, 2.2, 0, Math.PI*2);
-  ctx.fillStyle = cBL; ctx.fill(); ctx.strokeStyle = cO; ctx.lineWidth = 1; ctx.stroke();
+  // ── Antennae elegantes com glow nas pontas ──
+  var _aw = Math.sin(frame * 0.07) * 2.2;
+  var _ant = [
+    { sx: hx-3, sy: hy-hr+1, cx: hx-7+_aw, cy: hy-hr-7, ex: hx-5+_aw*0.6, ey: hy-hr-14 },
+    { sx: hx+3, sy: hy-hr+1, cx: hx+7-_aw, cy: hy-hr-7, ex: hx+5-_aw*0.6, ey: hy-hr-14 },
+  ];
+  _ant.forEach(function(a, ai) {
+    // Haste
+    ctx.beginPath(); ctx.moveTo(a.sx, a.sy);
+    ctx.bezierCurveTo(a.cx, a.cy, a.cx, a.cy, a.ex, a.ey);
+    ctx.strokeStyle = cO; ctx.lineWidth = 1.3; ctx.globalAlpha = 0.85; ctx.stroke();
+    // Glow halo na ponta
+    var _tgl = ctx.createRadialGradient(a.ex, a.ey, 0, a.ex, a.ey, 6);
+    _tgl.addColorStop(0, cBL+'dd'); _tgl.addColorStop(1, cBL+'00');
+    ctx.fillStyle = _tgl; ctx.globalAlpha = 0.55;
+    ctx.beginPath(); ctx.arc(a.ex, a.ey, 6, 0, Math.PI*2); ctx.fill();
+    // Bolinha sólida
+    ctx.beginPath(); ctx.arc(a.ex, a.ey, 2.6, 0, Math.PI*2);
+    ctx.fillStyle = cBL; ctx.globalAlpha = 1; ctx.fill();
+    ctx.strokeStyle = cO; ctx.lineWidth = 0.9; ctx.stroke();
+    // Micro-highlight
+    ctx.beginPath(); ctx.arc(a.ex - 0.8, a.ey - 0.8, 0.9, 0, Math.PI*2);
+    ctx.fillStyle = '#ffffff'; ctx.globalAlpha = 0.9; ctx.fill();
+  });
   ctx.globalAlpha = 1;
 
-  // Eyes — two round eyes on upper-right face area
-  // Far eye (slight back)
-  ctx.beginPath(); ctx.arc(hx + 2, hy - 5, 3.8, 0, Math.PI*2);
-  ctx.fillStyle = '#ffffff'; ctx.fill();
-  ctx.lineWidth = 1.1; ctx.strokeStyle = cO; ctx.stroke();
-  ctx.beginPath(); ctx.arc(hx + 3, hy - 5, 2.1, 0, Math.PI*2);
-  ctx.fillStyle = cEy; ctx.fill();
-  ctx.beginPath(); ctx.arc(hx + 2.2, hy - 6.2, 0.85, 0, Math.PI*2);
-  ctx.fillStyle = '#ffffff'; ctx.fill();
+  // ── Olhos com íris gradiente, cílios e blink ──
+  var _blink = Math.abs(Math.sin(frame * 0.033)) < 0.07; // pisca raro
 
-  // Near eye (front, larger)
-  ctx.beginPath(); ctx.arc(hx + 8, hy - 4, 4.8, 0, Math.PI*2);
-  ctx.fillStyle = '#ffffff'; ctx.fill();
-  ctx.lineWidth = 1.3; ctx.strokeStyle = cO; ctx.stroke();
-  ctx.beginPath(); ctx.arc(hx + 9, hy - 4, 2.8, 0, Math.PI*2);
-  ctx.fillStyle = cEy; ctx.fill();
-  ctx.beginPath(); ctx.arc(hx + 8, hy - 5.5, 1.1, 0, Math.PI*2);
-  ctx.fillStyle = '#ffffff'; ctx.fill();
+  // Helper: desenha um olho completo
+  function _drawEye(ex, ey, rS, rI, rP, lashes) {
+    ctx.save(); ctx.translate(ex, ey);
+    ctx.scale(1, _blink ? 0.10 : 1);
+    // Esclera branca
+    ctx.beginPath(); ctx.ellipse(0, 0, rS, rS*1.2, 0, 0, Math.PI*2);
+    ctx.fillStyle = '#ffffff'; ctx.fill();
+    ctx.lineWidth = 1.1; ctx.strokeStyle = cO; ctx.stroke();
+    // Íris gradiente
+    var _ig = ctx.createRadialGradient(-rI*0.25, -rI*0.25, rI*0.05, 0, 0, rI);
+    _ig.addColorStop(0,   cBL+'ff');
+    _ig.addColorStop(0.55, cEy+'ee');
+    _ig.addColorStop(1,   cD+'cc');
+    ctx.beginPath(); ctx.ellipse(0, 0, rI, rI*1.18, 0, 0, Math.PI*2);
+    ctx.fillStyle = _ig; ctx.fill();
+    // Pupila
+    ctx.beginPath(); ctx.ellipse(0.2, 0.3, rP, rP*1.2, 0, 0, Math.PI*2);
+    ctx.fillStyle = '#080808'; ctx.fill();
+    // Highlight principal (brilho grande)
+    ctx.beginPath(); ctx.arc(-rP*0.7, -rP*1.0, rP*0.6, 0, Math.PI*2);
+    ctx.fillStyle = '#ffffff'; ctx.globalAlpha = 0.95; ctx.fill(); ctx.globalAlpha = 1;
+    // Highlight secundário (mini)
+    ctx.beginPath(); ctx.arc(rP*0.55, rP*0.55, rP*0.28, 0, Math.PI*2);
+    ctx.fillStyle = '#ffffff'; ctx.globalAlpha = 0.55; ctx.fill(); ctx.globalAlpha = 1;
+    // Sombra de pálpebra (arco escuro no topo)
+    ctx.beginPath(); ctx.arc(0, -rS*0.2, rS*1.05, Math.PI+0.45, Math.PI*2-0.45);
+    ctx.lineWidth = 1.4; ctx.strokeStyle = cO; ctx.globalAlpha = 0.28; ctx.stroke();
+    ctx.restore();
+    if (lashes && !_blink) {
+      // Cílios no topo do olho
+      ctx.save(); ctx.strokeStyle = cO; ctx.lineWidth = 1.1; ctx.globalAlpha = 0.75;
+      var _lA = [-0.85, -0.48, -0.12, 0.22];
+      _lA.forEach(function(la) {
+        var ang = la - Math.PI/2;
+        var ox = ex + Math.cos(ang)*rS*1.0, oy = ey + Math.sin(ang)*rS*1.2;
+        var lx = ex + Math.cos(ang)*(rS*1.55) - 0.5, ly = ey + Math.sin(ang)*(rS*1.55) - 1.8;
+        ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(lx, ly); ctx.stroke();
+      });
+      ctx.globalAlpha = 1; ctx.restore();
+    }
+  }
 
-  // Rosy cheeks
-  ctx.beginPath(); ctx.ellipse(hx + 10, hy + 2, 3.5, 2.2, 0.1, 0, Math.PI*2);
-  ctx.fillStyle = 'rgba(255,140,130,0.55)'; ctx.fill();
-  ctx.beginPath(); ctx.ellipse(hx + 2, hy + 2, 2.8, 1.8, 0, 0, Math.PI*2);
-  ctx.fillStyle = 'rgba(255,140,130,0.40)'; ctx.fill();
+  _drawEye(hx+2,  hy-5, 4.0, 2.8, 1.6, false);   // far eye  (smaller, no lashes)
+  _drawEye(hx+9,  hy-5, 5.2, 3.6, 2.0, true);    // near eye (bigger, with lashes)
 
-  // Smile
+  // ── Bochechas — degradê radial suave ──
+  [[hx+11, hy+2, 5.5],[hx+2, hy+2, 4.2]].forEach(function(c,i) {
+    var _cg = ctx.createRadialGradient(c[0],c[1],0, c[0],c[1],c[2]);
+    _cg.addColorStop(0,'rgba(255,128,118,'+(i===0?'0.60':'0.45')+')');
+    _cg.addColorStop(1,'rgba(255,128,118,0)');
+    ctx.fillStyle=_cg; ctx.beginPath(); ctx.arc(c[0],c[1],c[2],0,Math.PI*2); ctx.fill();
+  });
+
+  // ── Boca — sorriso largo com dentes e covinhas ──
+  var _mx = hx+7, _my = hy+4, _mr = 5;
+  // Interior escuro do sorriso
   ctx.beginPath();
-  ctx.arc(hx + 7, hy + 3, 4.5, 0.15, Math.PI - 0.15);
-  ctx.lineWidth = 1.6; ctx.strokeStyle = cO; ctx.stroke();
+  ctx.arc(_mx, _my, _mr, 0.18, Math.PI-0.18);
+  ctx.lineTo(_mx-_mr*Math.cos(0.18), _my);
+  ctx.fillStyle = cD; ctx.globalAlpha = 0.7; ctx.fill(); ctx.globalAlpha = 1;
+  // Dentes (faixa branca)
+  ctx.beginPath();
+  ctx.moveTo(_mx-_mr*0.85+0.5, _my+0.5);
+  ctx.lineTo(_mx+_mr*0.85-0.5, _my+0.5);
+  ctx.lineWidth = 2.8; ctx.strokeStyle = '#fffcf6'; ctx.globalAlpha = 0.88; ctx.stroke();
+  // Divisórias dos dentes
+  for(var _td=1;_td<4;_td++){
+    ctx.beginPath();
+    ctx.moveTo(_mx - _mr*0.7 + _td*(_mr*1.4/4), _my-0.5);
+    ctx.lineTo(_mx - _mr*0.7 + _td*(_mr*1.4/4), _my+1.5);
+    ctx.lineWidth=0.7; ctx.strokeStyle=cO; ctx.globalAlpha=0.4; ctx.stroke();
+  }
+  ctx.globalAlpha=1;
+  // Arco do sorriso
+  ctx.beginPath(); ctx.arc(_mx, _my, _mr, 0.18, Math.PI-0.18);
+  ctx.lineWidth=1.8; ctx.strokeStyle=cO; ctx.stroke();
+  // Covinhas nos cantos
+  [-1,1].forEach(function(side){
+    ctx.beginPath(); ctx.arc(_mx + side*_mr*0.88, _my+0.2, 1.3, 0, Math.PI*2);
+    ctx.fillStyle=cO; ctx.globalAlpha=0.3; ctx.fill(); ctx.globalAlpha=1;
+  });
 
   // ── Score flash glow ──
   if (typeof scoreGlow !== 'undefined' && scoreGlow > 0) {
