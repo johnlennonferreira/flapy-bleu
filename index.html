@@ -1679,6 +1679,60 @@ function drawWorm(x, y, flapAnim, angle) {
   _drawEye(hx+2,  hy-7, 5.0, 3.5, 2.0, false);  // far eye  (smaller, no lashes)
   _drawEye(hx+10, hy-6, 6.5, 4.5, 2.5, true);   // near eye (bigger, with lashes)
 
+  // ── Boca kawaii — open round smile com lingua e dentes ──
+  var _mox = hx + 10, _moy = hy + 5;
+
+  // Bochechinhas sutis perto da boca
+  [[_mox-5.5, _moy-0.5, 5],[_mox+6, _moy-0.5, 4]].forEach(function(c){
+    var _ckg = ctx.createRadialGradient(c[0],c[1],0, c[0],c[1],c[2]);
+    _ckg.addColorStop(0,'rgba(255,120,110,0.48)'); _ckg.addColorStop(1,'rgba(255,120,110,0)');
+    ctx.fillStyle=_ckg; ctx.beginPath(); ctx.arc(c[0],c[1],c[2],0,Math.PI*2); ctx.fill();
+  });
+
+  // Halo suave de lábio
+  var _lhg = ctx.createRadialGradient(_mox,_moy,0, _mox,_moy,8);
+  _lhg.addColorStop(0,'rgba(255,155,145,0.35)'); _lhg.addColorStop(1,'rgba(255,155,145,0)');
+  ctx.fillStyle=_lhg; ctx.beginPath(); ctx.arc(_mox,_moy,8,0,Math.PI*2); ctx.fill();
+
+  // Cavidade da boca — oval escuro
+  ctx.beginPath(); ctx.ellipse(_mox, _moy+0.5, 5.5, 4, 0, 0, Math.PI*2);
+  ctx.fillStyle=cD; ctx.globalAlpha=0.72; ctx.fill(); ctx.globalAlpha=1;
+
+  // Língua — almofada rosa fofa
+  ctx.beginPath(); ctx.ellipse(_mox, _moy+2, 3.2, 2.4, 0, 0, Math.PI*2);
+  ctx.fillStyle='#ff8899'; ctx.fill();
+  // Divisória da língua (a linha do meio)
+  ctx.beginPath(); ctx.moveTo(_mox, _moy+0.2); ctx.lineTo(_mox, _moy+3.8);
+  ctx.lineWidth=0.8; ctx.strokeStyle='#cc4466'; ctx.globalAlpha=0.45; ctx.stroke();
+  ctx.globalAlpha=1;
+  // Brilho na língua
+  ctx.beginPath(); ctx.ellipse(_mox-1, _moy+1.2, 1.2, 0.8, -0.3, 0, Math.PI*2);
+  ctx.fillStyle='#ffbbcc'; ctx.globalAlpha=0.7; ctx.fill(); ctx.globalAlpha=1;
+
+  // Dentinhos — faixa branca na metade superior da boca
+  ctx.save();
+  ctx.beginPath(); ctx.ellipse(_mox, _moy+0.5, 5.5, 4, 0, Math.PI, Math.PI*2); ctx.clip();
+  ctx.fillStyle='#fffaf7';
+  ctx.fillRect(_mox-5.5, _moy-3.5, 11, 4);
+  // Divisórias dos dentinhos
+  ctx.strokeStyle=cO; ctx.lineWidth=0.55; ctx.globalAlpha=0.35;
+  [1,2,3].forEach(function(t){
+    ctx.beginPath();
+    ctx.moveTo(_mox-5.5+t*2.75, _moy-3.5); ctx.lineTo(_mox-5.5+t*2.75, _moy+0.5);
+    ctx.stroke();
+  });
+  ctx.globalAlpha=1; ctx.restore();
+
+  // Contorno final da boca
+  ctx.beginPath(); ctx.ellipse(_mox, _moy+0.5, 5.5, 4, 0, 0, Math.PI*2);
+  ctx.lineWidth=1.7; ctx.strokeStyle=cO; ctx.stroke();
+
+  // Covinhas nos cantos
+  [-1,1].forEach(function(s){
+    ctx.beginPath(); ctx.arc(_mox+s*5.8, _moy+0.5, 1.4, 0, Math.PI*2);
+    ctx.fillStyle='rgba(180,80,80,0.28)'; ctx.fill();
+  });
+
   // ── Score flash glow ──
   if (typeof scoreGlow !== 'undefined' && scoreGlow > 0) {
     ctx.globalAlpha = Math.min(0.38, scoreGlow / 15 * 0.42);
