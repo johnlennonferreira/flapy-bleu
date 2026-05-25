@@ -4026,7 +4026,7 @@ function drawMidGameShop() {
   }
 
   ctx.font = '9px Courier New'; ctx.fillStyle = '#ffffff33';
-  ctx.fillText('toque no card para comprar (máx 3)', W/2, _cy + _ch + 14);
+  ctx.fillText('tap the card to buy (max 3)', W/2, _cy + _ch + 14);
 
   // ── CONTINUAR button ──
   var _btnY = H - 78;
@@ -4699,7 +4699,7 @@ function loop(ts) {
     ctx.fillStyle='#0052FF'; ctx.strokeStyle='#00D4FF'; ctx.lineWidth=2;
     ctx.beginPath(); ctx.roundRect(-80,-18,160,36,10); ctx.fill(); ctx.stroke();
     ctx.fillStyle='#fff'; ctx.font='bold 14px Courier New'; ctx.textBaseline='middle';
-    ctx.fillText('▶  CONTINUAR', 0, 0); ctx.textBaseline='alphabetic';
+    ctx.fillText('▶  CONTINUE', 0, 0); ctx.textBaseline='alphabetic';
     ctx.restore();
     // corações no HUD também
     drawLivesHUD();
