@@ -3822,32 +3822,18 @@ function drawLivesHUD() {
     ctx.textBaseline='alphabetic'; ctx.globalAlpha=1;
     ctx.restore();
   }
-  // Shield indicator — same bezier shape as shop card, green
+  // Shield indicator — usa drawShieldItem diretamente: 100% idêntico ao in-game e à loja
   if(shield>0){
-    var _sp = 0.88 + 0.12*Math.sin(frame*0.18);
-    var _hr = 10; // HUD shield radius
-    ctx.save(); ctx.translate(18, 46);
-    // halo pulse
-    ctx.globalAlpha = (0.14 + 0.08*Math.sin(frame*0.18)) * _sp;
-    ctx.fillStyle = '#00FF88';
-    ctx.beginPath(); ctx.arc(0, 0, _hr*1.6, 0, Math.PI*2); ctx.fill();
-    ctx.globalAlpha = _sp;
-    // shield body (bezier — identical to shop)
-    ctx.fillStyle = '#00CC66'; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.moveTo(0,-_hr); ctx.bezierCurveTo(_hr,-_hr,_hr,0,0,_hr);
-    ctx.bezierCurveTo(-_hr,0,-_hr,-_hr,0,-_hr); ctx.closePath();
-    ctx.fill(); ctx.stroke();
-    // cross stripe
-    ctx.strokeStyle = '#ffffff66'; ctx.lineWidth = 1.2;
-    ctx.beginPath(); ctx.moveTo(0,-_hr*0.7); ctx.lineTo(0,_hr*0.7); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(-_hr*0.55,0); ctx.lineTo(_hr*0.55,0); ctx.stroke();
-    // count or single indicator
-    ctx.fillStyle = '#001a0f'; ctx.font = 'bold 9px Arial';
-    ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.globalAlpha = _sp;
-    ctx.fillText(shield > 1 ? shield : '✦', 0, 0.5);
-    ctx.textBaseline='alphabetic'; ctx.globalAlpha=1; ctx.restore();
+    ctx.save(); ctx.translate(18, 46); ctx.scale(0.72, 0.72); // escala p/ HUD (~r=10)
+    drawShieldItem(0, 0);
+    ctx.restore();
+    // contagem se > 1
+    if(shield > 1){
+      ctx.fillStyle='#00FF88'; ctx.font='bold 10px Courier New';
+      ctx.textAlign='left'; ctx.textBaseline='middle';
+      ctx.fillText('x'+shield, 31, 46);
+      ctx.textBaseline='alphabetic';
+    }
     // flash vermelho ao quebrar
     if(shieldBreak>0){
       ctx.globalAlpha=shieldBreak/10*0.5;
@@ -4556,12 +4542,7 @@ function loop(ts) {
     ctx.textBaseline='alphabetic';
     ctx.globalAlpha=1;
     ctx.restore();
-    // HUD — coin counter (top right, adjusted for wallet badge)
-    drawCoin(W - 38, walletAddress ? 48 : 34);
-    ctx.shadowColor = '#88ccff'; ctx.shadowBlur = 6;
-    ctx.fillStyle = '#d8f4ff'; ctx.font = 'bold 13px Courier New'; ctx.textAlign = 'left';
-    ctx.fillText(coinCount, W - 24, walletAddress ? 53 : 39);
-    ctx.shadowBlur = 0;
+    // HUD — coin counter removido (sobrepunha botão de som)
     // progress bar — next phase, below score card
     var progress = (score % 15) / 15;
     ctx.fillStyle = '#ffffff10';
