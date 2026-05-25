@@ -748,6 +748,17 @@ function drawLeaderboardTab() {
   ctx.fillStyle=rg; ctx.shadowColor='#FFD700'; ctx.shadowBlur=14;
   ctx.fillText('⛓  ONCHAIN RANK', W/2, H/2-128); ctx.shadowBlur=0;
 
+  // ── Testnet badge ──
+  if(TESTNET){
+    ctx.save();
+    ctx.fillStyle='#ff990022'; ctx.strokeStyle='#ff9900'; ctx.lineWidth=1.2;
+    ctx.beginPath(); ctx.roundRect(W/2-52,H/2-136,104,18,6); ctx.fill(); ctx.stroke();
+    ctx.fillStyle='#ffaa33'; ctx.font='bold 9px Courier New';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('⚠ TESTNET — Base Sepolia', W/2, H/2-127);
+    ctx.restore();
+  }
+
   // ── Wallet status bar ──
   var wy = H/2-110;
   if(walletAddress){
@@ -981,14 +992,20 @@ var shopChar=0, shopSelColor=0;
 var shieldStock=parseInt(localStorage.getItem('bleuShieldStock')||'0'); // purchasable shields
 var chestType='normal';
 
-// ─── ONCHAIN CONFIG ──────────────────────────────────────────
-// 1. Cole o hex do seu Builder Code: dashboard.base.org → Builder Codes
+// ─── ONCHAIN CONFIG (TESTNET — Base Sepolia) ─────────────────
+// Quando o jogo estiver pronto para produção:
+//   BASE_CHAIN_ID    → '0x2105'  (Base mainnet, 8453)
+//   USDC_CONTRACT    → '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
+//   TREASURY_WALLET  → sua carteira real
+//   TESTNET          → false
+var TESTNET = true;
+// Builder Code: dashboard.base.org → Builder Codes → copiar hex
 var BUILDER_CODE_HEX = '';
-// 2. Sua carteira para receber USDC (atualize com seu endereço)
-var TREASURY_WALLET  = '0x0000000000000000000000000000000000000000';
-// USDC na Base mainnet (6 decimais)
-var USDC_CONTRACT    = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
-var BASE_CHAIN_ID    = '0x2105'; // 8453
+// Tesouraria: na testnet qualquer endereço serve (USDC sem valor)
+var TREASURY_WALLET  = '0x000000000000000000000000000000000000dEaD';
+// Base Sepolia (testnet)
+var USDC_CONTRACT    = '0x036CbD53842c5426634e7929541eC2318f3dCF7e';
+var BASE_CHAIN_ID    = '0x14a34'; // 84532 = Base Sepolia
 // Preços USDC por slot de cor [Bleu, Phantom, Worm] (6 decimais = 1 USDC)
 var USDC_COLOR_PRICES = [
   [0, 100000, 200000, 250000, 350000],  // Bleu:    free, $0.10, $0.20, $0.25, $0.35
@@ -996,7 +1013,7 @@ var USDC_COLOR_PRICES = [
   [0, 100000, 200000, 300000, 400000],  // Worm:    free, $0.10, $0.20, $0.30, $0.40
 ];
 var USDC_CHAR_UNLOCK = 500000; // $0.50 para desbloquear Phantom ou Worm
-function fmtUSDC(a6){ return '$'+(a6/1e6).toFixed(2); }
+function fmtUSDC(a6){ return (TESTNET?'[TEST] ':'')+'$'+(a6/1e6).toFixed(2); }
 
 // ─── WALLET ──────────────────────────────────────────────────
 var walletAddress    = null;
@@ -1082,10 +1099,11 @@ function ensureBaseNetwork(cb) {
       .catch(function(err){
         if(err.code===4902){
           window.ethereum.request({method:'wallet_addEthereumChain',params:[{
-            chainId:BASE_CHAIN_ID, chainName:'Base',
+            chainId:BASE_CHAIN_ID,
+            chainName: TESTNET ? 'Base Sepolia' : 'Base',
             nativeCurrency:{name:'ETH',symbol:'ETH',decimals:18},
-            rpcUrls:['https://mainnet.base.org'],
-            blockExplorerUrls:['https://basescan.org']
+            rpcUrls:[ TESTNET ? 'https://sepolia.base.org' : 'https://mainnet.base.org'],
+            blockExplorerUrls:[ TESTNET ? 'https://sepolia.basescan.org' : 'https://basescan.org']
           }]}).then(cb).catch(function(){});
         }
       });
