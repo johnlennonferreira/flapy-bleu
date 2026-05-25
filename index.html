@@ -975,6 +975,7 @@ var lastScore=parseInt(localStorage.getItem('bleuLastScore')||'0');
 var runPhase=0; // fase mais longe desta run
 var bestPhaseEver=parseInt(localStorage.getItem('bleuBestPhase')||'0');
 var shareFlash=0; // feedback do botão compartilhar
+var deadTapCount=0; // exige 3 toques para reiniciar (anti-acidente)
 const MILESTONES=[5,10,25,50,100];
 var activeChar=parseInt(localStorage.getItem('bleuChar')||'0');
 var activeColorBleu=parseInt(localStorage.getItem('bleuColorB')||'0');
@@ -1188,7 +1189,7 @@ function resetGame() {
   shieldStock = 0; localStorage.setItem('bleuShieldStock', 0); // reseta ao morrer — compra denovo
   phaseShopPending = false;
   shieldItems = []; shieldBreak = 0;
-  runPhase = 0; shareFlash = 0; bleuAngle = 0; bleuFlapTimer = 0; phantomFartParticles = [];
+  runPhase = 0; shareFlash = 0; bleuAngle = 0; bleuFlapTimer = 0; phantomFartParticles = []; deadTapCount = 0;
   // lastScore mantido — rank tab mostra última pontuação da run anterior
 }
 resetGame();
@@ -4620,7 +4621,7 @@ function loop(ts) {
         lastScore=score; localStorage.setItem('bleuLastScore',lastScore); totalScore+=score; localStorage.setItem('bleuTotal',totalScore);
         if(score>0) top5=saveTop5(score);
         if(runPhase > bestPhaseEver){ bestPhaseEver=runPhase; localStorage.setItem('bleuBestPhase', bestPhaseEver); }
-        gameState='dead'; screenShake=14; hitFlash=8; stopMusic();
+        gameState='dead'; screenShake=14; hitFlash=8; stopMusic(); deadTapCount=0;
         if(score>0) submitWalletScore(score);
         // Death chest disabled (coins only from phase completion)
         deadChest={active:false,opened:false,coins:0,anim:0,clicks:0};
@@ -4785,13 +4786,21 @@ function loop(ts) {
     ctx.fillText(shareFlash>0 ? '✓ COPIED!' : '🔗 SHARE', W/2, shareY+1);
     ctx.textBaseline='alphabetic';
 
-    // ── Botão JOGAR DE NOVO ──
+    // ── Botão JOGAR DE NOVO — exige 3 toques anti-acidente ──
     var pulse2 = 0.97 + 0.03*Math.sin(frame*0.12);
+    // cor e label mudam com progresso dos toques
+    var _tapBtnCol = deadTapCount === 0 ? '#0052FF' : deadTapCount === 1 ? '#005FCC' : '#007A44';
+    var _tapLabel  = deadTapCount === 0 ? '▶  PLAY AGAIN'
+                   : deadTapCount === 1 ? '▶  ●○○  tap again'
+                   :                      '▶  ●●○  one more!';
     ctx.save(); ctx.translate(W/2, H/2+178); ctx.scale(pulse2, pulse2);
-    ctx.fillStyle = '#0052FF';
+    ctx.fillStyle = _tapBtnCol;
+    ctx.shadowColor = _tapBtnCol; ctx.shadowBlur = deadTapCount > 0 ? 18 : 0;
     ctx.beginPath(); ctx.roundRect(-78,-17,156,34,10); ctx.fill();
-    ctx.font='bold 14px Courier New'; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillStyle='#fff'; ctx.fillText('▶ PLAY AGAIN', 0, 0);
+    ctx.shadowBlur = 0;
+    ctx.font = deadTapCount > 0 ? 'bold 11px Courier New' : 'bold 14px Courier New';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillStyle='#fff'; ctx.fillText(_tapLabel, 0, 0);
     ctx.textBaseline='alphabetic'; ctx.restore();
 
     // ── Botão MENU ──
@@ -4985,8 +4994,16 @@ function handleClick(ex, ey) {
       if(!walletAddress) connectWallet();
       return;
     }
-    // Retry — anywhere else (incluindo botão JOGAR DE NOVO)
-    flap(); return;
+    // Retry — botão JOGAR DE NOVO ou toque fora dos botões
+    // Exige 3 toques para evitar reiniciar por acidente
+    deadTapCount++;
+    if(deadTapCount >= 3) {
+      flap(); // 3º toque: reinicia
+    } else {
+      beep(440 + deadTapCount*110, 660 + deadTapCount*110, 0.06, 'sine', 0.08);
+      if(navigator.vibrate) navigator.vibrate(15);
+    }
+    return;
   }
 
   // ── IDLE tabs click
