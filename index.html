@@ -962,6 +962,7 @@ var _heavenMist=null, _dungeonMist=null;
 // ── LIVES + POWER-UPS ──
 var lives=3, invincible=0, starPower=0, stars=[];
 var shield=0, shieldItems=[], shieldBreak=0; // escudo power-up
+var shieldPickedUp=0; // escudos pegos em jogo nesta fase (só valem até fim da fase)
 // Speed lines para star power
 var speedLines = [];
 (function(){ for(var i=0;i<18;i++) speedLines.push({ y: Math.random()*600, len: 40+Math.random()*80, speed: 6+Math.random()*8, alpha: 0.3+Math.random()*0.5 }); })();
@@ -1179,7 +1180,8 @@ function resetGame() {
   combo = 0; comboFlash = 0; coinsThisRun = 0; milestoneIdx = 0; recFlash = 0;
   lives = 3; invincible = 0; starPower = 0; stars = [];
   deadChest={active:false,opened:false,coins:0,anim:0,clicks:0};
-  shield = 0; // shields are bought between phases, not at game start
+  shield = 0; shieldPickedUp = 0;
+  shieldStock = 0; localStorage.setItem('bleuShieldStock', 0); // reseta ao morrer — compra denovo
   phaseShopPending = false;
   shieldItems = []; shieldBreak = 0;
   runPhase = 0; shareFlash = 0; bleuAngle = 0; bleuFlapTimer = 0; phantomFartParticles = [];
@@ -4335,7 +4337,7 @@ function loop(ts) {
       drawShieldItem(shieldItems[shi].x, shieldItems[shi].y);
       var shDx=shieldItems[shi].x-bleu.x, shDy=shieldItems[shi].y-bleu.y;
       if(Math.sqrt(shDx*shDx+shDy*shDy)<26){
-        shield=1; shieldItems.splice(shi,1);
+        if(shield<3){ shield++; shieldPickedUp++; } shieldItems.splice(shi,1);
         spawnParticles(bleu.x,bleu.y,'#00FF88',10);
         spawnParticles(bleu.x,bleu.y,'#ffffff',6);
         beep(440,880,0.12,'sine',0.18);
@@ -4386,6 +4388,9 @@ function loop(ts) {
           bleu.y  = H / 2;
           // clear screen and center gap so player has safe passage on transition
           pipes = []; stars = []; shieldItems = [];
+          // Pickups de fase expiram — apenas shields comprados persistem
+          shield = Math.max(0, shield - shieldPickedUp);
+          shieldPickedUp = 0;
           lastGapCenter = H / 2;
           startMusic(newPI);
           spawnParticles(W/2, H/2, '#FFD700', 30);
@@ -4845,7 +4850,10 @@ function loop(ts) {
 
 // ─── INPUT ───────────────────────────────────
 function flap() {
-  if(gameState==='idle')         { gameState='playing'; startMusic(getPhaseIdx()); combo=0; comboFlash=0; coinsThisRun=0; milestoneIdx=0; recFlash=0; phaseFlash=190; phasePaused=true; bleu.vy=0; bleu.y=H/2; }
+  if(gameState==='idle')         { gameState='playing'; startMusic(getPhaseIdx()); combo=0; comboFlash=0; coinsThisRun=0; milestoneIdx=0; recFlash=0; phaseFlash=190; phasePaused=true; bleu.vy=0; bleu.y=H/2;
+    // Ativar shields comprados na loja idle ao iniciar run
+    if(shieldStock>0){ shield=Math.min(3,shieldStock); shieldStock=0; shieldPickedUp=0; localStorage.setItem('bleuShieldStock',0); }
+  }
   else if(gameState==='playing') {
     if(phasePaused){ if(shopOverlay) return; phasePaused=false; phaseFlash=0; bleu.vy=-4; bleuSquish=6; return; } // pula animação
     bleu.vy=-7.5; bleu.flap=0; bleuSquish=8; bleuFlapTimer=18;
@@ -4886,7 +4894,7 @@ function handleClick(ex, ey) {
   if(gameState==='playing' && shopOverlay){
     var _mgClose = function(){
       shopOverlay = false;
-      if(shieldStock>0){ shield=shieldStock; shieldStock=0; localStorage.setItem('bleuShieldStock',0); }
+      if(shieldStock>0){ shield=Math.min(3,shield+shieldStock); shieldStock=0; localStorage.setItem('bleuShieldStock',0); }
       phasePaused = false; phaseFlash = 0;
       startMusic(getPhaseIdx());
     };
@@ -5084,7 +5092,7 @@ document.addEventListener('keydown', function(e){
     e.preventDefault();
     if(gameState==='award'){ handleClick(canvas.getBoundingClientRect().left + W/2, canvas.getBoundingClientRect().top + H/2); return; }
     if(paused){ paused=false; return; }
-    if(shopOverlay){ shopOverlay=false; if(shieldStock>0){shield=shieldStock;shieldStock=0;localStorage.setItem('bleuShieldStock',0);} phasePaused=false; phaseFlash=0; startMusic(getPhaseIdx()); return; }
+    if(shopOverlay){ shopOverlay=false; if(shieldStock>0){shield=Math.min(3,shield+shieldStock);shieldStock=0;localStorage.setItem('bleuShieldStock',0);} phasePaused=false; phaseFlash=0; startMusic(getPhaseIdx()); return; }
     flap();
   }
   if(e.code==='KeyP' && (gameState==='playing'||paused)){ paused=!paused; }
