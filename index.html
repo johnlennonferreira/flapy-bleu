@@ -662,9 +662,9 @@ function drawShopTab() {
   }
   ctx.textAlign='center';
 
-  // ── SHIELD CARD — left side of shop, aligned with character preview ──
+  // ── SHIELD CARD — bottom-left, above tab bar ──
   if((shopChar===0)||((shopChar===1)&&gengarUnlocked)||((shopChar===2)&&wormUnlocked)){
-    var _sc = { x:6, y:190, w:108, h:115 };
+    var _sc = { x:6, y:410, w:108, h:118 };
     var _shdCanBuy = (coinCount>=80) && (shieldStock<3);
     // Card background
     ctx.fillStyle = shieldStock>0 ? '#00FF8812' : '#ffffff07';
@@ -676,46 +676,31 @@ function drawShopTab() {
     ctx.font = 'bold 8px Courier New'; ctx.textAlign='center'; ctx.fillStyle='#ffffff33';
     ctx.fillText('ITEMS', _sc.x+_sc.w/2, _sc.y+11);
 
-    // Shield icon — identical to the in-game drawShieldItem (bezier shield shape)
+    // Shield icon — chama drawShieldItem diretamente: idêntico ao game e mid-game shop
     ctx.save();
     ctx.translate(_sc.x+_sc.w/2, _sc.y+52);
-    var _ir = 18;
-    // Outer halo glow
-    ctx.globalAlpha = 0.18 + 0.08*Math.sin(frame*0.12);
-    ctx.fillStyle = shieldStock>0 ? '#00FF88' : '#44aaff';
-    ctx.beginPath(); ctx.arc(0,0,_ir*1.55,0,Math.PI*2); ctx.fill();
-    ctx.globalAlpha = 1;
-    // Shield body (same bezier as drawShieldItem)
-    ctx.fillStyle = shieldStock>0 ? '#00CC66' : '#2277cc';
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 1.8;
-    ctx.beginPath();
-    ctx.moveTo(0,-_ir);
-    ctx.bezierCurveTo( _ir,-_ir,  _ir,  0,  0,  _ir);
-    ctx.bezierCurveTo(-_ir,   0, -_ir,-_ir,  0, -_ir);
-    ctx.closePath(); ctx.fill(); ctx.stroke();
-    // Interior cross-stripe (like in-game icon)
-    ctx.strokeStyle = '#ffffff44'; ctx.lineWidth=1;
-    ctx.beginPath(); ctx.moveTo(0,-_ir*0.7); ctx.lineTo(0,_ir*0.7); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(-_ir*0.55,0); ctx.lineTo(_ir*0.55,0); ctx.stroke();
-    // Stock count or ✦ symbol
-    ctx.fillStyle = shieldStock>0 ? '#001a0f' : '#ffffff';
-    ctx.font = 'bold '+(shieldStock>0?'13':'11')+'px Arial';
-    ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText(shieldStock>0 ? shieldStock : '✦', 0, 1);
-    ctx.textBaseline='alphabetic';
+    ctx.scale(1.28, 1.28); // escala: 14*1.28≈18, igual ao tamanho anterior
+    drawShieldItem(0, 0);
     ctx.restore();
+    // sobrescreve o ✦ com a contagem se já tiver shields
+    if(shieldStock>0){
+      ctx.save(); ctx.translate(_sc.x+_sc.w/2, _sc.y+52);
+      ctx.fillStyle='#001a0f'; ctx.font='bold 13px Arial';
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(shieldStock, 0, 1);
+      ctx.textBaseline='alphabetic'; ctx.restore();
+    }
 
     // SHIELD label + stock
     ctx.textAlign='center';
     ctx.font='bold 10px Courier New';
-    ctx.fillStyle = shieldStock>0 ? '#00FF88' : '#88ccff';
-    ctx.fillText('SHIELD', _sc.x+_sc.w/2, _sc.y+80);
+    ctx.fillStyle='#00FF88';
+    ctx.fillText('SHIELD', _sc.x+_sc.w/2, _sc.y+82);
     ctx.font='8px Courier New'; ctx.fillStyle='#ffffff44';
-    ctx.fillText(shieldStock>=3 ? 'MAX 3/3' : shieldStock+'/3', _sc.x+_sc.w/2, _sc.y+92);
+    ctx.fillText(shieldStock>=3 ? 'MAX 3/3' : shieldStock+'/3', _sc.x+_sc.w/2, _sc.y+94);
 
     // BUY button
-    var _bby = _sc.y+97;
+    var _bby = _sc.y+100;
     if(shieldStock<3){
       ctx.fillStyle = _shdCanBuy ? '#FFD70022' : '#ff444418';
       ctx.strokeStyle = _shdCanBuy ? '#FFD700' : '#ff4444';
@@ -5020,7 +5005,7 @@ function handleClick(ex, ey) {
         }
       }
       // Shield purchase — left card (x:6, y:190, w:108, buy button at y:287)
-      if(((shopChar===0)||((shopChar===1)&&gengarUnlocked)||((shopChar===2)&&wormUnlocked))&&cx>=6&&cx<=114&&cy>=190&&cy<=315){
+      if(((shopChar===0)||((shopChar===1)&&gengarUnlocked)||((shopChar===2)&&wormUnlocked))&&cx>=6&&cx<=114&&cy>=410&&cy<=535){
         if(shieldStock>=3){ beep(220,150,0.1,'sawtooth',0.06); return; }
         if(coinCount>=80){
           coinCount-=80; if(coinCount<0)coinCount=0; localStorage.setItem('bleuCoins',coinCount);
