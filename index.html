@@ -1117,6 +1117,8 @@ let bleu, pipes, score, frame, gameState, particles, lastGapCenter;
 let phaseFlash = 0, lastPhaseIdx = 0, phasePaused = false;
 let screenShake = 0, scorePop = 0, hitFlash = 0, bleuSquish = 0;
 let coins = [], coinCount = parseInt(localStorage.getItem('bleuCoins')||'0');
+// 🎁 DEV GRANT — one-time 1000 coins to test Alien (remove after testing)
+if(!localStorage.getItem('_devGrant1')){ coinCount = Math.max(coinCount, 1000); localStorage.setItem('bleuCoins', coinCount); localStorage.setItem('_devGrant1','1'); }
 var _mTimeout=null, _mPhase=-1, _mPos=0;
 var completedPhase=0, chestClicks=0, chestBounce=0, chestOpened=false, chestCoins=0, chestOpenAnim=0, awardCoins=0, awardCoinAnim=0;
 var bleuAngle=0; // smooth rotation (radians)
