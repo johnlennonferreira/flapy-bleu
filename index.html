@@ -1820,6 +1820,18 @@ function drawWorm(x, y, flapAnim, angle) {
   _drawEye(hx+2,  hy-7, 5.0, 3.5, 2.0, false);  // far eye  (smaller, no lashes)
   _drawEye(hx+10, hy-6, 6.5, 4.5, 2.5, true);   // near eye (bigger, with lashes)
 
+  // ── BOCA — sorriso emoji :) limpo, kawaii, sem vergonha ──
+  var _mx = hx + 9, _my = hy + 7;
+  var _mR = 5.2; // raio do sorriso
+
+  // Bochechas rosadas — desenhadas ANTES do nariz para nariz ficar por cima
+  [_mx - 9, _mx + 7].forEach(function(bx) {
+    var _g = ctx.createRadialGradient(bx, _my - 2, 0, bx, _my - 2, 6.5);
+    _g.addColorStop(0, 'rgba(255,100,115,0.44)');
+    _g.addColorStop(1, 'rgba(255,100,115,0)');
+    ctx.fillStyle = _g; ctx.beginPath(); ctx.arc(bx, _my - 2, 6.5, 0, Math.PI*2); ctx.fill();
+  });
+
   // ── Nariz de palhaço 🔴 — entre os olhos e a boca ──
   var _nx = hx+10, _ny = hy+1;
   var _nRad = 3.0;
@@ -1831,18 +1843,6 @@ function drawWorm(x, y, flapAnim, angle) {
   // brilho do nariz
   ctx.beginPath(); ctx.arc(_nx-1.0, _ny-1.0, 1.1, 0, Math.PI*2);
   ctx.fillStyle = '#ffffff'; ctx.globalAlpha = 0.75; ctx.fill(); ctx.globalAlpha = 1;
-
-  // ── BOCA — sorriso emoji :) limpo, kawaii, sem vergonha ──
-  var _mx = hx + 9, _my = hy + 7;
-  var _mR = 5.2; // raio do sorriso
-
-  // Bochechas rosadas
-  [_mx - 9, _mx + 7].forEach(function(bx) {
-    var _g = ctx.createRadialGradient(bx, _my - 2, 0, bx, _my - 2, 6.5);
-    _g.addColorStop(0, 'rgba(255,100,115,0.44)');
-    _g.addColorStop(1, 'rgba(255,100,115,0)');
-    ctx.fillStyle = _g; ctx.beginPath(); ctx.arc(bx, _my - 2, 6.5, 0, Math.PI*2); ctx.fill();
-  });
 
   // Sorriso: linha reta no topo + arco para baixo = forma :) exata do emoji
   ctx.beginPath();
@@ -3157,8 +3157,6 @@ function drawTicker(pv) {
   ctx.globalAlpha = 1;
   ctx.fillStyle = pv.glowColor + 'cc'; ctx.font = '8px Courier New'; ctx.textAlign = 'center';
   ctx.fillText(pv.name, W/2, 14);
-  ctx.fillStyle = pv.glowColor; ctx.font = '8px Courier New'; ctx.textAlign = 'right';
-  ctx.fillText('$BLEU +6900%', W-6, 14);
 }
 
 function drawStarField(count, alpha) {
