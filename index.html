@@ -1835,92 +1835,47 @@ function drawWorm(x, y, flapAnim, angle) {
   _drawEye(hx+2,  hy-7, 5.0, 3.5, 2.0, false);  // far eye  (smaller, no lashes)
   _drawEye(hx+10, hy-6, 6.5, 4.5, 2.5, true);   // near eye (bigger, with lashes)
 
-  // ── Boca kawaii premium — open smile com bezier, dentes 3D, língua plush ──
-  var _mx = hx + 9, _my = hy + 6;
-  var _mW = 5.8, _mH = 5.0;  // half-width / half-height da forma do sorriso
+  // ── BOCA — sorriso emoji :) limpo, kawaii, sem vergonha ──
+  var _mx = hx + 9, _my = hy + 7;
+  var _mR = 5.2; // raio do sorriso
 
-  // Bochechas rosadas suaves (afastadas, bilaterais)
-  [[_mx-9, _my-2, 7.5],[_mx+7.5, _my-2, 6]].forEach(function(b){
-    var _bg = ctx.createRadialGradient(b[0],b[1],0,b[0],b[1],b[2]);
-    _bg.addColorStop(0,'rgba(255,100,110,0.40)'); _bg.addColorStop(1,'rgba(255,100,110,0)');
-    ctx.fillStyle=_bg; ctx.beginPath(); ctx.arc(b[0],b[1],b[2],0,Math.PI*2); ctx.fill();
+  // Bochechas rosadas
+  [_mx - 9, _mx + 7].forEach(function(bx) {
+    var _g = ctx.createRadialGradient(bx, _my - 2, 0, bx, _my - 2, 6.5);
+    _g.addColorStop(0, 'rgba(255,100,115,0.44)');
+    _g.addColorStop(1, 'rgba(255,100,115,0)');
+    ctx.fillStyle = _g; ctx.beginPath(); ctx.arc(bx, _my - 2, 6.5, 0, Math.PI*2); ctx.fill();
   });
 
-  // Halo de lábio
-  var _lhg = ctx.createRadialGradient(_mx,_my,0,_mx,_my,9.5);
-  _lhg.addColorStop(0,'rgba(255,140,150,0.32)'); _lhg.addColorStop(1,'rgba(255,140,150,0)');
-  ctx.fillStyle=_lhg; ctx.beginPath(); ctx.arc(_mx,_my,9.5,0,Math.PI*2); ctx.fill();
-
-  // Cavidade da boca — forma de sorriso com gradiente de profundidade
+  // Sorriso: linha reta no topo + arco para baixo = forma :) exata do emoji
   ctx.beginPath();
-  ctx.moveTo(_mx-_mW, _my-1.0);
-  ctx.bezierCurveTo(_mx-_mW-0.8,_my-_mH, _mx-2,_my-_mH-0.5, _mx,_my-_mH);
-  ctx.bezierCurveTo(_mx+2,_my-_mH+0.5, _mx+_mW+0.8,_my-_mH, _mx+_mW,_my-1.0);
-  ctx.bezierCurveTo(_mx+_mW+0.5,_my+_mH*0.9, _mx-_mW-0.5,_my+_mH*0.9, _mx-_mW,_my-1.0);
+  ctx.moveTo(_mx - _mR, _my);       // canto esquerdo
+  ctx.lineTo(_mx + _mR, _my);       // borda superior reta
+  ctx.arc(_mx, _my, _mR, 0, Math.PI, false); // arco desce → cria U
   ctx.closePath();
-  var _cg = ctx.createRadialGradient(_mx,_my+1.5,0, _mx,_my+1.5,_mH*1.35);
-  _cg.addColorStop(0,'#1a0810'); _cg.addColorStop(0.65, cD); _cg.addColorStop(1,cD);
-  ctx.fillStyle=_cg; ctx.fill();
+  ctx.fillStyle = '#1e0810'; ctx.fill();
 
-  // Língua — almofadão rosa vibrante
+  // Língua — meia-elipse fofa no fundo do sorriso
   ctx.beginPath();
-  ctx.ellipse(_mx, _my+2.2, 4.0, 3.2, 0, 0, Math.PI*2);
-  ctx.fillStyle='#ff6688'; ctx.fill();
-  // Divisória da língua (sulco central curvo)
-  ctx.beginPath();
-  ctx.moveTo(_mx, _my-0.2);
-  ctx.bezierCurveTo(_mx+0.2,_my+1.5, _mx+0.3,_my+3.0, _mx+0.1,_my+4.8);
-  ctx.lineWidth=0.95; ctx.strokeStyle='#cc2255'; ctx.globalAlpha=0.5; ctx.stroke(); ctx.globalAlpha=1;
+  ctx.ellipse(_mx, _my + _mR * 0.52, _mR * 0.56, _mR * 0.46, 0, 0, Math.PI, false);
+  ctx.fillStyle = '#ff6688'; ctx.fill();
   // Brilho da língua
-  ctx.beginPath(); ctx.ellipse(_mx-1.5, _my+0.9, 1.6, 1.1, -0.4, 0, Math.PI*2);
-  ctx.fillStyle='#ffaabb'; ctx.globalAlpha=0.82; ctx.fill(); ctx.globalAlpha=1;
-
-  // Dentinhos — 3 dentes arredondados individualmente (clip à região superior)
-  ctx.save();
   ctx.beginPath();
-  ctx.moveTo(_mx-_mW, _my-1.0);
-  ctx.bezierCurveTo(_mx-_mW-0.8,_my-_mH, _mx-2,_my-_mH-0.5, _mx,_my-_mH);
-  ctx.bezierCurveTo(_mx+2,_my-_mH+0.5, _mx+_mW+0.8,_my-_mH, _mx+_mW,_my-1.0);
-  ctx.lineTo(_mx+_mW, _my+0.3);
-  ctx.lineTo(_mx-_mW, _my+0.3);
+  ctx.ellipse(_mx - 1.2, _my + _mR * 0.28, 1.4, 1.0, -0.3, 0, Math.PI*2);
+  ctx.fillStyle = '#ffbbcc'; ctx.globalAlpha = 0.75; ctx.fill(); ctx.globalAlpha = 1;
+
+  // Contorno do sorriso
+  ctx.beginPath();
+  ctx.moveTo(_mx - _mR, _my);
+  ctx.lineTo(_mx + _mR, _my);
+  ctx.arc(_mx, _my, _mR, 0, Math.PI, false);
   ctx.closePath();
-  ctx.clip();
-  ctx.fillStyle='#fffdf8';
-  [-3.8, 0, 3.8].forEach(function(dx){
-    var _tx=_mx+dx-1.7, _ty=_my-_mH-1.2, _tw=3.4, _th=4.5, _tr=1.3;
-    ctx.beginPath();
-    ctx.moveTo(_tx, _ty);
-    ctx.lineTo(_tx+_tw, _ty);
-    ctx.lineTo(_tx+_tw, _ty+_th-_tr);
-    ctx.arcTo(_tx+_tw, _ty+_th, _tx+_tw-_tr, _ty+_th, _tr);
-    ctx.lineTo(_tx+_tr, _ty+_th);
-    ctx.arcTo(_tx, _ty+_th, _tx, _ty+_th-_tr, _tr);
-    ctx.lineTo(_tx, _ty);
-    ctx.closePath();
-    ctx.fill();
-    ctx.strokeStyle=cO; ctx.lineWidth=0.5; ctx.globalAlpha=0.22; ctx.stroke(); ctx.globalAlpha=1;
-  });
-  ctx.restore();
+  ctx.lineWidth = 1.6; ctx.strokeStyle = cO; ctx.globalAlpha = 0.65; ctx.stroke(); ctx.globalAlpha = 1;
 
-  // Contorno dos lábios (outline completo)
+  // Brilho no lábio inferior (arco rosado sutil)
   ctx.beginPath();
-  ctx.moveTo(_mx-_mW, _my-1.0);
-  ctx.bezierCurveTo(_mx-_mW-0.8,_my-_mH, _mx-2,_my-_mH-0.5, _mx,_my-_mH);
-  ctx.bezierCurveTo(_mx+2,_my-_mH+0.5, _mx+_mW+0.8,_my-_mH, _mx+_mW,_my-1.0);
-  ctx.bezierCurveTo(_mx+_mW+0.5,_my+_mH*0.9, _mx-_mW-0.5,_my+_mH*0.9, _mx-_mW,_my-1.0);
-  ctx.closePath();
-  ctx.lineWidth=2.0; ctx.strokeStyle=cO; ctx.globalAlpha=0.88; ctx.stroke(); ctx.globalAlpha=1;
-
-  // Brilho sutil no lábio inferior
-  ctx.beginPath();
-  ctx.ellipse(_mx, _my+_mH*0.62, 3.2, 1.0, 0, 0, Math.PI*2);
-  ctx.fillStyle='rgba(255,210,200,0.42)'; ctx.fill();
-
-  // Covinhas nos cantos do sorriso
-  [-1,1].forEach(function(s){
-    ctx.beginPath(); ctx.arc(_mx+s*(_mW+0.4), _my-0.9, 1.5, 0, Math.PI*2);
-    ctx.fillStyle='rgba(190,60,75,0.30)'; ctx.fill();
-  });
+  ctx.arc(_mx, _my, _mR * 0.80, 0.14 * Math.PI, 0.86 * Math.PI, false);
+  ctx.lineWidth = 2.2; ctx.strokeStyle = 'rgba(255,155,175,0.36)'; ctx.stroke();
 
   // ── Score flash glow ──
   if (typeof scoreGlow !== 'undefined' && scoreGlow > 0) {
