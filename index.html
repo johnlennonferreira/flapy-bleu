@@ -379,12 +379,14 @@ function drawAwardScreen() {
   ctx.shadowColor=titleCol; ctx.shadowBlur=16;
   ctx.fillText(aTitle, cx, H/2-110); ctx.shadowBlur=0;
 
-  // Phase visual name
+  // Phase visual name — fonte prime, sem duplicata
   var pv2=PHASE_VISUALS[completedPhase]||PHASE_VISUALS[0];
-  ctx.fillStyle=pv2.glowColor; ctx.font='bold 28px Arial';
-  ctx.globalAlpha=0.2; ctx.fillText(pv2.name,cx,H/2-72);
-  ctx.globalAlpha=1; ctx.font='bold 24px Arial';
+  ctx.fillStyle=pv2.glowColor;
+  ctx.shadowColor=pv2.glowColor; ctx.shadowBlur=16;
+  ctx.font='bold 22px Georgia, serif';
+  ctx.globalAlpha=1;
   ctx.fillText(pv2.name, cx, H/2-72);
+  ctx.shadowBlur=0;
 
   // Coins earned this phase — count-up animation from 0 to awardCoins
   if(awardCoinAnim < awardCoins){
@@ -1187,7 +1189,7 @@ function resetGame() {
   phaseShopPending = false;
   shieldItems = []; shieldBreak = 0;
   runPhase = 0; shareFlash = 0; bleuAngle = 0; bleuFlapTimer = 0; phantomFartParticles = [];
-  lastScore = 0; localStorage.setItem('bleuLastScore', 0); // reset ao voltar ao idle
+  // lastScore mantido — rank tab mostra última pontuação da run anterior
 }
 resetGame();
 
@@ -1370,15 +1372,8 @@ function drawBleu(x, y, flapAnim, angle) {
     ctx.restore();
   }
 
-  // Onchain wallet glow — subtle green aura when wallet connected
-  if(walletAddress) {
-    ctx.save();
-    var _wg = 0.08 + 0.05*Math.sin(frame*0.06);
-    ctx.globalAlpha = _wg;
-    ctx.fillStyle = '#00FF88';
-    ctx.beginPath(); ctx.arc(4, -10, 28, 0, Math.PI*2); ctx.fill();
-    ctx.globalAlpha = 1;
-    ctx.restore();
+  // wallet glow removido — esfera ao redor do personagem nas telas idle/shop
+  if(false) {
   }
 
   ctx.restore();
@@ -1605,14 +1600,7 @@ function drawPhantom(x, y, flapAnim, angle) {
     ctx.globalAlpha = 1;
   }
 
-  // Wallet glow (green aura)
-  if (walletAddress) {
-    var _wg = 0.07 + 0.04 * Math.sin(frame * 0.06);
-    ctx.globalAlpha = _wg;
-    ctx.fillStyle = '#00FF88';
-    ctx.beginPath(); ctx.arc(0, 0, 36, 0, Math.PI*2); ctx.fill();
-    ctx.globalAlpha = 1;
-  }
+  // wallet glow removido (esfera indesejada no idle/shop)
   ctx.restore();
 }
 function drawGengar(x, y, flapAnim, angle) { drawPhantom(x, y, flapAnim, angle); }
@@ -1857,13 +1845,7 @@ function drawWorm(x, y, flapAnim, angle) {
     ctx.beginPath(); ctx.arc(0, 0, 28, 0, Math.PI*2); ctx.fill();
     ctx.globalAlpha = 1;
   }
-  // ── Wallet glow ──
-  if (typeof walletAddress !== 'undefined' && walletAddress) {
-    var _wg = 0.07 + 0.04 * Math.sin(frame * 0.06);
-    ctx.globalAlpha = _wg; ctx.fillStyle = '#00FF88';
-    ctx.beginPath(); ctx.arc(0, 0, 32, 0, Math.PI*2); ctx.fill();
-    ctx.globalAlpha = 1;
-  }
+  // wallet glow removido (esfera indesejada no idle/shop)
   ctx.restore();
 }
 
@@ -3944,33 +3926,17 @@ function drawMidGameShop() {
   ctx.lineWidth = 1.5;
   ctx.beginPath(); ctx.roundRect(_cx, _cy, _cw, _ch, 10); ctx.fill(); ctx.stroke();
 
-  // Shield icon
+  // Shield icon — idêntico à loja e ao HUD (sempre verde)
   ctx.save();
   ctx.translate(W/2, _cy + 52);
-  var _ir = 18;
-  ctx.globalAlpha = 0.18 + 0.08 * Math.sin(frame * 0.12);
-  ctx.fillStyle = shieldStock > 0 ? '#00FF88' : '#44aaff';
-  ctx.beginPath(); ctx.arc(0, 0, _ir * 1.55, 0, Math.PI * 2); ctx.fill();
-  ctx.globalAlpha = 1;
-  ctx.fillStyle = shieldStock > 0 ? '#00CC66' : '#2277cc';
-  ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.8;
-  ctx.beginPath();
-  ctx.moveTo(0,-_ir); ctx.bezierCurveTo(_ir,-_ir,_ir,0,0,_ir);
-  ctx.bezierCurveTo(-_ir,0,-_ir,-_ir,0,-_ir); ctx.closePath();
-  ctx.fill(); ctx.stroke();
-  ctx.strokeStyle = '#ffffff88'; ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.moveTo(0,-_ir*0.7); ctx.lineTo(0,_ir*0.7); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(-_ir*0.55,0); ctx.lineTo(_ir*0.55,0); ctx.stroke();
-  ctx.fillStyle = shieldStock > 0 ? '#001a0f' : '#ffffff';
-  ctx.font = 'bold ' + (shieldStock>0?'13':'11') + 'px Arial';
-  ctx.textAlign='center'; ctx.textBaseline='middle';
-  ctx.fillText(shieldStock > 0 ? shieldStock : '✦', 0, 1);
-  ctx.textBaseline = 'alphabetic'; ctx.restore();
+  ctx.scale(1.28, 1.28);
+  drawShieldItem(0, 0, true);
+  ctx.restore();
 
   // Labels
   ctx.textAlign = 'center';
   ctx.font = 'bold 10px Courier New';
-  ctx.fillStyle = shieldStock > 0 ? '#00FF88' : '#88ccff';
+  ctx.fillStyle = '#00FF88';
   ctx.fillText('SHIELD', W/2, _cy + 87);
   ctx.font = '8px Courier New'; ctx.fillStyle = '#ffffff55';
   ctx.fillText(shieldStock >= 3 ? 'MAX 3/3' : shieldStock + '/3', W/2, _cy + 100);
@@ -3984,7 +3950,7 @@ function drawMidGameShop() {
     ctx.beginPath(); ctx.roundRect(_cx+10, _bby, _cw-20, 26, 7); ctx.fill(); ctx.stroke();
     ctx.font = 'bold 11px Courier New';
     ctx.fillStyle = _canBuy ? '#FFD700' : '#ff6644';
-    ctx.fillText('80 💎', W/2, _bby + 16);
+    ctx.fillText('🐉 80', W/2, _bby + 16);
   }
 
   ctx.font = '9px Courier New'; ctx.fillStyle = '#ffffff33';
@@ -4063,16 +4029,14 @@ function drawPhaseBanner() {
   ctx.font = 'bold 15px Courier New';
   ctx.fillText(ph.label, W/2, H/2-32);
 
-  // Nome da fase — destaque máximo
+  // Nome da fase — fonte prime, uma única camada com glow real
   ctx.fillStyle = pv.glowColor;
-  ctx.font = 'bold 28px Arial';
-  // Camada de brilho falso (sem shadowBlur): texto levemente maior + alpha baixo
-  ctx.globalAlpha = alpha * 0.25;
-  ctx.font = 'bold 32px Arial';
-  ctx.fillText(pv.name, W/2, H/2+8);
+  ctx.shadowColor = pv.glowColor; ctx.shadowBlur = 18 * alpha;
+  ctx.font = 'bold 26px Georgia, serif';
+  ctx.letterSpacing = '2px';
   ctx.globalAlpha = alpha;
-  ctx.font = 'bold 28px Arial';
   ctx.fillText(pv.name, W/2, H/2+8);
+  ctx.shadowBlur = 0; ctx.letterSpacing = '0px';
 
   // Velocidade + barra de progresso de fase
   ctx.fillStyle = '#ffffff88';
@@ -4695,29 +4659,46 @@ function loop(ts) {
     drawCharacter(bleu.x, bleu.y+4, bleu.flap, bleuAngle);
     updateParticles();
     ctx.textAlign = 'center';
+
+    // ── Mensagem acima do painel — dopamina / congratulations ──
+    var _congMsg, _congCol;
     if(newRecord){
-      ctx.fillStyle = '#FFD700'; ctx.font = 'bold 15px Courier New';
-      ctx.shadowColor = '#FFD700'; ctx.shadowBlur = 24;
-      ctx.fillText('NEW RECORD!', W/2, H/2-92);
-      ctx.shadowBlur = 0;
+      _congMsg = '🏆 NEW RECORD!'; _congCol = '#FFD700';
+    } else if(score >= 30){
+      _congMsg = '🔥 LEGENDARY RUN'; _congCol = '#ff8800';
+    } else if(score >= 20){
+      _congMsg = '⚡ INCREDIBLE!'; _congCol = '#cc44ff';
+    } else if(score >= 10){
+      _congMsg = '✦ WELL PLAYED!'; _congCol = '#00D4FF';
+    } else if(score >= 5){
+      _congMsg = 'KEEP GOING!'; _congCol = '#00FF88';
+    } else {
+      _congMsg = 'TRY AGAIN!'; _congCol = '#ffffff66';
     }
+    ctx.font = 'bold 13px Courier New';
+    ctx.fillStyle = _congCol;
+    ctx.shadowColor = _congCol; ctx.shadowBlur = 18;
+    ctx.fillText(_congMsg, W/2, H/2-100);
+    ctx.shadowBlur = 0;
+
     // ── painel principal — glassy card ──
     ctx.fillStyle = 'rgba(0,5,20,0.86)';
-    ctx.beginPath(); ctx.roundRect(W/2-120, H/2-92, 240, 320, 16); ctx.fill();
-    // border glow
-    ctx.strokeStyle = '#FF174466'; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.roundRect(W/2-120, H/2-92, 240, 320, 16); ctx.stroke();
-    ctx.strokeStyle = '#0052FF33'; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.roundRect(W/2-118, H/2-90, 236, 268, 15); ctx.stroke();
+    ctx.beginPath(); ctx.roundRect(W/2-120, H/2-88, 240, 320, 16); ctx.fill();
+    // border glow — cor muda com performance
+    var _bCol = newRecord ? '#FFD700' : score>=10 ? '#0052FF' : '#FF174466';
+    ctx.strokeStyle = _bCol+'88'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.roundRect(W/2-120, H/2-88, 240, 320, 16); ctx.stroke();
+    ctx.strokeStyle = '#ffffff11'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.roundRect(W/2-118, H/2-86, 236, 268, 15); ctx.stroke();
     // shimmer top edge
     ctx.fillStyle='rgba(255,255,255,0.06)';
-    ctx.beginPath(); ctx.roundRect(W/2-116, H/2-90, 232, 18, 8); ctx.fill();
+    ctx.beginPath(); ctx.roundRect(W/2-116, H/2-86, 232, 18, 8); ctx.fill();
 
     // REKT — big impactful text
-    ctx.font = 'bold 36px Courier New';
-    ctx.shadowColor = '#FF1744'; ctx.shadowBlur = 32;
+    ctx.font = 'bold 34px Courier New';
+    ctx.shadowColor = '#FF1744'; ctx.shadowBlur = 28;
     ctx.fillStyle = '#FF1744'; ctx.textAlign = 'center';
-    ctx.fillText('REKT', W/2, H/2-54);
+    ctx.fillText('REKT', W/2, H/2-52);
     ctx.shadowBlur = 0;
 
     // Score grande + glow
