@@ -5278,7 +5278,7 @@ function loop(ts) {
     ctx.fillText('PAUSED', W/2, H/2+22); ctx.shadowBlur=0;
     // Hint
     ctx.font='11px Courier New'; ctx.fillStyle='#ffffff66';
-    ctx.fillText('tap ⏸ or press P to resume', W/2, H/2+46);
+    ctx.fillText('toque em qualquer lugar para continuar', W/2, H/2+46);
     ctx.textBaseline='alphabetic';
   }
   if(hitFlash>0){ctx.globalAlpha=(hitFlash/8)*.38;ctx.fillStyle='#ff1133';ctx.fillRect(0,0,W,H);ctx.globalAlpha=1;hitFlash--;}
@@ -5305,7 +5305,7 @@ function flap() {
     }
   }
   else if(gameState==='hurt')    { gameState='playing'; invincible=140; bleu.vy=-5; beep(440,880,0.1,'sine',0.15); }
-  else if(gameState==='dead')    { resetGame(); gameState='playing'; }
+  else if(gameState==='dead')    { resetGame(); gameState='playing'; startMusic(0); bleu.vy=-7.5; bleuFlapTimer=18; }
   else if(gameState==='prestige') {
     if(prestigeAnim < 40) return; // aguarda animação mínima
     resetGame();
@@ -5556,7 +5556,13 @@ function handleClick(ex, ey) {
 
   // Pause button hit (top-right corner, playing state)
   if(gameState==='playing' && cx>=0&&cx<=66&&cy>=H-136&&cy<=H-72){ paused=!paused; beep(paused?330:440,paused?280:520,0.07,'sine',0.08); return; }
-  if(paused) return;
+  // Paused — qualquer toque em qualquer lugar retoma (mobile friendly)
+  if(paused) {
+    paused = false;
+    if(!muted && _curAudio) _playAudio(_curAudio);
+    beep(440, 520, 0.07, 'sine', 0.08);
+    return;
+  }
   flap();
 }
 
@@ -5572,6 +5578,36 @@ document.addEventListener('keydown', function(e){
   if(e.code==='KeyP' && (gameState==='playing'||paused)){ paused=!paused; }
 });
 canvas.addEventListener('touchstart', function(e){ e.preventDefault(); handleClick(e.touches[0].clientX, e.touches[0].clientY); }, {passive:false});
+
+// ── MOBILE PAUSE/RESUME — visibilitychange ──────────────────────
+// Quando o jogador minimiza o app, sai para outra aba ou recebe
+// uma ligação, o browser suspende o jogo. Ao voltar, retomamos
+// música e AudioContext automaticamente.
+document.addEventListener('visibilitychange', function() {
+  if(document.hidden) {
+    // App foi para background: pausa jogo e música
+    if(gameState === 'playing' && !paused) paused = true;
+    if(_curAudio  && !_curAudio.paused)  _curAudio.pause();
+    if(_presAudio && !_presAudio.paused) _presAudio.pause();
+  } else {
+    // App voltou para foreground
+    // Retoma AudioContext (SFX) — iOS/Android suspendem automaticamente
+    var _ac = getAC();
+    if(_ac && _ac.state === 'suspended') _ac.resume().catch(function(){});
+    // Música NÃO retoma aqui — usuário toca para retomar (paused=true)
+    // Isso garante que o jogador não seja pego de surpresa
+  }
+});
+
+// Fallback extra: ao focar a janela (desktop/Android Chrome)
+window.addEventListener('focus', function() {
+  var _ac = getAC();
+  if(_ac && _ac.state === 'suspended') _ac.resume().catch(function(){});
+  if(!muted && _curAudio && _curAudio.paused &&
+     (gameState==='playing'||gameState==='hurt')) {
+    _playAudio(_curAudio);
+  }
+});
 
 checkDailyLogin();
 loop();
