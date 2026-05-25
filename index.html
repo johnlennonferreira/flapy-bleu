@@ -46,7 +46,31 @@ if (!CanvasRenderingContext2D.prototype.roundRect) {
   };
 }
 const ctx = canvas.getContext('2d', {alpha: false});
-const W = canvas.width, H = canvas.height;
+const W = canvas.width, H = canvas.height; // canvas é 400 × 600 — tudo posicionado com W/2, H/2
+
+// ╔══════════════════════════════════════════════════════════════════╗
+// ║  FLAPY BLEU — INDEX DE SEÇÕES (grep pelo nome para ir direto)   ║
+// ╠══════════════════════════════════════════════════════════════════╣
+// ║  ONCHAIN CONFIG     ~L1001  ← mudar testnet/mainnet aqui        ║
+// ║  PHASES (difficulty)~L80   ← velocidade, gap dos obstáculos     ║
+// ║  PHASE_VISUALS      ~L96   ← tema visual de cada fase (nome/bg) ║
+// ║  USDC PAYMENTS      ~L1113 ← sendUSDCPurchase, Builder Code     ║
+// ║  WALLET             ~L1046 ← connectWallet / disconnect         ║
+// ║  SHOP (draw)        ~L464  ← drawShopTab, cores, personagens    ║
+// ║  LEADERBOARD        ~L741  ← drawLeaderboardTab                 ║
+// ║  DAILY LOGIN        ~L838  ← checkDailyLogin, drawDailyModal    ║
+// ║  DRAW BLEU          ~L1200 ← corpo, asas, olhos do BLEU         ║
+// ║  DRAW PHANTOM       ~L1383 ← Haunter ghost                      ║
+// ║  DRAW WORM          ~L1655 ← verme kawaii (boca/língua ~L1730)  ║
+// ║  OBSTACLES          ~L2230 ← drawCandle / drawBasePipe / etc.   ║
+// ║  GAME LOOP — IDLE   ~L4187 ← tela inicial, tagline, botões      ║
+// ║  GAME LOOP — PHYSICS~L4295 ← gravidade, colisão, pontuação      ║
+// ║  GAME LOOP — HURT   ~L4682 ← tela "perdeu uma vida"             ║
+// ║  GAME LOOP — DEAD   ~L4715 ← tela REKT, botões PLAY/MENU        ║
+// ║  GAME LOOP — AWARD  ~L4708 ← tela de recompensa entre fases     ║
+// ║  flap()             ~L4897 ← mecânica de pulo                   ║
+// ║  handleClick()      ~L4919 ← toda lógica de clique/toque        ║
+// ╚══════════════════════════════════════════════════════════════════╝
 
 // ─── AUDIO ───────────────────────────────────
 var _ac = null, muted = false;
