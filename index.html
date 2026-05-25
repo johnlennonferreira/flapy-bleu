@@ -682,14 +682,6 @@ function drawShopTab() {
     ctx.scale(1.28, 1.28); // escala: 14*1.28≈18, igual ao tamanho anterior
     drawShieldItem(0, 0, true); // noAnim=true na loja (sem pulso)
     ctx.restore();
-    // sobrescreve o ✦ com a contagem se já tiver shields
-    if(shieldStock>0){
-      ctx.save(); ctx.translate(_sc.x+_sc.w/2, _sc.y+52);
-      ctx.fillStyle='#001a0f'; ctx.font='bold 13px Arial';
-      ctx.textAlign='center'; ctx.textBaseline='middle';
-      ctx.fillText(shieldStock, 0, 1);
-      ctx.textBaseline='alphabetic'; ctx.restore();
-    }
 
     // SHIELD label + stock
     ctx.textAlign='center';
@@ -1818,13 +1810,16 @@ function drawWorm(x, y, flapAnim, angle) {
   var _mx = hx + 9, _my = hy + 7;
   var _mR = 5.2; // raio do sorriso
 
-  // Bochechas rosadas — desenhadas ANTES do nariz para nariz ficar por cima
+  // Bochechas rosadas — clipped ao círculo da cabeça para não vazar
+  ctx.save();
+  ctx.beginPath(); ctx.arc(hx, hy, hr, 0, Math.PI*2); ctx.clip();
   [_mx - 9, _mx + 7].forEach(function(bx) {
     var _g = ctx.createRadialGradient(bx, _my - 2, 0, bx, _my - 2, 6.5);
     _g.addColorStop(0, 'rgba(255,100,115,0.44)');
     _g.addColorStop(1, 'rgba(255,100,115,0)');
     ctx.fillStyle = _g; ctx.beginPath(); ctx.arc(bx, _my - 2, 6.5, 0, Math.PI*2); ctx.fill();
   });
+  ctx.restore();
 
   // ── Nariz de palhaço 🔴 — entre os olhos e a boca ──
   var _nx = hx+10, _ny = hy+1;
