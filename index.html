@@ -568,6 +568,18 @@ function drawShopTab() {
     ctx.fillStyle=_bStroke; ctx.font='bold 13px Courier New';
     ctx.textAlign='center'; ctx.textBaseline='middle';
     ctx.fillText(_bLabel, W/2, _btnY+17); ctx.textBaseline='alphabetic';
+    // ── USDC button (wallet conectada + item não comprado) ──
+    if(walletAddress && !_selOwned && shopSelColor>0){
+      var _up=USDC_COLOR_PRICES[shopChar]&&USDC_COLOR_PRICES[shopChar][shopSelColor];
+      if(_up){
+        var _uY=_btnY+40;
+        ctx.fillStyle='#0052FF1a'; ctx.strokeStyle='#0052FF'; ctx.lineWidth=1.5;
+        ctx.beginPath(); ctx.roundRect(W/2-76,_uY,152,32,10); ctx.fill(); ctx.stroke();
+        ctx.fillStyle='#4499ff'; ctx.font='bold 12px Courier New';
+        ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText('⛓ PAY USDC '+fmtUSDC(_up), W/2, _uY+16); ctx.textBaseline='alphabetic';
+      }
+    }
   }
 
   // ── Gengar unlock overlay ──
@@ -585,10 +597,17 @@ function drawShopTab() {
     var _canUnlock=coinCount>=500;
     ctx.fillStyle=_canUnlock?'#aa44ff22':'#ffffff08';
     ctx.strokeStyle=_canUnlock?'#aa44ff':'#ffffff22'; ctx.lineWidth=1.5;
-    ctx.beginPath(); ctx.roundRect(W/2-82,344,164,38,10); ctx.fill(); ctx.stroke();
-    ctx.fillStyle=_canUnlock?'#cc88ff':'#ffffff44'; ctx.font='bold 13px Courier New';
+    ctx.beginPath(); ctx.roundRect(W/2-82,344,164,36,10); ctx.fill(); ctx.stroke();
+    ctx.fillStyle=_canUnlock?'#cc88ff':'#ffffff44'; ctx.font='bold 12px Courier New';
     ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText('UNLOCK  🐉 500', W/2, 363); ctx.textBaseline='alphabetic';
+    ctx.fillText('UNLOCK  🐉 500', W/2, 362); ctx.textBaseline='alphabetic';
+    if(walletAddress){
+      ctx.fillStyle='#0052FF1a'; ctx.strokeStyle='#0052FF'; ctx.lineWidth=1.5;
+      ctx.beginPath(); ctx.roundRect(W/2-82,386,164,34,10); ctx.fill(); ctx.stroke();
+      ctx.fillStyle='#4499ff'; ctx.font='bold 12px Courier New';
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText('⛓ UNLOCK  USDC $0.50', W/2, 403); ctx.textBaseline='alphabetic';
+    }
   }
   // ── Worm unlock overlay ──
   if(shopChar===2&&!wormUnlocked){
@@ -605,10 +624,17 @@ function drawShopTab() {
     var _canUnlockW=coinCount>=500;
     ctx.fillStyle=_canUnlockW?'#336611':'#ffffff08';
     ctx.strokeStyle=_canUnlockW?'#88dd44':'#ffffff22'; ctx.lineWidth=1.5;
-    ctx.beginPath(); ctx.roundRect(W/2-82,344,164,38,10); ctx.fill(); ctx.stroke();
-    ctx.fillStyle=_canUnlockW?'#aaffaa':'#ffffff44'; ctx.font='bold 13px Courier New';
+    ctx.beginPath(); ctx.roundRect(W/2-82,344,164,36,10); ctx.fill(); ctx.stroke();
+    ctx.fillStyle=_canUnlockW?'#aaffaa':'#ffffff44'; ctx.font='bold 12px Courier New';
     ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText('UNLOCK  🐉 500', W/2, 363); ctx.textBaseline='alphabetic';
+    ctx.fillText('UNLOCK  🐉 500', W/2, 362); ctx.textBaseline='alphabetic';
+    if(walletAddress){
+      ctx.fillStyle='#0052FF1a'; ctx.strokeStyle='#0052FF'; ctx.lineWidth=1.5;
+      ctx.beginPath(); ctx.roundRect(W/2-82,386,164,34,10); ctx.fill(); ctx.stroke();
+      ctx.fillStyle='#4499ff'; ctx.font='bold 12px Courier New';
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText('⛓ UNLOCK  USDC $0.50', W/2, 403); ctx.textBaseline='alphabetic';
+    }
   }
   ctx.textAlign='center';
 
@@ -955,6 +981,23 @@ var shopChar=0, shopSelColor=0;
 var shieldStock=parseInt(localStorage.getItem('bleuShieldStock')||'0'); // purchasable shields
 var chestType='normal';
 
+// ─── ONCHAIN CONFIG ──────────────────────────────────────────
+// 1. Cole o hex do seu Builder Code: dashboard.base.org → Builder Codes
+var BUILDER_CODE_HEX = '';
+// 2. Sua carteira para receber USDC (atualize com seu endereço)
+var TREASURY_WALLET  = '0x0000000000000000000000000000000000000000';
+// USDC na Base mainnet (6 decimais)
+var USDC_CONTRACT    = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
+var BASE_CHAIN_ID    = '0x2105'; // 8453
+// Preços USDC por slot de cor [Bleu, Phantom, Worm] (6 decimais = 1 USDC)
+var USDC_COLOR_PRICES = [
+  [0, 100000, 200000, 250000, 350000],  // Bleu:    free, $0.10, $0.20, $0.25, $0.35
+  [0, 150000, 200000, 250000, 350000],  // Phantom: free, $0.15, $0.20, $0.25, $0.35
+  [0, 100000, 200000, 300000, 400000],  // Worm:    free, $0.10, $0.20, $0.30, $0.40
+];
+var USDC_CHAR_UNLOCK = 500000; // $0.50 para desbloquear Phantom ou Worm
+function fmtUSDC(a6){ return '$'+(a6/1e6).toFixed(2); }
+
 // ─── WALLET ──────────────────────────────────────────────────
 var walletAddress    = null;
 var walletShort      = null;
@@ -1027,6 +1070,76 @@ function disconnectWallet() {
   walletAddress = null; walletShort = null;
   localStorage.removeItem('bleuWallet');
   beep(330,200,0.12,'sawtooth',0.08);
+}
+
+// ─── USDC PAYMENTS ───────────────────────────────────────────
+function ensureBaseNetwork(cb) {
+  if(!window.ethereum) return;
+  window.ethereum.request({method:'eth_chainId'}).then(function(chainId){
+    if(chainId===BASE_CHAIN_ID){ cb(); return; }
+    window.ethereum.request({method:'wallet_switchEthereumChain',params:[{chainId:BASE_CHAIN_ID}]})
+      .then(cb)
+      .catch(function(err){
+        if(err.code===4902){
+          window.ethereum.request({method:'wallet_addEthereumChain',params:[{
+            chainId:BASE_CHAIN_ID, chainName:'Base',
+            nativeCurrency:{name:'ETH',symbol:'ETH',decimals:18},
+            rpcUrls:['https://mainnet.base.org'],
+            blockExplorerUrls:['https://basescan.org']
+          }]}).then(cb).catch(function(){});
+        }
+      });
+  });
+}
+
+function sendUSDCPurchase(usdcAmount6, onSuccess) {
+  if(!walletAddress){ connectWallet(); return; }
+  if(!window.ethereum){ window.open('https://go.cb-w.com/dapp?cb_url='+encodeURIComponent('https://flapy-bleu.vercel.app'),'_blank'); return; }
+  if(TREASURY_WALLET==='0x0000000000000000000000000000000000000000'){ beep(220,150,0.12,'sawtooth',0.08); return; }
+  ensureBaseNetwork(function(){
+    // ERC-20 transfer(address,uint256) selector = 0xa9059cbb
+    var to32  = TREASURY_WALLET.replace('0x','').toLowerCase().padStart(64,'0');
+    var amt32 = usdcAmount6.toString(16).padStart(64,'0');
+    var data  = '0xa9059cbb'+to32+amt32;
+    // Append Builder Code suffix para o leaderboard
+    if(BUILDER_CODE_HEX) data += BUILDER_CODE_HEX.replace(/^0x/,'');
+    window.ethereum.request({method:'eth_sendTransaction',params:[{
+      from:walletAddress, to:USDC_CONTRACT, data:data
+    }]}).then(function(txHash){
+      beep(523,1047,0.28,'sine',0.15);
+      [659,784,1047].forEach(function(f,i){setTimeout(function(){beep(f,f,0.12,'sine',0.1);},i*70);});
+      spawnParticles(W/2,H/2,'#00FF88',18); spawnParticles(W/2,H/2,'#0052FF',8);
+      if(navigator.vibrate) navigator.vibrate([30,15,80]);
+      onSuccess(txHash);
+    }).catch(function(err){ console.warn('USDC tx:', err); beep(220,150,0.12,'sawtooth',0.08); });
+  });
+}
+
+function buyColorWithUSDC(charIdx, colorIdx) {
+  var prices = USDC_COLOR_PRICES[charIdx];
+  if(!prices || !prices[colorIdx]) return;
+  sendUSDCPurchase(prices[colorIdx], function(){
+    if(charIdx===0){ unlockedColorsBleu.push(colorIdx); localStorage.setItem('bleuColsB',JSON.stringify(unlockedColorsBleu)); activeColorBleu=colorIdx; localStorage.setItem('bleuColorB',''+colorIdx); }
+    else if(charIdx===1){ unlockedColorsGengar.push(colorIdx); localStorage.setItem('bleuColsG',JSON.stringify(unlockedColorsGengar)); activeColorGengar=colorIdx; localStorage.setItem('bleuColorG',''+colorIdx); }
+    else { unlockedColorsWorm.push(colorIdx); localStorage.setItem('bleuColsW',JSON.stringify(unlockedColorsWorm)); activeColorWorm=colorIdx; localStorage.setItem('bleuColorW',''+colorIdx); }
+    activeChar=charIdx; localStorage.setItem('bleuChar',''+charIdx);
+  });
+}
+
+function unlockCharWithUSDC(charIdx) {
+  sendUSDCPurchase(USDC_CHAR_UNLOCK, function(){
+    if(charIdx===1){
+      gengarUnlocked=true; localStorage.setItem('bleuGengar','1');
+      unlockedColorsGengar=[0]; localStorage.setItem('bleuColsG',JSON.stringify(unlockedColorsGengar));
+      activeColorGengar=0; localStorage.setItem('bleuColorG','0');
+    } else if(charIdx===2){
+      wormUnlocked=true; localStorage.setItem('bleuWorm','1');
+      unlockedColorsWorm=[0]; localStorage.setItem('bleuColsW',JSON.stringify(unlockedColorsWorm));
+      activeColorWorm=0; localStorage.setItem('bleuColorW','0');
+    }
+    activeChar=charIdx; localStorage.setItem('bleuChar',''+charIdx);
+    spawnParticles(W/2,H/2,'#FFD700',20);
+  });
 }
 
 function submitWalletScore(s) {
@@ -4894,6 +5007,15 @@ function handleClick(ex, ey) {
       // Action button
       var _btnY2=CHAR_PREVIEW_Y+146;
       if(cx>=W/2-76&&cx<=W/2+76&&cy>=_btnY2&&cy<=_btnY2+34){ shopBuyOrEquip(); return; }
+      // USDC color buy button
+      if(walletAddress){
+        var _uBtnY=_btnY2+40;
+        var _upC=USDC_COLOR_PRICES[shopChar]&&USDC_COLOR_PRICES[shopChar][shopSelColor];
+        if(_upC&&cx>=W/2-76&&cx<=W/2+76&&cy>=_uBtnY&&cy<=_uBtnY+32){
+          var _ownedC=isColorOwned(shopChar,shopSelColor);
+          if(!_ownedC&&shopSelColor>0){ buyColorWithUSDC(shopChar,shopSelColor); return; }
+        }
+      }
       // Shield purchase — left card (x:6, y:190, w:108, buy button at y:287)
       if(((shopChar===0)||((shopChar===1)&&gengarUnlocked)||((shopChar===2)&&wormUnlocked))&&cx>=6&&cx<=114&&cy>=190&&cy<=315){
         if(shieldStock>=3){ beep(220,150,0.1,'sawtooth',0.06); return; }
@@ -4906,7 +5028,11 @@ function handleClick(ex, ey) {
         } else { beep(220,150,0.12,'sawtooth',0.08); hitFlash=3; }
         return;
       }
-      // Worm unlock button
+      // Worm USDC unlock
+      if(shopChar===2&&!wormUnlocked&&walletAddress&&cx>=W/2-82&&cx<=W/2+82&&cy>=386&&cy<=420){ unlockCharWithUSDC(2); return; }
+      // Phantom USDC unlock
+      if(shopChar===1&&!gengarUnlocked&&walletAddress&&cx>=W/2-82&&cx<=W/2+82&&cy>=386&&cy<=420){ unlockCharWithUSDC(1); return; }
+      // Worm unlock button (coins)
       if(shopChar===2&&!wormUnlocked&&cx>=W/2-82&&cx<=W/2+82&&cy>=344&&cy<=382){
         if(coinCount>=500){
           coinCount-=500; localStorage.setItem('bleuCoins',coinCount);
@@ -4921,7 +5047,7 @@ function handleClick(ex, ey) {
         } else { beep(220,150,0.12,'sawtooth',0.08); hitFlash=3; }
         return;
       }
-      // Gengar/Phantom unlock button
+      // Gengar/Phantom unlock button (coins)
       if(shopChar===1&&!gengarUnlocked&&cx>=W/2-82&&cx<=W/2+82&&cy>=344&&cy<=382){
         if(coinCount>=500){
           coinCount-=500; localStorage.setItem('bleuCoins',coinCount);
