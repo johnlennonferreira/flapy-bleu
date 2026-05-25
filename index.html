@@ -24,7 +24,7 @@
 </style>
 </head>
 <body>
-<div id="ui">💎 FLAPY BLEU — tap or SPACE to flap</div>
+<div id="ui">💎 FLAPY BLEU — tap to flap</div>
 <canvas id="c" width="400" height="600"></canvas>
 <button id="mute">🔊 SFX</button>
 <script>
@@ -4218,13 +4218,13 @@ function loop(ts) {
 
       // ── Tagline ──
       ctx.fillStyle = '#ffffff55'; ctx.font = '11px Courier New';
-      ctx.fillText('tap · SPACE · dodge the candles', W/2, H/2-26);
+      ctx.fillText('tap to flap  ·  dodge the candles', W/2, H/2-26);
 
-      // ── BEST score ──
+      // ── BEST score (above the button so it's not covered) ──
       if(highScore > 0){
-        ctx.fillStyle = '#FFD700'; ctx.font = 'bold 14px Courier New';
-        ctx.shadowColor = '#FFD700'; ctx.shadowBlur = 18;
-        ctx.fillText('🏆  BEST: ' + highScore, W/2, H/2+44);
+        ctx.fillStyle = '#FFD700'; ctx.font = 'bold 13px Courier New';
+        ctx.shadowColor = '#FFD700'; ctx.shadowBlur = 16;
+        ctx.fillText('🏆  BEST: ' + highScore, W/2, H/2+14);
         ctx.shadowBlur = 0;
       }
 
@@ -4263,17 +4263,17 @@ function loop(ts) {
         ctx.fillText('disconnect', W/2, wy0+55);
         ctx.textBaseline='alphabetic';
       } else {
-        // Not connected — pulsing CTA button
-        var wp = 0.97+0.03*Math.sin(frame*0.10);
-        ctx.save(); ctx.translate(W/2, wy0+16); ctx.scale(wp,wp);
-        ctx.fillStyle='#0052FF';
-        ctx.beginPath(); ctx.roundRect(-100,-16,200,32,10); ctx.fill();
-        ctx.strokeStyle='#00D4FF66'; ctx.lineWidth=1.5; ctx.stroke();
-        ctx.fillStyle='#fff'; ctx.font='bold 12px Courier New'; ctx.textAlign='center'; ctx.textBaseline='middle';
-        ctx.fillText('💎  CONNECT WALLET', 0, 0);
+        // Not connected — subtle secondary CTA (wallet is optional, don't scare casual players)
+        var wp = 0.98+0.02*Math.sin(frame*0.08);
+        ctx.save(); ctx.translate(W/2, wy0+14); ctx.scale(wp,wp);
+        ctx.fillStyle='#0052FF18';
+        ctx.beginPath(); ctx.roundRect(-96,-14,192,28,10); ctx.fill();
+        ctx.strokeStyle='#0052FF55'; ctx.lineWidth=1; ctx.stroke();
+        ctx.fillStyle='#6699cc'; ctx.font='10px Courier New'; ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText('💎  connect wallet', 0, 0);
         ctx.textBaseline='alphabetic'; ctx.restore();
-        ctx.fillStyle='#ffffff33'; ctx.font='8px Courier New'; ctx.textAlign='center';
-        ctx.fillText('save scores · global ranking', W/2, wy0+40);
+        ctx.fillStyle='#ffffff22'; ctx.font='8px Courier New'; ctx.textAlign='center';
+        ctx.fillText('optional  ·  save scores  ·  unlock skins on-chain', W/2, wy0+38);
       }
 
       // ── Powered by ──
