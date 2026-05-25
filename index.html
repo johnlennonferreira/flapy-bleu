@@ -1278,6 +1278,14 @@ function drawBleu(x, y, flapAnim, angle) {
   ctx.globalAlpha = 0.4;
   ctx.stroke();
   ctx.globalAlpha = 1;
+  // ── Restaurar contorno preto na borda superior (coberta pelo highlight) ──
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.bezierCurveTo(-2, -5, -11, -13, -19, -9);
+  ctx.lineWidth = 1.4;
+  ctx.strokeStyle = cOutline;
+  ctx.globalAlpha = 1;
+  ctx.stroke();
   ctx.restore();
 
   // ══════════════════════════════════════════
@@ -4409,10 +4417,22 @@ function loop(ts) {
     }
     pipes = pipes.filter(function(p){ return p.x > -70; });
 
-    // ── COINS: spawn ──
+    // ── COINS: spawn — sempre dentro do gap atual, nunca atrás de obstáculo ──
     if(frame % 140 === 70) {
-      var cy0 = 80 + Math.random() * (H - 220);
-      coins.push({ x: W + 14, y: cy0, collected: false, pulse: frame });
+      // Usar lastGapCenter ± variância pequena → coin sempre no espaço entre canos
+      var _coinVar = 30 + Math.random() * 20; // 30-50px de offset do centro
+      var _coinDir = Math.random() < 0.5 ? 1 : -1;
+      var cy0 = lastGapCenter + _coinDir * _coinVar;
+      cy0 = Math.max(100, Math.min(H - 120, cy0));
+      // Confirmar que não coincide com um cano próximo à borda direita
+      var _safe = true;
+      for(var _cpi = 0; _cpi < pipes.length; _cpi++) {
+        var _cp = pipes[_cpi];
+        if(_cp.x > W - 40) { // cano próximo ao spawn da coin
+          if(cy0 < _cp.topH + 20 || cy0 > _cp.botY - 20) { _safe = false; break; }
+        }
+      }
+      if(_safe) coins.push({ x: W + 14, y: cy0, collected: false, pulse: frame });
     }
     // ── COINS: move + collect + draw ──
     var spd2 = getPhase().speed;
@@ -4670,9 +4690,7 @@ function loop(ts) {
     // REKT — big impactful text
     ctx.font = 'bold 36px Courier New';
     ctx.shadowColor = '#FF1744'; ctx.shadowBlur = 32;
-    ctx.fillStyle = '#FF3355'; ctx.textAlign = 'center';
-    ctx.fillText('REKT', W/2+2, H/2-52+2); // shadow
-    ctx.fillStyle = '#FF1744';
+    ctx.fillStyle = '#FF1744'; ctx.textAlign = 'center';
     ctx.fillText('REKT', W/2, H/2-54);
     ctx.shadowBlur = 0;
 
@@ -4749,11 +4767,11 @@ function loop(ts) {
 
     // ── Botão MENU ──
     ctx.fillStyle='#ffffff14';
-    ctx.beginPath(); ctx.roundRect(W/2-74, H/2+202, 148, 28, 8); ctx.fill();
+    ctx.beginPath(); ctx.roundRect(W/2-74, H/2+197, 148, 28, 8); ctx.fill();
     ctx.strokeStyle='#0052FF66'; ctx.lineWidth=1; ctx.stroke();
     ctx.font='bold 12px Courier New'; ctx.fillStyle='#99bbee';
     ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText('⌂  MENU', W/2, H/2+216);
+    ctx.fillText('⌂  MENU', W/2, H/2+211);
     ctx.textBaseline='alphabetic';
     ctx.fillStyle='#ffffff30'; ctx.font='8px Courier New';
     ctx.fillText('$BLEU never stops', W/2, H/2+240);
@@ -4926,8 +4944,8 @@ function handleClick(ex, ey) {
       else { try{ navigator.clipboard.writeText(shareText); }catch(e){} }
       shareFlash=90; return;
     }
-    // Botão MENU: H/2+202 a H/2+228
-    if(cx>=W/2-74&&cx<=W/2+74&&cy>=H/2+202&&cy<=H/2+230){
+    // Botão MENU: H/2+197 a H/2+225
+    if(cx>=W/2-74&&cx<=W/2+74&&cy>=H/2+197&&cy<=H/2+225){
       resetGame(); idleTab='play'; return;
     }
     // Wallet line: H/2+248 a H/2+264 — conectar se não tiver wallet
