@@ -2516,10 +2516,10 @@ function makePipe(x) {
 
   // ── Movimento vertical suave e justo ──
   // maxShift: quanto o centro do gap pode mover entre um cano e o próximo
-  // Fases fáceis → mais movimento (surpresa); fases difíceis → mais controlado
-  const maxShift = 62 - pi * 2.5; // phase 1: 59px | phase 10: 39px
-  // Pull gravitacional suave em direção ao centro da tela
-  const pull = 0.08 * (H / 2 - lastGapCenter);
+  // [TEST fase 1: gaps extremos topo↔chão — reverter se necessário]
+  const maxShift = pi === 0 ? 220 : 62 - pi * 2.5;
+  // Pull gravitacional suave em direção ao centro (reduzido na fase 1 para gaps extremos)
+  const pull = pi === 0 ? 0.01 * (H / 2 - lastGapCenter) : 0.08 * (H / 2 - lastGapCenter);
   // Movimento delta: aleatório ± maxShift + pull central
   const delta = (Math.random() - 0.5) * 2 * maxShift + pull;
   let center  = lastGapCenter + delta;
