@@ -100,18 +100,20 @@ function beep(f1, f2, dur, type, vol) {
   } catch(e) {}
 }
 
-// ─── FASES (10 fases, muda a cada 10 pontos para teste) ─────
+// ─── FASES (10 fases, muda a cada 15 pontos) ──────────────────
+// Dificuldade progressiva e justa — retorno de dopamina garantido
+// Fase 9 é respiro intencional (loop dopamínico: tensão → alívio → tensão)
 const PHASES = [
-  { speed: 2.0, gapMin:148, gapMax:168, label:'PHASE 1'  }, // aprende — confortável
-  { speed: 2.1, gapMin:140, gapMax:160, label:'PHASE 2'  }, // fecha levemente
-  { speed: 2.2, gapMin:132, gapMax:150, label:'PHASE 3'  }, // desafio real começa
-  { speed: 2.3, gapMin:126, gapMax:144, label:'PHASE 4'  }, // close calls frequentes
-  { speed: 2.4, gapMin:120, gapMax:138, label:'PHASE 5'  }, // tensão alta
-  { speed: 2.5, gapMin:115, gapMax:133, label:'PHASE 6'  }, // território Flappy Bird
-  { speed: 2.6, gapMin:110, gapMax:128, label:'PHASE 7'  }, // difícil de verdade
-  { speed: 2.6, gapMin:108, gapMax:124, label:'PHASE 8'  }, // muito difícil
-  { speed: 2.4, gapMin:125, gapMax:148, label:'PHASE 9'  }, // respiro — alivia tensão
-  { speed: 2.8, gapMin:100, gapMax:116, label:'PHASE 10' }, // hardcore — poucos chegam
+  { speed: 1.85, gapMin:162, gapMax:178, label:'PHASE 1'  }, // aprende — confortável, gap largo
+  { speed: 1.95, gapMin:152, gapMax:168, label:'PHASE 2'  }, // fecha suavemente
+  { speed: 2.1,  gapMin:142, gapMax:158, label:'PHASE 3'  }, // desafio real começa
+  { speed: 2.25, gapMin:132, gapMax:150, label:'PHASE 4'  }, // close calls frequentes
+  { speed: 2.35, gapMin:124, gapMax:142, label:'PHASE 5'  }, // tensão sobe
+  { speed: 2.45, gapMin:117, gapMax:135, label:'PHASE 6'  }, // território Flappy Bird
+  { speed: 2.55, gapMin:111, gapMax:128, label:'PHASE 7'  }, // difícil de verdade
+  { speed: 2.6,  gapMin:107, gapMax:122, label:'PHASE 8'  }, // muito difícil
+  { speed: 2.2,  gapMin:140, gapMax:162, label:'PHASE 9'  }, // respiro — alivia tensão (loop dopamina)
+  { speed: 2.75, gapMin:104, gapMax:118, label:'PHASE 10' }, // hardcore — poucos chegam
 ];
 function getPhaseIdx() { return Math.min(9, Math.floor(score / 15)); }
 function getPhase()    { return PHASES[getPhaseIdx()]; }
@@ -2152,28 +2154,41 @@ function drawCharSelect() {
 }
 
 // ─── PIPE / OBSTACLE ─────────────────────────
+// Regras de design de nível:
+//   1. Salto vertical entre gaps consecutivos ≤ maxShift — sempre navegável
+//   2. Pull suave de volta ao centro — evita sequências extremas (topo ou fundo)
+//   3. Variância suficiente para manter surpresa (dopamina) sem ser injusto
+//   4. Fins visuais das foguetes BASE estendem ±14px — spawn guard garante espaço real
 function makePipe(x) {
-  const pv  = getPhaseVisual();
-  const ph  = getPhase();
-  // Random gap size within phase range — varies pipe to pipe
-  const gap = ph.gapMin + Math.random() * (ph.gapMax - ph.gapMin);
-  // Jitter grande: cria variedade vertical real (alto, baixo, meio)
-  // Não segue o anterior — escolha independente para maximizar surpresa
-  const range  = H - 80 - 115 - gap; // espaço total disponível
-  const center0 = 115 + gap/2 + Math.random() * range;
-  const jitter = (Math.random() - 0.5) * 80; // leve suavização sobre o anterior
-  let center   = center0 * 0.65 + (lastGapCenter + jitter) * 0.35;
-  const minC   = 115 + gap/2;
-  const maxC   = H - 80 - gap/2 - 15;
-  center       = Math.max(minC, Math.min(maxC, center));
+  const ph  = getPhaseVisual();
+  const p   = getPhase();
+  const pi  = getPhaseIdx();
+
+  // Gap size: varia dentro da faixa da fase, com pequena variância extra
+  const gap = p.gapMin + Math.random() * (p.gapMax - p.gapMin);
+
+  // ── Movimento vertical suave e justo ──
+  // maxShift: quanto o centro do gap pode mover entre um cano e o próximo
+  // Fases fáceis → mais movimento (surpresa); fases difíceis → mais controlado
+  const maxShift = 62 - pi * 2.5; // phase 1: 59px | phase 10: 39px
+  // Pull gravitacional suave em direção ao centro da tela
+  const pull = 0.08 * (H / 2 - lastGapCenter);
+  // Movimento delta: aleatório ± maxShift + pull central
+  const delta = (Math.random() - 0.5) * 2 * maxShift + pull;
+  let center  = lastGapCenter + delta;
+
+  const minC = 118 + gap / 2;
+  const maxC = H - 82 - gap / 2;
+  center = Math.max(minC, Math.min(maxC, center));
   lastGapCenter = center;
-  const topH   = center - gap/2;
-  const botY   = center + gap/2;
+
+  const topH = center - gap / 2;
+  const botY = center + gap / 2;
   return {
-    x, topH, gap, bodyW:42, wickW:5,
-    topBodyH: topH * (0.45 + Math.random()*0.4),
-    botBodyH: (H-80-botY) * (0.45 + Math.random()*0.4),
-    isGreen: Math.random() > 0.5, botY, passed:false
+    x, topH, gap, bodyW: 42, wickW: 5,
+    topBodyH: topH * (0.45 + Math.random() * 0.4),
+    botBodyH: (H - 80 - botY) * (0.45 + Math.random() * 0.4),
+    isGreen: Math.random() > 0.5, botY, passed: false
   };
 }
 
@@ -4261,9 +4276,15 @@ function loop(ts) {
     if(bleuFlapTimer > 0) bleuFlapTimer--;
 
     // spawn de pipes — progressivamente mais frequente
-    var spawnEvery = Math.max(52, 86 - pi * 3);
+    // spawnEvery: mais lento nas primeiras fases → mais rápido no final
+    var spawnEvery = Math.max(60, 96 - pi * 4);
     if(!phasePaused && frame % spawnEvery === 0){
-      pipes.push(makePipe(W+10));
+      // Guard: não spawnar se o cano anterior ainda está perto da borda direita
+      // bodyW(42) + fins(14*2) + margem(90) = mín 160px de espaço visual
+      var _lastP = pipes.length > 0 ? pipes[pipes.length - 1] : null;
+      if(!_lastP || (W + 10 - _lastP.x) >= 160){
+        pipes.push(makePipe(W + 10));
+      }
     }
 
     // ─── STAR POWER-UP spawn ─────────────────
