@@ -4704,10 +4704,10 @@ function loop(ts) {
     }
     // ── painel principal — glassy card ──
     ctx.fillStyle = 'rgba(0,5,20,0.86)';
-    ctx.beginPath(); ctx.roundRect(W/2-120, H/2-92, 240, 272, 16); ctx.fill();
+    ctx.beginPath(); ctx.roundRect(W/2-120, H/2-92, 240, 320, 16); ctx.fill();
     // border glow
     ctx.strokeStyle = '#FF174466'; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.roundRect(W/2-120, H/2-92, 240, 272, 16); ctx.stroke();
+    ctx.beginPath(); ctx.roundRect(W/2-120, H/2-92, 240, 320, 16); ctx.stroke();
     ctx.strokeStyle = '#0052FF33'; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.roundRect(W/2-118, H/2-90, 236, 268, 15); ctx.stroke();
     // shimmer top edge
@@ -4795,15 +4795,15 @@ function loop(ts) {
     ctx.textBaseline='alphabetic'; ctx.restore();
 
     // ── Botão MENU ──
-    ctx.fillStyle='#ffffff08';
-    ctx.beginPath(); ctx.roundRect(W/2-50, H/2+202, 100, 26, 8); ctx.fill();
-    ctx.strokeStyle='#0052FF33'; ctx.lineWidth=1; ctx.stroke();
-    ctx.font='11px Courier New'; ctx.fillStyle='#0052FFaa';
+    ctx.fillStyle='#ffffff14';
+    ctx.beginPath(); ctx.roundRect(W/2-74, H/2+202, 148, 28, 8); ctx.fill();
+    ctx.strokeStyle='#0052FF66'; ctx.lineWidth=1; ctx.stroke();
+    ctx.font='bold 12px Courier New'; ctx.fillStyle='#99bbee';
     ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText('⌂  MENU', W/2, H/2+215);
+    ctx.fillText('⌂  MENU', W/2, H/2+216);
     ctx.textBaseline='alphabetic';
-    ctx.fillStyle='#ffffff18'; ctx.font='9px Courier New';
-    ctx.fillText('$BLEU never stops', W/2, H/2+238);
+    ctx.fillStyle='#ffffff30'; ctx.font='8px Courier New';
+    ctx.fillText('$BLEU never stops', W/2, H/2+240);
 
     // ── Death chest (consolation prize) ──
     if(deadChest.active){
@@ -4974,7 +4974,7 @@ function handleClick(ex, ey) {
       shareFlash=90; return;
     }
     // Botão MENU: H/2+202 a H/2+228
-    if(cx>=W/2-50&&cx<=W/2+50&&cy>=H/2+202&&cy<=H/2+228){
+    if(cx>=W/2-74&&cx<=W/2+74&&cy>=H/2+202&&cy<=H/2+230){
       resetGame(); idleTab='play'; return;
     }
     // Wallet line: H/2+248 a H/2+264 — conectar se não tiver wallet
