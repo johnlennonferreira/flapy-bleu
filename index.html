@@ -664,7 +664,7 @@ function drawShopTab() {
 
   // ── SHIELD CARD — bottom-left, above tab bar ──
   if((shopChar===0)||((shopChar===1)&&gengarUnlocked)||((shopChar===2)&&wormUnlocked)){
-    var _sc = { x:6, y:410, w:108, h:118 };
+    var _sc = { x:6, y:355, w:108, h:118 };
     var _shdCanBuy = (coinCount>=80) && (shieldStock<3);
     // Card background
     ctx.fillStyle = shieldStock>0 ? '#00FF8812' : '#ffffff07';
@@ -680,7 +680,7 @@ function drawShopTab() {
     ctx.save();
     ctx.translate(_sc.x+_sc.w/2, _sc.y+52);
     ctx.scale(1.28, 1.28); // escala: 14*1.28≈18, igual ao tamanho anterior
-    drawShieldItem(0, 0);
+    drawShieldItem(0, 0, true); // noAnim=true na loja (sem pulso)
     ctx.restore();
     // sobrescreve o ✦ com a contagem se já tiver shields
     if(shieldStock>0){
@@ -1720,10 +1720,12 @@ function drawWorm(x, y, flapAnim, angle) {
     ctx.fillStyle = _segGr; ctx.fill();
     ctx.lineWidth = 1.5; ctx.strokeStyle = cO; ctx.stroke();
 
-    // Belly patch — pale oval on lower-front
-    ctx.beginPath();
-    ctx.ellipse(sx + sr*0.18, sy + sr*0.28, sr*0.52, sr*0.38, 0.25, 0, Math.PI*2);
-    ctx.fillStyle = cBelly; ctx.globalAlpha = 0.70; ctx.fill(); ctx.globalAlpha = 1;
+    // Belly patch — pale oval on lower-front (só nos segmentos do corpo, não na cabeça)
+    if (!isHead) {
+      ctx.beginPath();
+      ctx.ellipse(sx + sr*0.18, sy + sr*0.28, sr*0.52, sr*0.38, 0.25, 0, Math.PI*2);
+      ctx.fillStyle = cBelly; ctx.globalAlpha = 0.70; ctx.fill(); ctx.globalAlpha = 1;
+    }
 
     // Segment ring (divider arc on right edge, darker line)
     if (si < NS - 1) {
@@ -1844,35 +1846,10 @@ function drawWorm(x, y, flapAnim, angle) {
   ctx.beginPath(); ctx.arc(_nx-1.0, _ny-1.0, 1.1, 0, Math.PI*2);
   ctx.fillStyle = '#ffffff'; ctx.globalAlpha = 0.75; ctx.fill(); ctx.globalAlpha = 1;
 
-  // Sorriso: linha reta no topo + arco para baixo = forma :) exata do emoji
+  // Sorriso fechado — traço curvo kawaii :)
   ctx.beginPath();
-  ctx.moveTo(_mx - _mR, _my);       // canto esquerdo
-  ctx.lineTo(_mx + _mR, _my);       // borda superior reta
-  ctx.arc(_mx, _my, _mR, 0, Math.PI, false); // arco desce → cria U
-  ctx.closePath();
-  ctx.fillStyle = '#1e0810'; ctx.fill();
-
-  // Língua — meia-elipse fofa no fundo do sorriso
-  ctx.beginPath();
-  ctx.ellipse(_mx, _my + _mR * 0.52, _mR * 0.56, _mR * 0.46, 0, 0, Math.PI, false);
-  ctx.fillStyle = '#ff6688'; ctx.fill();
-  // Brilho da língua
-  ctx.beginPath();
-  ctx.ellipse(_mx - 1.2, _my + _mR * 0.28, 1.4, 1.0, -0.3, 0, Math.PI*2);
-  ctx.fillStyle = '#ffbbcc'; ctx.globalAlpha = 0.75; ctx.fill(); ctx.globalAlpha = 1;
-
-  // Contorno do sorriso
-  ctx.beginPath();
-  ctx.moveTo(_mx - _mR, _my);
-  ctx.lineTo(_mx + _mR, _my);
-  ctx.arc(_mx, _my, _mR, 0, Math.PI, false);
-  ctx.closePath();
-  ctx.lineWidth = 1.6; ctx.strokeStyle = cO; ctx.globalAlpha = 0.65; ctx.stroke(); ctx.globalAlpha = 1;
-
-  // Brilho no lábio inferior (arco rosado sutil)
-  ctx.beginPath();
-  ctx.arc(_mx, _my, _mR * 0.80, 0.14 * Math.PI, 0.86 * Math.PI, false);
-  ctx.lineWidth = 2.2; ctx.strokeStyle = 'rgba(255,155,175,0.36)'; ctx.stroke();
+  ctx.arc(_mx, _my - 1, _mR, 0.15 * Math.PI, 0.85 * Math.PI, false);
+  ctx.lineWidth = 2.2; ctx.strokeStyle = '#1e0810'; ctx.lineCap = 'round'; ctx.stroke();
 
   // ── Score flash glow ──
   if (typeof scoreGlow !== 'undefined' && scoreGlow > 0) {
@@ -3728,12 +3705,12 @@ function drawStarItem(x, y) {
 }
 
 // ─── SHIELD POWER-UP ─────────────────────────
-function drawShieldItem(x, y) {
-  var pulse = 1 + 0.14 * Math.sin(frame * 0.10);
+function drawShieldItem(x, y, noAnim) {
+  var pulse = noAnim ? 1 : (1 + 0.14 * Math.sin(frame * 0.10));
   var r = 14 * pulse;
   ctx.save(); ctx.translate(x, y);
   // Halo externo verde
-  ctx.globalAlpha = 0.16 + 0.10 * Math.sin(frame * 0.15);
+  ctx.globalAlpha = noAnim ? 0.18 : (0.16 + 0.10 * Math.sin(frame * 0.15));
   ctx.fillStyle = '#00FF88';
   ctx.beginPath(); ctx.arc(0, 0, r * 1.6, 0, Math.PI*2); ctx.fill();
   ctx.globalAlpha = 1;
@@ -5002,8 +4979,8 @@ function handleClick(ex, ey) {
           if(!_ownedC&&shopSelColor>0){ buyColorWithUSDC(shopChar,shopSelColor); return; }
         }
       }
-      // Shield purchase — left card (x:6, y:190, w:108, buy button at y:287)
-      if(((shopChar===0)||((shopChar===1)&&gengarUnlocked)||((shopChar===2)&&wormUnlocked))&&cx>=6&&cx<=114&&cy>=410&&cy<=535){
+      // Shield purchase — left card (x:6, y:355, w:108, h:118)
+      if(((shopChar===0)||((shopChar===1)&&gengarUnlocked)||((shopChar===2)&&wormUnlocked))&&cx>=6&&cx<=114&&cy>=355&&cy<=480){
         if(shieldStock>=3){ beep(220,150,0.1,'sawtooth',0.06); return; }
         if(coinCount>=80){
           coinCount-=80; if(coinCount<0)coinCount=0; localStorage.setItem('bleuCoins',coinCount);
