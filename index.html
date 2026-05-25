@@ -455,16 +455,18 @@ function isColorOwned(charIdx, colorIdx) {
   if(charIdx===0) return unlockedColorsBleu.indexOf(colorIdx)>=0;
   if(charIdx===1) return gengarUnlocked && unlockedColorsGengar.indexOf(colorIdx)>=0;
   if(charIdx===2) return wormUnlocked && unlockedColorsWorm.indexOf(colorIdx)>=0;
+  if(charIdx===3) return alienUnlocked && unlockedColorsAlien.indexOf(colorIdx)>=0;
   return false;
 }
 function isColorEquipped(charIdx, colorIdx) {
   if(charIdx===0) return activeChar===0 && activeColorBleu===colorIdx;
   if(charIdx===1) return activeChar===1 && activeColorGengar===colorIdx;
   if(charIdx===2) return activeChar===2 && activeColorWorm===colorIdx;
+  if(charIdx===3) return activeChar===3 && activeColorAlien===colorIdx;
   return false;
 }
 function shopBuyOrEquip() {
-  var colors = shopChar===0 ? BLEU_COLORS : shopChar===1 ? PHANTOM_COLORS : WORM_COLORS;
+  var colors = shopChar===0 ? BLEU_COLORS : shopChar===1 ? PHANTOM_COLORS : shopChar===2 ? WORM_COLORS : ALIEN_COLORS;
   var color  = colors[shopSelColor];
   if(!color) return;
   var owned    = isColorOwned(shopChar, shopSelColor);
@@ -474,7 +476,8 @@ function shopBuyOrEquip() {
     activeChar = shopChar;
     if(shopChar===0)     { activeColorBleu=shopSelColor;   localStorage.setItem('bleuColorB',''+shopSelColor); }
     else if(shopChar===1){ activeColorGengar=shopSelColor; localStorage.setItem('bleuColorG',''+shopSelColor); }
-    else                 { activeColorWorm=shopSelColor;   localStorage.setItem('bleuColorW',''+shopSelColor); }
+    else if(shopChar===2){ activeColorWorm=shopSelColor;   localStorage.setItem('bleuColorW',''+shopSelColor); }
+    else                 { activeColorAlien=shopSelColor;  localStorage.setItem('bleuColorA',''+shopSelColor); }
     localStorage.setItem('bleuChar',''+activeChar);
     beep(523,1047,0.18,'sine',0.12);
   } else if(coinCount>=color.price) {
@@ -482,7 +485,8 @@ function shopBuyOrEquip() {
     localStorage.setItem('bleuCoins',coinCount);
     if(shopChar===0)     { unlockedColorsBleu.push(shopSelColor); localStorage.setItem('bleuColsB',JSON.stringify(unlockedColorsBleu)); activeColorBleu=shopSelColor;   localStorage.setItem('bleuColorB',''+shopSelColor); }
     else if(shopChar===1){ unlockedColorsGengar.push(shopSelColor); localStorage.setItem('bleuColsG',JSON.stringify(unlockedColorsGengar)); activeColorGengar=shopSelColor; localStorage.setItem('bleuColorG',''+shopSelColor); }
-    else                 { unlockedColorsWorm.push(shopSelColor); localStorage.setItem('bleuColsW',JSON.stringify(unlockedColorsWorm)); activeColorWorm=shopSelColor;   localStorage.setItem('bleuColorW',''+shopSelColor); }
+    else if(shopChar===2){ unlockedColorsWorm.push(shopSelColor); localStorage.setItem('bleuColsW',JSON.stringify(unlockedColorsWorm)); activeColorWorm=shopSelColor;   localStorage.setItem('bleuColorW',''+shopSelColor); }
+    else                 { unlockedColorsAlien.push(shopSelColor); localStorage.setItem('bleuColsA',JSON.stringify(unlockedColorsAlien)); activeColorAlien=shopSelColor; localStorage.setItem('bleuColorA',''+shopSelColor); }
     activeChar=shopChar; localStorage.setItem('bleuChar',''+activeChar);
     beep(523,1047,0.28,'sine',0.15);
     [659,784,1047].forEach(function(f,ii){setTimeout(function(){beep(f,f,0.12,'sine',0.1);},ii*70);});
@@ -500,33 +504,36 @@ function drawShopTab() {
   ctx.font='11px Courier New'; ctx.fillStyle='#FFD700';
   ctx.fillText('🐉 '+coinCount.toLocaleString()+' / 100,000', W/2, 50);
 
-  // ── Character selector tabs ──
-  var ctw=118, cgap=10, ctx0=W/2-Math.round((3*(ctw+cgap)-cgap)/2);
-  var charNames=['BLEU','PHANTOM','WORM'], charLock=[false,!gengarUnlocked,!wormUnlocked];
-  for(var _ci=0; _ci<3; _ci++){
+  // ── Character selector tabs (4 personagens) ──
+  var ctw=92, cgap=7, ctx0=W/2-Math.round((4*(ctw+cgap)-cgap)/2);
+  var charNames=['BLEU','PHANTOM','WORM','ALIEN'];
+  var charLock=[false,!gengarUnlocked,!wormUnlocked,!alienUnlocked];
+  for(var _ci=0; _ci<4; _ci++){
     var _cx=ctx0+_ci*(ctw+cgap);
     var _isAct=shopChar===_ci;
     ctx.fillStyle=_isAct?'#0052FF33':'#ffffff08';
     ctx.strokeStyle=_isAct?'#0052FF':'#ffffff22'; ctx.lineWidth=_isAct?2:1;
     ctx.beginPath(); ctx.roundRect(_cx,58,ctw,28,8); ctx.fill(); ctx.stroke();
     ctx.fillStyle=_isAct?'#00D4FF':'#ffffff55';
-    ctx.font='bold 11px Courier New'; ctx.textAlign='center';
+    ctx.font='bold 10px Courier New'; ctx.textAlign='center';
     ctx.fillText((charLock[_ci]?'🔒 ':'')+charNames[_ci], _cx+ctw/2, 58+18);
   }
 
   // ── Character preview ──
   var _prevY = CHAR_PREVIEW_Y;
-  var _savedCB=activeColorBleu, _savedCG=activeColorGengar, _savedCW=activeColorWorm;
+  var _savedCB=activeColorBleu, _savedCG=activeColorGengar, _savedCW=activeColorWorm, _savedCA=activeColorAlien;
   activeColorBleu   = (shopChar===0) ? shopSelColor : activeColorBleu;
   activeColorGengar = (shopChar===1) ? shopSelColor : activeColorGengar;
   activeColorWorm   = (shopChar===2) ? shopSelColor : activeColorWorm;
+  activeColorAlien  = (shopChar===3) ? shopSelColor : activeColorAlien;
   ctx.save(); ctx.translate(W/2, _prevY); ctx.scale(1.9,1.9);
-  ctx.globalAlpha = ((shopChar===1&&!gengarUnlocked)||(shopChar===2&&!wormUnlocked)) ? 0.35 : 1;
+  ctx.globalAlpha = ((shopChar===1&&!gengarUnlocked)||(shopChar===2&&!wormUnlocked)||(shopChar===3&&!alienUnlocked)) ? 0.35 : 1;
   if(shopChar===0)      drawBleu(0,0,frame*0.28,0);
   else if(shopChar===1) drawPhantom(0,0,frame*0.28,0);
-  else                  drawWorm(0,0,frame*0.28,0);
+  else if(shopChar===2) drawWorm(0,0,frame*0.28,0);
+  else                  drawAlien(0,0,frame*0.28,0);
   ctx.globalAlpha=1; ctx.restore();
-  activeColorBleu=_savedCB; activeColorGengar=_savedCG; activeColorWorm=_savedCW;
+  activeColorBleu=_savedCB; activeColorGengar=_savedCG; activeColorWorm=_savedCW; activeColorAlien=_savedCA;
 
   // ── Fan connector lines ──
   ctx.strokeStyle='#ffffff11'; ctx.lineWidth=1;
@@ -538,7 +545,7 @@ function drawShopTab() {
   }
 
   // ── Fan orbs ──
-  var _fanColors = shopChar===0 ? BLEU_COLORS : shopChar===1 ? PHANTOM_COLORS : WORM_COLORS;
+  var _fanColors = shopChar===0 ? BLEU_COLORS : shopChar===1 ? PHANTOM_COLORS : shopChar===2 ? WORM_COLORS : ALIEN_COLORS;
   for(var _fi2=0; _fi2<5; _fi2++){
     var _fa2=FAN_ANGLES[_fi2]*Math.PI/180;
     var _fx=W/2+FAN_RADIUS*Math.cos(_fa2), _fy=_prevY+FAN_RADIUS*Math.sin(_fa2);
@@ -664,10 +671,37 @@ function drawShopTab() {
       ctx.fillText('⛓ UNLOCK  USDC $0.50', W/2, 403); ctx.textBaseline='alphabetic';
     }
   }
+  // ── Alien unlock overlay ──
+  if(shopChar===3&&!alienUnlocked){
+    ctx.fillStyle='rgba(0,8,0,0.90)';
+    ctx.beginPath(); ctx.roundRect(W/2-122,93,244,430,14); ctx.fill();
+    ctx.strokeStyle='#00FF4455'; ctx.lineWidth=1.5; ctx.stroke();
+    ctx.save(); ctx.translate(W/2,240); ctx.scale(2,2); ctx.globalAlpha=0.7;
+    drawAlien(0,0,frame*0.22,0); ctx.globalAlpha=1; ctx.restore();
+    ctx.font='bold 15px Courier New'; ctx.fillStyle='#44FF88';
+    ctx.shadowColor='#00FF44'; ctx.shadowBlur=14;
+    ctx.fillText('🔒 ALIEN', W/2, 310); ctx.shadowBlur=0;
+    ctx.font='10px Courier New'; ctx.fillStyle='#ffffff44';
+    ctx.fillText('pilot from the outer zones', W/2, 328);
+    var _canUnlockA=coinCount>=500;
+    ctx.fillStyle=_canUnlockA?'#00441a':'#ffffff08';
+    ctx.strokeStyle=_canUnlockA?'#44FF88':'#ffffff22'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.roundRect(W/2-82,344,164,36,10); ctx.fill(); ctx.stroke();
+    ctx.fillStyle=_canUnlockA?'#aaffcc':'#ffffff44'; ctx.font='bold 12px Courier New';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('UNLOCK  🐉 500', W/2, 362); ctx.textBaseline='alphabetic';
+    if(walletAddress){
+      ctx.fillStyle='#0052FF1a'; ctx.strokeStyle='#0052FF'; ctx.lineWidth=1.5;
+      ctx.beginPath(); ctx.roundRect(W/2-82,386,164,34,10); ctx.fill(); ctx.stroke();
+      ctx.fillStyle='#4499ff'; ctx.font='bold 12px Courier New';
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText('⛓ UNLOCK  USDC $0.50', W/2, 403); ctx.textBaseline='alphabetic';
+    }
+  }
   ctx.textAlign='center';
 
   // ── SHIELD CARD — bottom-left, above tab bar ──
-  if((shopChar===0)||((shopChar===1)&&gengarUnlocked)||((shopChar===2)&&wormUnlocked)){
+  if((shopChar===0)||((shopChar===1)&&gengarUnlocked)||((shopChar===2)&&wormUnlocked)||((shopChar===3)&&alienUnlocked)){
     var _sc = { x:6, y:355, w:108, h:118 };
     var _shdCanBuy = (coinCount>=80) && (shieldStock<3);
     // Card background
@@ -740,6 +774,15 @@ const WORM_COLORS = [
   { name:'ROYAL',     price:190, body:'#8844cc', bodyLt:'#bb77ff', shadow:'#440088', belly:'#e8ccff', outline:'#2a0055', eyeColor:'#140028', glow:'#bb44ff' },
   { name:'GOLDEN',    price:260, body:'#cc9a18', bodyLt:'#ffd040', shadow:'#885500', belly:'#fff0bb', outline:'#663300', eyeColor:'#2a1400', glow:'#ffc000' },
   { name:'ABYSS',     price:400, body:'#1a3a5c', bodyLt:'#3a6ea0', shadow:'#080f1a', belly:'#96c8ee', outline:'#060c16', eyeColor:'#000510', glow:'#44aaff' },
+];
+
+// ─── ALIEN (UFO) SKINS ──────────────────────────────────────────────
+const ALIEN_COLORS = [
+  { name:'AREA 51',  price:0,   body:'#44CC44', bodyLt:'#88FF88', shadow:'#1e7a1e', outline:'#0d4d0d', eyeColor:'#050a05', glow:'#00FF44', ufo:'#C0C8D8', ufoLt:'#E8EEF8', ufoSh:'#8090A8' },
+  { name:'ROSWELL',  price:130, body:'#AAAACC', bodyLt:'#DDDDEE', shadow:'#555577', outline:'#222233', eyeColor:'#110011', glow:'#AAAAFF', ufo:'#D0D8F0', ufoLt:'#F0F4FF', ufoSh:'#9090BB' },
+  { name:'PLASMA',   price:190, body:'#FF55AA', bodyLt:'#FFAACC', shadow:'#BB1166', outline:'#880033', eyeColor:'#1a0010', glow:'#FF44BB', ufo:'#CC3388', ufoLt:'#FF88BB', ufoSh:'#991155' },
+  { name:'NEBULA',   price:270, body:'#5588FF', bodyLt:'#AABBFF', shadow:'#2244CC', outline:'#112277', eyeColor:'#000820', glow:'#4499FF', ufo:'#2244AA', ufoLt:'#5577DD', ufoSh:'#112266' },
+  { name:'GOLDEN',   price:380, body:'#FFDD44', bodyLt:'#FFEE99', shadow:'#CC8800', outline:'#664400', eyeColor:'#1a0f00', glow:'#FFD700', ufo:'#C8A820', ufoLt:'#EED040', ufoSh:'#996600' },
 ];
 
 // ─── LEADERBOARD TAB ────────────────────────────────────────────────
@@ -986,6 +1029,9 @@ var unlockedColorsGengar=JSON.parse(localStorage.getItem('bleuColsG')||'[]');
 var unlockedColorsWorm=JSON.parse(localStorage.getItem('bleuColsW')||'[]');
 var gengarUnlocked=localStorage.getItem('bleuGengar')==='1';
 var wormUnlocked=localStorage.getItem('bleuWorm')==='1';
+var alienUnlocked=localStorage.getItem('bleuAlien')==='1';
+var activeColorAlien=parseInt(localStorage.getItem('bleuColorA')||'0');
+var unlockedColorsAlien=JSON.parse(localStorage.getItem('bleuColsA')||'[]');
 var shopChar=0, shopSelColor=0;
 var shieldStock=parseInt(localStorage.getItem('bleuShieldStock')||'0'); // purchasable shields
 var chestType='normal';
@@ -1009,6 +1055,7 @@ var USDC_COLOR_PRICES = [
   [0, 100000, 200000, 250000, 350000],  // Bleu:    free, $0.10, $0.20, $0.25, $0.35
   [0, 150000, 200000, 250000, 350000],  // Phantom: free, $0.15, $0.20, $0.25, $0.35
   [0, 100000, 200000, 300000, 400000],  // Worm:    free, $0.10, $0.20, $0.30, $0.40
+  [0, 130000, 190000, 270000, 380000],  // Alien:   free, $0.13, $0.19, $0.27, $0.38
 ];
 var USDC_CHAR_UNLOCK = 500000; // $0.50 para desbloquear Phantom ou Worm
 function fmtUSDC(a6){ return (TESTNET?'[TEST] ':'')+'$'+(a6/1e6).toFixed(2); }
@@ -2029,11 +2076,138 @@ function drawBrett_ORIG(x, y, flapAnim, vy) {
   ctx.restore();
 }
 
+// ─── ALIEN — ET na nave oval ─────────────────────────────────────────
+function drawAlien(x, y, flapAnim, angle) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(typeof angle === 'number' ? angle : 0);
+
+  var ac  = ALIEN_COLORS[activeColorAlien] || ALIEN_COLORS[0];
+  var cB  = ac.body, cBL = ac.bodyLt, cO = ac.outline, cGl = ac.glow;
+  var cU  = ac.ufo,  cUL = ac.ufoLt,  cUS = ac.ufoSh;
+  ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+
+  var _ft  = (typeof bleuFlapTimer !== 'undefined') ? bleuFlapTimer : 0;
+  var _ftp = (_ft > 0) ? (1 - _ft / 18) : 0;
+  var _pulse = 0.5 + 0.5 * Math.sin(frame * 0.07);
+  var _bob   = Math.sin(flapAnim * 0.9) * 1.4; // alien head gentle bob
+
+  // ── THRUSTER BEAM — energia embaixo quando impulsiona ──
+  if(_ft > 0) {
+    var _bPow = 1 - _ftp;
+    var _bG = ctx.createRadialGradient(0, 16, 0, 0, 22, 18 * _bPow + 8);
+    _bG.addColorStop(0, cGl + 'DD'); _bG.addColorStop(1, cGl + '00');
+    ctx.globalAlpha = _bPow * 0.85;
+    ctx.fillStyle = _bG;
+    ctx.beginPath(); ctx.ellipse(0, 20, (12 + _bPow * 8), (8 + _bPow * 6), 0, 0, Math.PI*2); ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  // ── DISCO VOADOR — base oval da nave ──
+  // sombra do disco
+  ctx.beginPath(); ctx.ellipse(2, 13, 28, 8, 0, 0, Math.PI*2);
+  ctx.fillStyle = cUS + 'aa'; ctx.fill();
+
+  // brilho ambiente embaixo (propulsão idle)
+  var _idleGl = ctx.createRadialGradient(0, 15, 0, 0, 15, 22);
+  _idleGl.addColorStop(0, cGl + '44'); _idleGl.addColorStop(1, cGl + '00');
+  ctx.globalAlpha = 0.45 + _pulse * 0.25;
+  ctx.fillStyle = _idleGl;
+  ctx.beginPath(); ctx.ellipse(0, 16, 20, 7, 0, 0, Math.PI*2); ctx.fill();
+  ctx.globalAlpha = 1;
+
+  // corpo do disco — gradiente metálico
+  var _dg = ctx.createLinearGradient(0, 4, 0, 18);
+  _dg.addColorStop(0, cUL); _dg.addColorStop(0.45, cU); _dg.addColorStop(1, cUS);
+  ctx.beginPath(); ctx.ellipse(0, 11, 27, 7, 0, 0, Math.PI*2);
+  ctx.fillStyle = _dg; ctx.fill();
+  ctx.lineWidth = 1.5; ctx.strokeStyle = cO + '88'; ctx.stroke();
+
+  // highlight superior do disco
+  ctx.beginPath(); ctx.ellipse(-6, 8, 15, 3, -0.1, 0, Math.PI*2);
+  ctx.fillStyle = cUL; ctx.globalAlpha = 0.4; ctx.fill(); ctx.globalAlpha = 1;
+
+  // anel de luzes giratórias ao redor do disco
+  var _nLights = 8;
+  for(var _li = 0; _li < _nLights; _li++) {
+    var _la = (_li / _nLights) * Math.PI * 2 + frame * 0.05;
+    var _lx = Math.cos(_la) * 23, _ly = 11 + Math.sin(_la) * 3.5;
+    var _lA = 0.45 + 0.45 * Math.sin(_la * 2 + frame * 0.12);
+    ctx.beginPath(); ctx.ellipse(_lx, _ly, 2.2, 1.4, _la, 0, Math.PI*2);
+    ctx.fillStyle = cGl; ctx.globalAlpha = _lA; ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // ── CÚPULA DE VIDRO — semicírculo transparente ──
+  ctx.beginPath();
+  ctx.arc(0, 4, 14, Math.PI, 0);
+  ctx.lineTo(14, 4); ctx.lineTo(-14, 4); ctx.closePath();
+  var _domGrad = ctx.createRadialGradient(-4, -5, 2, 0, 2, 16);
+  _domGrad.addColorStop(0, 'rgba(180,240,255,0.52)');
+  _domGrad.addColorStop(0.6, 'rgba(80,180,220,0.22)');
+  _domGrad.addColorStop(1, 'rgba(40,100,160,0.12)');
+  ctx.fillStyle = _domGrad; ctx.fill();
+  ctx.lineWidth = 1.6; ctx.strokeStyle = '#AADDFF66'; ctx.stroke();
+
+  // brilho da cúpula
+  ctx.beginPath(); ctx.ellipse(-5, -5, 5, 3, -0.5, 0, Math.PI*2);
+  ctx.fillStyle = '#ffffff'; ctx.globalAlpha = 0.32; ctx.fill(); ctx.globalAlpha = 1;
+
+  // ── CABEÇA DO ALIENÍGENA (dentro da cúpula) ──
+  // cranio grande clássico de ET
+  ctx.beginPath(); ctx.ellipse(0, -2 + _bob, 7, 10, 0, 0, Math.PI*2);
+  ctx.fillStyle = cB; ctx.fill();
+  ctx.lineWidth = 1; ctx.strokeStyle = cO; ctx.stroke();
+
+  // highlight craniano
+  ctx.beginPath(); ctx.ellipse(-2, -8 + _bob, 3.5, 4.5, -0.3, 0, Math.PI*2);
+  ctx.fillStyle = cBL; ctx.globalAlpha = 0.42; ctx.fill(); ctx.globalAlpha = 1;
+
+  // Olhos amendoados de ET — grandes, inclinados, pretos totais
+  function _etEye(ex, ey, rot) {
+    ctx.save(); ctx.translate(ex, ey + _bob); ctx.rotate(rot);
+    ctx.beginPath(); ctx.ellipse(0, 0, 3.2, 4.8, 0, 0, Math.PI*2);
+    ctx.fillStyle = '#060a0e'; ctx.fill();
+    ctx.lineWidth = 0.7; ctx.strokeStyle = cO; ctx.stroke();
+    // reflexo
+    ctx.beginPath(); ctx.ellipse(-1, -1.8, 1.1, 1.5, -0.25, 0, Math.PI*2);
+    ctx.fillStyle = '#ffffff'; ctx.globalAlpha = 0.72; ctx.fill(); ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+  _etEye(-3.2, -1, -0.22);
+  _etEye( 3.2, -1,  0.22);
+
+  // narizinho minúsculo (2 pontinhos)
+  ctx.fillStyle = cO; ctx.globalAlpha = 0.55;
+  ctx.beginPath(); ctx.arc(-1.2, 4 + _bob, 0.8, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc( 1.2, 4 + _bob, 0.8, 0, Math.PI*2); ctx.fill();
+  ctx.globalAlpha = 1;
+
+  // boca fina (linha levemente curvada)
+  ctx.beginPath(); ctx.arc(0, 5.5 + _bob, 2.8, 0.12*Math.PI, 0.88*Math.PI, false);
+  ctx.lineWidth = 0.9; ctx.strokeStyle = cO; ctx.globalAlpha = 0.6; ctx.stroke(); ctx.globalAlpha = 1;
+
+  // pescoço fino
+  ctx.beginPath(); ctx.moveTo(-2, 7 + _bob); ctx.lineTo(-2, 9); ctx.lineTo(2, 9); ctx.lineTo(2, 7 + _bob);
+  ctx.fillStyle = cB; ctx.fill();
+
+  // ── Score glow ──
+  if(typeof scoreGlow !== 'undefined' && scoreGlow > 0) {
+    ctx.globalAlpha = Math.min(0.38, scoreGlow / 15 * 0.4);
+    ctx.fillStyle = cGl;
+    ctx.beginPath(); ctx.arc(0, 4, 28, 0, Math.PI*2); ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  ctx.restore();
+}
+
 // ─── CHARACTER DISPATCHER ────────────────────
 function drawCharacter(x, y, flap, angle) {
-  if(activeChar===2 && wormUnlocked)   drawWorm(x, y, flap, angle);
+  if(activeChar===3 && alienUnlocked)       drawAlien(x, y, flap, angle);
+  else if(activeChar===2 && wormUnlocked)   drawWorm(x, y, flap, angle);
   else if(activeChar===1 && gengarUnlocked) drawPhantom(x, y, flap, angle);
-  else drawBleu(x, y, flap, angle);
+  else                                       drawBleu(x, y, flap, angle);
 }
 
 // ─── COLLECTIBLE COIN ────────────────────────
@@ -5009,9 +5183,9 @@ function handleClick(ex, ey) {
   // ── IDLE tabs click
   if(gameState === 'idle') {
     if(idleTab==='shop'){
-      // Char selector tabs
-      var _ctw=118,_cgap=10,_ctx0=W/2-Math.round((3*(_ctw+_cgap)-_cgap)/2);
-      for(var _ci2=0;_ci2<3;_ci2++){
+      // Char selector tabs (4 personagens)
+      var _ctw=92,_cgap=7,_ctx0=W/2-Math.round((4*(_ctw+_cgap)-_cgap)/2);
+      for(var _ci2=0;_ci2<4;_ci2++){
         var _cx2=_ctx0+_ci2*(_ctw+_cgap);
         if(cx>=_cx2&&cx<=_cx2+_ctw&&cy>=58&&cy<=86){ shopChar=_ci2; shopSelColor=0; beep(440,880,0.06,'sine',0.08); return; }
       }
@@ -5034,7 +5208,7 @@ function handleClick(ex, ey) {
         }
       }
       // Shield purchase — left card (x:6, y:355, w:108, h:118)
-      if(((shopChar===0)||((shopChar===1)&&gengarUnlocked)||((shopChar===2)&&wormUnlocked))&&cx>=6&&cx<=114&&cy>=355&&cy<=480){
+      if(((shopChar===0)||((shopChar===1)&&gengarUnlocked)||((shopChar===2)&&wormUnlocked)||((shopChar===3)&&alienUnlocked))&&cx>=6&&cx<=114&&cy>=355&&cy<=480){
         if(shieldStock>=3){ beep(220,150,0.1,'sawtooth',0.06); return; }
         if(coinCount>=80){
           coinCount-=80; if(coinCount<0)coinCount=0; localStorage.setItem('bleuCoins',coinCount);
@@ -5049,6 +5223,23 @@ function handleClick(ex, ey) {
       if(shopChar===2&&!wormUnlocked&&walletAddress&&cx>=W/2-82&&cx<=W/2+82&&cy>=386&&cy<=420){ unlockCharWithUSDC(2); return; }
       // Phantom USDC unlock
       if(shopChar===1&&!gengarUnlocked&&walletAddress&&cx>=W/2-82&&cx<=W/2+82&&cy>=386&&cy<=420){ unlockCharWithUSDC(1); return; }
+      // Alien USDC unlock
+      if(shopChar===3&&!alienUnlocked&&walletAddress&&cx>=W/2-82&&cx<=W/2+82&&cy>=386&&cy<=420){ unlockCharWithUSDC(3); return; }
+      // Alien unlock button (coins)
+      if(shopChar===3&&!alienUnlocked&&cx>=W/2-82&&cx<=W/2+82&&cy>=344&&cy<=382){
+        if(coinCount>=500){
+          coinCount-=500; localStorage.setItem('bleuCoins',coinCount);
+          alienUnlocked=true; localStorage.setItem('bleuAlien','1');
+          unlockedColorsAlien=[0]; localStorage.setItem('bleuColsA',JSON.stringify(unlockedColorsAlien));
+          activeChar=3; activeColorAlien=0;
+          localStorage.setItem('bleuChar','3'); localStorage.setItem('bleuColorA','0');
+          beep(660,1320,0.35,'sine',0.18);
+          [880,1047,1320,1760].forEach(function(f,i){setTimeout(function(){beep(f,f*1.2,0.13,'sine',0.1);},i*80);});
+          spawnParticles(W/2,H/2,'#44FF88',20); spawnParticles(W/2,H/2,'#00D4FF',12);
+          if(navigator.vibrate) navigator.vibrate([20,10,50,10,100,10,80]);
+        } else { beep(220,150,0.12,'sawtooth',0.08); hitFlash=3; }
+        return;
+      }
       // Worm unlock button (coins)
       if(shopChar===2&&!wormUnlocked&&cx>=W/2-82&&cx<=W/2+82&&cy>=344&&cy<=382){
         if(coinCount>=500){
