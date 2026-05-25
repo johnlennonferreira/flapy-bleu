@@ -77,7 +77,10 @@ var _ac = null, muted = false;
 document.getElementById('mute').onclick = function() {
   muted = !muted;
   document.getElementById('mute').textContent = muted ? '🔇 MUTE' : '🔊 SFX';
-  if(muted) stopMusic(); else if(gameState==='playing') startMusic(getPhaseIdx());
+  if(muted){ if(_curAudio) _curAudio.pause(); if(_presAudio) _presAudio.pause(); }
+    else if(_starActive){ _playAudio(_starAudio); }
+    else if(gameState==='prestige'){ _playAudio(_presAudio); }
+    else if(gameState==='playing'||gameState==='hurt') startMusic(getPhaseIdx());
 };
 function getAC() {
   if (!_ac) { try { _ac = new (window.AudioContext || window.webkitAudioContext)(); } catch(e){} }
@@ -160,80 +163,74 @@ const PHASE_VISUALS = [
 function getPhaseVisual() { return PHASE_VISUALS[getPhaseIdx()]; }
 
 // ─── PHASE MUSIC ────────────────────────────────────────────
-const PHASE_MUSIC = [
-  // Phase 1 — PERPDEX TERMINAL: techy 8-bit beat
-  { n:[110,0,138,0,165,138,110,0, 146,0,138,165,110,0,138,0, 110,0,123,0,138,123,110,0, 98,0,110,138,110,98,0,0], d:105, w:'square', v:.044 },
-  // Phase 2 — BASE NETWORK: bright hopeful melody
-  { n:[523,0,659,784,659,523,0,523, 392,523,659,784,880,784,0,0, 523,659,784,880,784,659,523,0, 440,523,659,784,659,440,0,0], d:100, w:'sine', v:.048 },
-  // Phase 3 — TO THE MOON: ascending wonder
-  { n:[349,392,440,523,440,392,349,0, 294,349,392,440,523,698,523,0, 392,440,523,659,523,440,392,0, 349,440,523,392,349,294,0,0], d:135, w:'sine', v:.045 },
-  // Phase 4 — CRYPTO FOREST: mysterious minor groove
-  { n:[220,0,261,0,329,261,220,0, 196,0,247,294,247,196,0,196, 220,261,329,261,220,0,196,0, 185,220,261,220,185,0,174,0], d:170, w:'triangle', v:.05 },
-  // Phase 5 — HEAVEN'S GATE: epic choir-like
-  { n:[262,330,392,0,523,392,330,262, 220,277,330,440,392,330,220,0, 262,330,392,523,659,523,392,0, 330,392,523,392,330,262,0,262], d:140, w:'sine', v:.052 },
-  // Phase 6 — DUNGEON CASTLE: dark brooding
-  { n:[110,0,131,0,146,131,110,0, 98,0,116,0,131,116,98,0, 110,131,146,131,110,0,98,0, 87,110,131,110,87,0,0,87], d:175, w:'sawtooth', v:.036 },
-  // Phase 7 — OUTER SPACE: fast futuristic
-  { n:[440,0,554,659,880,659,554,0, 440,554,659,880,1047,880,0,0, 440,0,554,659,0,880,659,554, 440,0,659,880,659,440,0,0], d:88, w:'square', v:.04 },
-  // Phase 8 — CELESTIAL DESERT: flowing desert melody
-  { n:[294,330,370,440,370,330,294,0, 247,294,330,370,440,370,0,0, 330,370,440,494,440,370,330,0, 294,247,294,330,247,220,0,0], d:158, w:'sine', v:.048 },
-  // Phase 9 — VOLCANO: tense driving rhythm
-  { n:[185,0,185,207,246,0,220,185, 0,174,185,207,185,0,174,0, 185,207,246,220,185,0,185,207, 246,220,185,174,185,0,0,174], d:190, w:'sine', v:.042 },
-  // Phase 10 — COINBASE PLANET: triumphant finale
-  { n:[523,659,784,880,1047,880,784,659, 523,0,659,784,880,1047,880,0, 784,880,1047,880,784,659,523,0, 659,784,880,1047,880,784,659,523], d:95, w:'sine', v:.052 }
-];
-// Música da estrela — estilo Mario star, rápida e frenética
-var STAR_MUSIC = { n:[659,523,659,784, 784,880,784,659, 523,659,784,880, 1047,880,784,659], d:72, w:'square', v:0.045 };
-var _starMusicActive = false, _starSavedPhase = -1;
-function startStarMusic() {
-  _starSavedPhase = _mPhase;
-  clearTimeout(_mTimeout); _mTimeout = null;
-  _starMusicActive = true; _mPos = 0; _tickMusic();
-}
-function stopStarMusic() {
-  _starMusicActive = false;
-  clearTimeout(_mTimeout); _mTimeout = null;
-  var p = _starSavedPhase; _starSavedPhase = -1;
-  if (p >= 0) { _mPhase = p; _mPos = 0; _tickMusic(); }
-}
-function startMusic(pi) {
-  if (_mPhase === pi && !_starMusicActive) return;
-  _starMusicActive = false;
-  stopMusic(); _mPhase = pi; _mPos = 0; _tickMusic();
-}
-function stopMusic() { clearTimeout(_mTimeout); _mTimeout = null; _mPhase = -1; _starMusicActive = false; }
-function _tickMusic() {
-  if ((_mPhase < 0 && !_starMusicActive) || muted) return;
-  var pm = _starMusicActive ? STAR_MUSIC : PHASE_MUSIC[_mPhase], f = pm.n[_mPos % pm.n.length];
-  if (f > 0) {
-    var a = getAC();
-    if (a) try {
-      var dur = pm.d/1000;
-      // Main tone
-      var o = a.createOscillator(), g = a.createGain();
-      o.connect(g); g.connect(a.destination);
-      o.type = pm.w; o.frequency.value = f;
-      g.gain.setValueAtTime(pm.v, a.currentTime);
-      g.gain.exponentialRampToValueAtTime(0.001, a.currentTime + dur*.85);
-      o.start(a.currentTime); o.stop(a.currentTime + dur);
-      // Octave harmonic (softer, adds warmth)
-      var o2 = a.createOscillator(), g2 = a.createGain();
-      o2.connect(g2); g2.connect(a.destination);
-      o2.type = pm.w==='square'?'sine':pm.w; o2.frequency.value = f * 2;
-      g2.gain.setValueAtTime(pm.v * 0.28, a.currentTime);
-      g2.gain.exponentialRampToValueAtTime(0.001, a.currentTime + dur*.6);
-      o2.start(a.currentTime); o2.stop(a.currentTime + dur);
-      // Fifth harmonic (adds richness)
-      var o3 = a.createOscillator(), g3 = a.createGain();
-      o3.connect(g3); g3.connect(a.destination);
-      o3.type = 'sine'; o3.frequency.value = f * 1.5;
-      g3.gain.setValueAtTime(pm.v * 0.14, a.currentTime);
-      g3.gain.exponentialRampToValueAtTime(0.001, a.currentTime + dur*.5);
-      o3.start(a.currentTime); o3.stop(a.currentTime + dur);
-    } catch(e) {}
+// ─── MUSIC SYSTEM v2 — HTML5 Audio (Suno tracks) ────────────────
+var _musicInited = false;
+var _phaseAudio  = [];      // Audio[10] — uma por fase
+var _starAudio   = null;
+var _presAudio   = null;
+var _curAudio    = null;    // track atual tocando
+var _curPhaseIdx = -1;      // índice da fase atual (para retomar após star)
+var _starActive  = false;
+
+function _initMusic() {
+  if(_musicInited) return; _musicInited = true;
+  for(var _mi = 0; _mi < 10; _mi++) {
+    var _a = new Audio('music/phase' + (_mi + 1) + '.mp3');
+    _a.loop = true; _a.volume = 0.30; _a.preload = 'none';
+    _phaseAudio.push(_a);
   }
-  _mPos++;
-  _mTimeout = setTimeout(_tickMusic, pm.d);
+  _starAudio = new Audio('music/star.mp3');
+  _starAudio.loop = true; _starAudio.volume = 0.36; _starAudio.preload = 'none';
+  _presAudio = new Audio('music/prestige.mp3');
+  _presAudio.loop = false; _presAudio.volume = 0.42; _presAudio.preload = 'none';
+}
+
+function _playAudio(a) {
+  if(!a || muted) return;
+  var p = a.play(); if(p) p.catch(function(){});
+}
+
+function startMusic(pi) {
+  _initMusic();
+  _curPhaseIdx = pi;
+  if(_starActive) return; // star tem prioridade — só atualiza índice
+  var a = _phaseAudio[pi]; if(!a) return;
+  if(_curAudio && _curAudio !== a) { _curAudio.pause(); }
+  _curAudio = a;
+  _playAudio(a);
+}
+
+function stopMusic() {
+  if(_curAudio)  { _curAudio.pause(); }
+  if(_presAudio) { _presAudio.pause(); }
+  _starActive = false; _curAudio = null;
+}
+
+function startStarMusic() {
+  _initMusic(); _starActive = true;
+  if(_curAudio) _curAudio.pause();
+  _curAudio = _starAudio;
+  _starAudio.currentTime = 0;
+  _playAudio(_starAudio);
+}
+
+function stopStarMusic() {
+  _starActive = false;
+  if(_starAudio) _starAudio.pause();
+  if(_curPhaseIdx >= 0) {
+    _curAudio = _phaseAudio[_curPhaseIdx];
+    _playAudio(_curAudio);
+  }
+}
+
+function playPrestigeMusic() {
+  _initMusic(); stopMusic();
+  _presAudio.currentTime = 0;
+  _playAudio(_presAudio);
+}
+
+function resumeCurrentMusic() {
+  if(_curAudio && _curAudio.paused) _playAudio(_curAudio);
 }
 
 // ─── AWARD / CHEST ──────────────────────────────────────────
@@ -1119,7 +1116,7 @@ let screenShake = 0, scorePop = 0, hitFlash = 0, bleuSquish = 0;
 let coins = [], coinCount = parseInt(localStorage.getItem('bleuCoins')||'0');
 // 🎁 DEV GRANT — one-time 1000 coins to test Alien (remove after testing)
 if(!localStorage.getItem('_devGrant1')){ coinCount = Math.max(coinCount, 1000); localStorage.setItem('bleuCoins', coinCount); localStorage.setItem('_devGrant1','1'); }
-var _mTimeout=null, _mPhase=-1, _mPos=0;
+// _mTimeout/_mPhase/_mPos removidos — substituídos pelo sistema HTML5 Audio
 var completedPhase=0, chestClicks=0, chestBounce=0, chestOpened=false, chestCoins=0, chestOpenAnim=0, awardCoins=0, awardCoinAnim=0;
 var bleuAngle=0; // smooth rotation (radians)
 var bleuFlapTimer=0; // frames of wing animation remaining after a flap
@@ -4772,7 +4769,7 @@ function loop(ts) {
           // Enter prestige screen
           prestigeAnim = 0;
           gameState = 'prestige';
-          stopMusic();
+          playPrestigeMusic();
           pipes = []; stars = []; shieldItems = [];
           spawnParticles(W/2, H/2, '#FFD700', 40);
           spawnParticles(W/2, H/2, '#00D4FF', 25);
@@ -5328,7 +5325,10 @@ function handleClick(ex, ey) {
   if(cy >= 0 && cy <= 22 && cx >= W-50 && cx <= W) {
     muted = !muted;
     document.getElementById('mute').textContent = muted ? '🔇 MUTE' : '🔊 SFX';
-    if(muted) stopMusic(); else if(gameState==='playing') startMusic(getPhaseIdx());
+    if(muted){ if(_curAudio) _curAudio.pause(); if(_presAudio) _presAudio.pause(); }
+    else if(_starActive){ _playAudio(_starAudio); }
+    else if(gameState==='prestige'){ _playAudio(_presAudio); }
+    else if(gameState==='playing'||gameState==='hurt') startMusic(getPhaseIdx());
     return;
   }
   if(dailyModal){
