@@ -1835,6 +1835,18 @@ function drawWorm(x, y, flapAnim, angle) {
   _drawEye(hx+2,  hy-7, 5.0, 3.5, 2.0, false);  // far eye  (smaller, no lashes)
   _drawEye(hx+10, hy-6, 6.5, 4.5, 2.5, true);   // near eye (bigger, with lashes)
 
+  // ── Nariz de palhaço 🔴 — entre os olhos e a boca ──
+  var _nx = hx+10, _ny = hy+1;
+  var _nRad = 3.0;
+  var _nog = ctx.createRadialGradient(_nx-0.8, _ny-0.8, 0, _nx, _ny, _nRad);
+  _nog.addColorStop(0, '#ff5577'); _nog.addColorStop(1, '#cc0022');
+  ctx.beginPath(); ctx.arc(_nx, _ny, _nRad, 0, Math.PI*2);
+  ctx.fillStyle = _nog; ctx.fill();
+  ctx.lineWidth = 0.8; ctx.strokeStyle = '#880011'; ctx.globalAlpha = 0.5; ctx.stroke(); ctx.globalAlpha = 1;
+  // brilho do nariz
+  ctx.beginPath(); ctx.arc(_nx-1.0, _ny-1.0, 1.1, 0, Math.PI*2);
+  ctx.fillStyle = '#ffffff'; ctx.globalAlpha = 0.75; ctx.fill(); ctx.globalAlpha = 1;
+
   // ── BOCA — sorriso emoji :) limpo, kawaii, sem vergonha ──
   var _mx = hx + 9, _my = hy + 7;
   var _mR = 5.2; // raio do sorriso
@@ -3810,23 +3822,36 @@ function drawLivesHUD() {
     ctx.textBaseline='alphabetic'; ctx.globalAlpha=1;
     ctx.restore();
   }
-  // Shield indicator
+  // Shield indicator — same bezier shape as shop card, green
   if(shield>0){
-    var pulse2 = 0.85 + 0.15*Math.sin(frame*0.18);
-    ctx.globalAlpha = pulse2;
-    ctx.fillStyle='#00FF88'; ctx.font='bold 18px Arial';
-    ctx.textAlign='left'; ctx.textBaseline='middle';
-    ctx.fillText('🛡️', 8, 44);
-    if(shield>1){
-      ctx.font='bold 11px Courier New'; ctx.fillStyle='#00FF88';
-      ctx.globalAlpha=1; ctx.fillText('x'+shield, 30, 44);
-    }
-    ctx.globalAlpha=1; ctx.textBaseline='alphabetic';
+    var _sp = 0.88 + 0.12*Math.sin(frame*0.18);
+    var _hr = 10; // HUD shield radius
+    ctx.save(); ctx.translate(18, 46);
+    // halo pulse
+    ctx.globalAlpha = (0.14 + 0.08*Math.sin(frame*0.18)) * _sp;
+    ctx.fillStyle = '#00FF88';
+    ctx.beginPath(); ctx.arc(0, 0, _hr*1.6, 0, Math.PI*2); ctx.fill();
+    ctx.globalAlpha = _sp;
+    // shield body (bezier — identical to shop)
+    ctx.fillStyle = '#00CC66'; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(0,-_hr); ctx.bezierCurveTo(_hr,-_hr,_hr,0,0,_hr);
+    ctx.bezierCurveTo(-_hr,0,-_hr,-_hr,0,-_hr); ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    // cross stripe
+    ctx.strokeStyle = '#ffffff66'; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.moveTo(0,-_hr*0.7); ctx.lineTo(0,_hr*0.7); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-_hr*0.55,0); ctx.lineTo(_hr*0.55,0); ctx.stroke();
+    // count or single indicator
+    ctx.fillStyle = '#001a0f'; ctx.font = 'bold 9px Arial';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.globalAlpha = _sp;
+    ctx.fillText(shield > 1 ? shield : '✦', 0, 0.5);
+    ctx.textBaseline='alphabetic'; ctx.globalAlpha=1; ctx.restore();
     // flash vermelho ao quebrar
     if(shieldBreak>0){
       ctx.globalAlpha=shieldBreak/10*0.5;
-      ctx.fillStyle='#FF1744';
-      ctx.fillRect(0,0,W,H);
+      ctx.fillStyle='#FF1744'; ctx.fillRect(0,0,W,H);
       ctx.globalAlpha=1;
     }
   }
@@ -3954,8 +3979,8 @@ function drawMidGameShop() {
   ctx.fillStyle = '#FFD700';
   ctx.fillText('💎 ' + coinCount, W/2, 112);
 
-  // ── Shield card (centered) ──
-  var _cx = W/2 - 65, _cy = 132, _cw = 130, _ch = 158;
+  // ── Shield card — just above CONTINUE button ──
+  var _cx = W/2 - 65, _cy = 310, _cw = 130, _ch = 158;
   ctx.fillStyle = shieldStock > 0 ? '#00FF8812' : '#ffffff07';
   ctx.strokeStyle = shieldStock > 0 ? '#00FF8855' : '#ffffff1a';
   ctx.lineWidth = 1.5;
@@ -4016,7 +4041,7 @@ function drawMidGameShop() {
   ctx.beginPath(); ctx.roundRect(-92, -19, 184, 38, 10); ctx.fill(); ctx.stroke();
   ctx.fillStyle = '#fff'; ctx.font = 'bold 14px Courier New';
   ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
-  ctx.fillText('▶  CONTINUAR', 0, 0);
+  ctx.fillText('▶  CONTINUE', 0, 0);
   ctx.textBaseline = 'alphabetic'; ctx.restore();
 }
 
@@ -4922,7 +4947,7 @@ function handleClick(ex, ey) {
     // CONTINUAR button: centered at H-78
     if(cy >= H-97 && cy <= H-59){ _mgClose(); return; }
     // Shield card: _cx=W/2-65, _cy=132, _cw=130, _ch=158
-    if(cx >= W/2-65 && cx <= W/2+65 && cy >= 132 && cy <= 290){
+    if(cx >= W/2-65 && cx <= W/2+65 && cy >= 310 && cy <= 468){
       if(shieldStock>=3){ beep(220,150,0.1,'sawtooth',0.06); return; }
       if(coinCount>=80){
         coinCount-=80; if(coinCount<0)coinCount=0; localStorage.setItem('bleuCoins',coinCount);
