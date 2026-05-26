@@ -5163,7 +5163,7 @@ function loop(ts) {
       drawFireStarItem(fireStars[fsi].x, fireStars[fsi].y);
       var fsdx=fireStars[fsi].x-bleu.x, fsdy=fireStars[fsi].y-bleu.y;
       if(Math.sqrt(fsdx*fsdx+fsdy*fsdy) < 26){
-        firePower = 240; // 4s de caos
+        firePower = 390; // ~6.5s de caos (maior que estrela azul 300f)
         fireStars.splice(fsi,1); fireStars=[]; stars=[];
         spawnParticles(bleu.x,bleu.y,'#FF4400',20);
         spawnParticles(bleu.x,bleu.y,'#FFaa00',14);
@@ -5177,14 +5177,32 @@ function loop(ts) {
     // ─── FIRE POWER — bola de fogo desgovernada ──────────────────────
     if(firePower > 0){
       firePower--;
-      var _ff = firePower < 60 ? firePower/60 : 1;
-      // Movimento caótico — impulso aleatório de vy a cada 22 frames
-      if(frame % 22 === 0) bleu.vy = (Math.random()-0.5) * 16;
-      bleu.vy += 0.35; if(bleu.vy>13) bleu.vy=13; if(bleu.vy<-13) bleu.vy=-13;
-      bleu.y += bleu.vy;
-      // Quica nas paredes
-      if(bleu.y+14 > H-80){ bleu.y=H-80-14; bleu.vy=-Math.abs(bleu.vy)*0.85; screenShake=3; }
-      if(bleu.y-14 < 22)  { bleu.y=22+14;   bleu.vy= Math.abs(bleu.vy)*0.85; screenShake=3; }
+      var _ff = firePower < 80 ? firePower/80 : 1; // fade out visual nos últimos 80f
+      var _returning = firePower < 80; // modo retorno: guia para posição segura
+
+      if(!_returning){
+        // ── Fase caótica: movimento aleatório em TODOS os eixos ──
+        if(frame % 18 === 0) bleu.vy = (Math.random()-0.5) * 18; // caos vertical
+        if(frame % 22 === 0) bleu.vx = (Math.random()-0.5) * 12; // caos horizontal
+        bleu.vy += 0.35; if(bleu.vy>14) bleu.vy=14; if(bleu.vy<-14) bleu.vy=-14;
+        if(!bleu.vx) bleu.vx=0;
+        bleu.vx *= 0.96; // leve fricção horizontal
+        bleu.y += bleu.vy;
+        bleu.x += bleu.vx;
+        // Quica nas 4 paredes
+        if(bleu.y+14 > H-80){ bleu.y=H-80-14; bleu.vy=-Math.abs(bleu.vy)*0.82; screenShake=4; beep(120,60,0.1,'sawtooth',0.06); }
+        if(bleu.y-14 < 22)  { bleu.y=22+14;   bleu.vy= Math.abs(bleu.vy)*0.82; screenShake=4; beep(120,60,0.1,'sawtooth',0.06); }
+        if(bleu.x+14 > W-14){ bleu.x=W-28;    bleu.vx=-Math.abs(bleu.vx)*0.82; screenShake=3; }
+        if(bleu.x-14 < 14)  { bleu.x=28;      bleu.vx= Math.abs(bleu.vx)*0.82; screenShake=3; }
+      } else {
+        // ── Fase de retorno: move suavemente para posição inicial (90, H/2) ──
+        var _tx=90, _ty=H/2;
+        bleu.x += (_tx - bleu.x) * 0.055;
+        bleu.y += (_ty - bleu.y) * 0.055;
+        if(!bleu.vx) bleu.vx=0;
+        bleu.vx *= 0.85; bleu.vy *= 0.85;
+      }
+
       // Destrói pipes ao tocar
       for(var fpi=pipes.length-1; fpi>=0; fpi--){
         var _fp=pipes[fpi];
@@ -5199,21 +5217,71 @@ function loop(ts) {
           }
         }
       }
-      // Screen orange tint
-      ctx.globalAlpha=_ff*0.18; ctx.fillStyle='#FF4400'; ctx.fillRect(0,0,W,H); ctx.globalAlpha=1;
-      // Aura de fogo ao redor do pássaro
-      var _faR=34+7*Math.abs(Math.sin(frame*0.35));
-      ctx.globalAlpha=(0.35+0.22*Math.sin(frame*0.5))*_ff;
-      var _fag=ctx.createRadialGradient(bleu.x,bleu.y,6,bleu.x,bleu.y,_faR);
-      _fag.addColorStop(0,'#ffffff99'); _fag.addColorStop(0.35,'#FF440077'); _fag.addColorStop(1,'#FF440000');
+
+      // Screen orange tint (pisca no retorno para avisar que vai acabar)
+      var _tintAlpha = _returning ? (0.12 + 0.12*Math.sin(frame*0.55)) : 0.20;
+      ctx.globalAlpha=_tintAlpha; ctx.fillStyle='#FF3300'; ctx.fillRect(0,0,W,H); ctx.globalAlpha=1;
+
+      // Aura de fogo ao redor do pássaro — maior e mais intensa
+      var _faR=44+10*Math.abs(Math.sin(frame*0.32));
+      ctx.globalAlpha=(0.45+0.25*Math.sin(frame*0.5))*_ff;
+      var _fag=ctx.createRadialGradient(bleu.x,bleu.y,4,bleu.x,bleu.y,_faR);
+      _fag.addColorStop(0,'#ffffffcc'); _fag.addColorStop(0.25,'#FF8800aa'); _fag.addColorStop(0.6,'#FF440066'); _fag.addColorStop(1,'#FF440000');
       ctx.fillStyle=_fag;
       ctx.beginPath(); ctx.arc(bleu.x,bleu.y,_faR,0,Math.PI*2); ctx.fill();
       ctx.globalAlpha=1;
-      // Rastro de fogo a cada 2 frames
-      if(frame%2===0){ spawnParticles(bleu.x-10,bleu.y,'#FF4400',2); }
-      if(frame%4===0){ spawnParticles(bleu.x-14,bleu.y,'#FFaa00',2); }
-      // Fim do firePower — recuperação
-      if(firePower===0){ invincible=80; spawnParticles(bleu.x,bleu.y,'#FFaa00',16); beep(350,180,0.3,'sawtooth',0.16); }
+
+      // Coroa de chamas acima do pássaro
+      if(!_returning){
+        ctx.save(); ctx.translate(bleu.x, bleu.y-20);
+        for(var _fi=0; _fi<5; _fi++){
+          var _fa=(_fi/5)*Math.PI*2 + frame*0.18;
+          var _fr=10+5*Math.sin(frame*0.4+_fi);
+          ctx.beginPath();
+          ctx.arc(Math.cos(_fa)*8, Math.sin(_fa)*4 - 4, _fr*0.45, 0, Math.PI*2);
+          ctx.fillStyle = _fi%2===0 ? '#FF4400' : '#FFaa00';
+          ctx.globalAlpha=0.6+0.25*Math.sin(frame*0.3+_fi);
+          ctx.fill();
+        }
+        ctx.restore(); ctx.globalAlpha=1;
+      }
+
+      // Rastro de fogo mais denso
+      if(frame%2===0){ spawnParticles(bleu.x-12,bleu.y,'#FF4400',3); }
+      if(frame%3===0){ spawnParticles(bleu.x-16,bleu.y,'#FFaa00',2); spawnParticles(bleu.x,bleu.y-8,'#FFff00',1); }
+
+      // Fim do firePower — penalidade obrigatória: perde escudo ou coração
+      if(firePower===0){
+        invincible=100;
+        bleu.vx=0; // zera momentum horizontal
+        spawnParticles(bleu.x,bleu.y,'#FFaa00',20);
+        spawnParticles(bleu.x,bleu.y,'#FF4400',12);
+        beep(350,180,0.3,'sawtooth',0.18);
+        // Penalidade
+        if(shield > 0){
+          shield--; shieldBreak=15;
+          spawnParticles(bleu.x,bleu.y,'#00D4FF',10);
+          beep(220,110,0.2,'sawtooth',0.14);
+        } else {
+          lives = Math.max(0, lives-1);
+          if(navigator.vibrate) navigator.vibrate([80,30,120]);
+          beep(160,80,0.3,'sawtooth',0.18);
+          if(lives === 0){
+            if(checkpointStock>0 && !checkpointUsed){
+              checkpointStock--; localStorage.setItem('bleuCheckpoint',checkpointStock);
+              checkpointUsed=true; dizzyTimer=90; checkpointFlash=150;
+              lives=3; invincible=240; bleu.y=H/2; bleu.vy=0;
+              gameState='playing';
+            } else {
+              totalScore+=score; localStorage.setItem('bleuTotal',totalScore);
+              if(score>highScore){highScore=score;newRecord=true;localStorage.setItem('bleuHS',highScore);}
+              lastScore=score; localStorage.setItem('bleuLastScore',lastScore);
+              saveTop5(score); submitWalletScore(score);
+              stopMusic(); resetGame();
+            }
+          }
+        }
+      }
     }
 
     if(starPower>0){ starPower--;
@@ -5342,7 +5410,7 @@ function loop(ts) {
           // Enter prestige screen
           prestigeAnim = 0;
           gameState = 'prestige';
-          playPrestigeMusic();
+          stopMusic(); playPrestigeMusic();
           pipes = []; stars = []; shieldItems = []; fireStars = [];
           spawnParticles(W/2, H/2, '#FFD700', 40);
           spawnParticles(W/2, H/2, '#00D4FF', 25);
@@ -5952,7 +6020,7 @@ function loop(ts) {
 
 // ─── INPUT ───────────────────────────────────
 function flap() {
-  if(gameState==='idle')         { gameState='playing'; startMusic(getPhaseIdx()); combo=0; comboFlash=0; coinsThisRun=0; milestoneIdx=0; recFlash=0; phaseFlash=190; phasePaused=true; bleu.vy=0; bleu.y=H/2;
+  if(gameState==='idle')         { gameState='playing'; startMusic(getPhaseIdx()); combo=0; comboFlash=0; coinsThisRun=0; milestoneIdx=0; recFlash=0; phaseFlash=190; phasePaused=true; bleu.vy=0; bleu.vx=0; bleu.y=H/2;
     // Aplicar itens comprados ao iniciar a run
     if(shieldStock>0){ shield=Math.min(3,shieldStock); shieldStock=0; shieldPickedUp=0; localStorage.setItem('bleuShieldStock',0); }
     if(extraHeartStock>0){ lives=3+Math.min(extraHeartStock,2); extraHeartStock=0; localStorage.setItem('bleuExtraHeart',0); }
@@ -5978,10 +6046,7 @@ function flap() {
   else if(gameState==='dead')    { resetGame(); gameState='playing'; startMusic(0); bleu.vy=-7.5; bleuFlapTimer=18; }
   else if(gameState==='prestige') {
     if(prestigeAnim < 40) return; // aguarda animação mínima
-    resetGame();
-    gameState = 'playing';
-    startMusic(getPhaseIdx());
-    bleu.vy = -7.5; bleuFlapTimer = 18;
+    resetGame(); // volta ao menu idle com badge de prestígio — jogador clica para começar
   }
 }
 
