@@ -107,16 +107,16 @@ function beep(f1, f2, dur, type, vol) {
 // Dificuldade progressiva e justa — retorno de dopamina garantido
 // Fase 9 é respiro intencional (loop dopamínico: tensão → alívio → tensão)
 const PHASES = [
-  { speed: 1.85, gapMin:116, gapMax:126, label:'PHASE 1'  }, // intro — já exige atenção
-  { speed: 1.95, gapMin:108, gapMax:118, label:'PHASE 2'  }, // aperta
-  { speed: 2.1,  gapMin:102, gapMax:112, label:'PHASE 3'  }, // desafio real
-  { speed: 2.25, gapMin: 96, gapMax:108, label:'PHASE 4'  }, // close calls frequentes
-  { speed: 2.35, gapMin: 91, gapMax:103, label:'PHASE 5'  }, // tensão sobe
-  { speed: 2.45, gapMin: 87, gapMax: 98, label:'PHASE 6'  }, // território Flappy Bird
-  { speed: 2.55, gapMin: 83, gapMax: 94, label:'PHASE 7'  }, // difícil de verdade
-  { speed: 2.6,  gapMin: 80, gapMax: 91, label:'PHASE 8'  }, // muito difícil
-  { speed: 2.2,  gapMin:100, gapMax:114, label:'PHASE 9'  }, // respiro — alivia tensão (loop dopamina)
-  { speed: 2.75, gapMin: 76, gapMax: 87, label:'PHASE 10' }, // hardcore — poucos chegam
+  { speed: 1.85, gapMin:132, gapMax:144, label:'PHASE 1'  }, // intro — confortável
+  { speed: 1.95, gapMin:124, gapMax:136, label:'PHASE 2'  }, // aperta levemente
+  { speed: 2.1,  gapMin:118, gapMax:128, label:'PHASE 3'  }, // desafio real
+  { speed: 2.25, gapMin:112, gapMax:124, label:'PHASE 4'  }, // close calls frequentes
+  { speed: 2.35, gapMin:106, gapMax:118, label:'PHASE 5'  }, // tensão sobe
+  { speed: 2.45, gapMin:102, gapMax:114, label:'PHASE 6'  }, // território Flappy Bird
+  { speed: 2.55, gapMin: 98, gapMax:110, label:'PHASE 7'  }, // difícil de verdade
+  { speed: 2.6,  gapMin: 94, gapMax:106, label:'PHASE 8'  }, // muito difícil
+  { speed: 2.2,  gapMin:116, gapMax:130, label:'PHASE 9'  }, // respiro — alivia tensão
+  { speed: 2.75, gapMin: 90, gapMax:102, label:'PHASE 10' }, // hardcore — poucos chegam
 ];
 function getPhaseIdx() { return Math.min(9, Math.floor(score / 15)); }
 function getPhase() {
@@ -539,10 +539,10 @@ function drawAwardScreen() {
 
 // ─── IDLE TABS ───────────────────────────────────────────────
 function drawIdleTabs() {
-  var labels=['PLAY','SHOP','RANK'], keys=['play','shop','leaderboard'];
-  var icons=['▶','🛒','🏆'];
-  var tw=110, th=44, gap=6, total=labels.length*(tw+gap)-gap;
-  var tx0=W/2-total/2, ty=H-58;
+  var labels=['PLAY','SHOP','RANK','MARKET'], keys=['play','shop','leaderboard','market'];
+  var icons=['▶','🛒','🏆','⚗'];
+  var tw=82, th=44, gap=5, total=labels.length*(tw+gap)-gap;
+  var tx0=Math.round(W/2-total/2), ty=H-58;
   ctx.textAlign='center';
   for(var ti=0;ti<labels.length;ti++) {
     var tx=tx0+ti*(tw+gap), act=idleTab===keys[ti];
@@ -550,14 +550,17 @@ function drawIdleTabs() {
     ctx.fillStyle=act?'#0052FF':'#ffffff18';
     ctx.strokeStyle=act?'#00D4FF':'#ffffff44'; ctx.lineWidth=act?2:1;
     ctx.beginPath(); ctx.roundRect(tx,ty,tw,th,8); ctx.fill(); ctx.stroke();
-    // icone
-    ctx.font=act?'16px Courier New':'14px Courier New';
+    // icone — MARKET mostra item rotativo
+    var _icon=icons[ti];
+    if(ti===3){ var _mItems=['⚗','♥','🃏']; _icon=_mItems[Math.floor(frame/60)%3]; }
+    ctx.font=act?'16px Arial':'14px Arial';
     ctx.fillStyle=act?'#fff':'#ffffffbb';
-    ctx.fillText(icons[ti], tx+tw/2, ty+16);
+    ctx.textBaseline='middle';
+    ctx.fillText(_icon, tx+tw/2, ty+15); ctx.textBaseline='alphabetic';
     // label
-    ctx.font=act?'bold 10px Courier New':'bold 9px Courier New';
+    ctx.font=act?'bold 9px Courier New':'bold 8px Courier New';
     ctx.fillStyle=act?'#fff':'#ffffffaa';
-    ctx.shadowColor=act?'#00D4FF':'transparent'; ctx.shadowBlur=act?10:0;
+    ctx.shadowColor=act?'#00D4FF':'transparent'; ctx.shadowBlur=act?8:0;
     ctx.fillText(labels[ti], tx+tw/2, ty+32); ctx.shadowBlur=0;
   }
 }
@@ -612,6 +615,8 @@ function shopBuyOrEquip() {
   } else { beep(220,150,0.12,'sawtooth',0.08); hitFlash=3; }
 }
 function drawShopTab() {
+  // ── Fundo escuro para cobrir o cenário de fase ──
+  ctx.fillStyle='rgba(0,4,18,0.88)'; ctx.fillRect(0,0,W,H);
   ctx.textAlign='center';
   // ── Header ──
   ctx.font='bold 16px Courier New';
@@ -622,19 +627,29 @@ function drawShopTab() {
   ctx.font='11px Courier New'; ctx.fillStyle='#FFD700';
   ctx.fillText('🐉 '+coinCount.toLocaleString()+' / 100,000', W/2, 50);
 
-  // ── Character selector tabs (4 personagens) ──
-  var ctw=92, cgap=7, ctx0=W/2-Math.round((4*(ctw+cgap)-cgap)/2);
-  var charNames=['BLEU','PHANTOM','WORM','ALIEN'];
-  var charLock=[false,!gengarUnlocked,!wormUnlocked,!alienUnlocked];
-  for(var _ci=0; _ci<4; _ci++){
+  // ── Character selector tabs — só personagens desbloqueados ──
+  var _allChars=[
+    {idx:0,name:'BLEU',   unlocked:true},
+    {idx:1,name:'PHANTOM',unlocked:gengarUnlocked},
+    {idx:2,name:'WORM',   unlocked:wormUnlocked},
+    {idx:3,name:'ALIEN',  unlocked:alienUnlocked}
+  ];
+  var _visChars=_allChars.filter(function(c){return c.unlocked;});
+  var ctw=Math.min(110,Math.floor((W-16)/(_visChars.length+0.3*(_visChars.length-1)))-4);
+  var cgap=6;
+  var ctx0=Math.round(W/2-(_visChars.length*(ctw+cgap)-cgap)/2);
+  // garante shopChar válido (pode ter sido bloqueado)
+  if(!_allChars[shopChar]||!_allChars[shopChar].unlocked) shopChar=0;
+  for(var _ci=0; _ci<_visChars.length; _ci++){
+    var _vc=_visChars[_ci];
     var _cx=ctx0+_ci*(ctw+cgap);
-    var _isAct=shopChar===_ci;
+    var _isAct=shopChar===_vc.idx;
     ctx.fillStyle=_isAct?'#0052FF33':'#ffffff08';
     ctx.strokeStyle=_isAct?'#0052FF':'#ffffff22'; ctx.lineWidth=_isAct?2:1;
     ctx.beginPath(); ctx.roundRect(_cx,58,ctw,28,8); ctx.fill(); ctx.stroke();
     ctx.fillStyle=_isAct?'#00D4FF':'#ffffff55';
     ctx.font='bold 10px Courier New'; ctx.textAlign='center';
-    ctx.fillText((charLock[_ci]?'🔒 ':'')+charNames[_ci], _cx+ctw/2, 58+18);
+    ctx.fillText(_vc.name, _cx+ctw/2, 58+18);
   }
 
   // ── Character preview ──
@@ -912,6 +927,70 @@ const ALIEN_COLORS = [
   { name:'NEBULA',   price:270, body:'#5588FF', bodyLt:'#AABBFF', shadow:'#2244CC', outline:'#112277', eyeColor:'#000820', glow:'#4499FF', ufo:'#2244AA', ufoLt:'#5577DD', ufoSh:'#112266' },
   { name:'GOLDEN',   price:380, body:'#FFDD44', bodyLt:'#FFEE99', shadow:'#CC8800', outline:'#664400', eyeColor:'#1a0f00', glow:'#FFD700', ufo:'#C8A820', ufoLt:'#EED040', ufoSh:'#996600' },
 ];
+
+// ─── MARKET TAB ─────────────────────────────────────────────────────
+function drawMarketTab() {
+  ctx.fillStyle='rgba(0,4,18,0.92)'; ctx.fillRect(0,0,W,H);
+  ctx.textAlign='center';
+  // Título
+  ctx.font='bold 16px Courier New';
+  var _mg=ctx.createLinearGradient(W/2-60,0,W/2+60,0);
+  _mg.addColorStop(0,'#00D4FF'); _mg.addColorStop(1,'#FFD700');
+  ctx.fillStyle=_mg; ctx.shadowColor='#00D4FF'; ctx.shadowBlur=8;
+  ctx.fillText('MARKET', W/2, 32); ctx.shadowBlur=0;
+  ctx.font='10px Courier New'; ctx.fillStyle='#ffffff44';
+  ctx.fillText('itens disponíveis · Base Network', W/2, 48);
+
+  var _items=[
+    { icon:'🛡', name:'SHIELD',     price:'🐉 80 coins', col:'#00FF88',
+      desc:'Absorve 1 impacto fatal.\nAtiva automaticamente ao iniciar.', stock: shieldStock+'/3' },
+    { icon:'⚗', name:'SLOW-MO',    price:'USDC $0.25',  col:'#00D4FF',
+      desc:'Reduz velocidade do jogo\npor 45 segundos (1 fase).', stock: slowMoStock>0?'x'+slowMoStock+' em estoque':'disponível' },
+    { icon:'♥', name:'+CORAÇÃO',   price:'USDC $0.25',  col:'#FF6680',
+      desc:'Adiciona +1 vida na\npróxima partida (máx +2).', stock: extraHeartStock>0?'x'+extraHeartStock+' em estoque':'disponível' },
+    { icon:'🃏', name:'CHECKPOINT', price:'USDC $0.50',  col:'#FFD700',
+      desc:'Revive no lugar da morte\ncom invencibilidade (1 uso/run).', stock: checkpointStock>0?'PRONTO':'disponível' },
+  ];
+  var _cy=80;
+  for(var _mi=0;_mi<_items.length;_mi++){
+    var _it=_items[_mi];
+    var _cardH=88;
+    // card bg
+    ctx.fillStyle=_it.col+'12'; ctx.strokeStyle=_it.col+'55'; ctx.lineWidth=1.3;
+    ctx.beginPath(); ctx.roundRect(12, _cy, W-24, _cardH, 10); ctx.fill(); ctx.stroke();
+    // icon grande
+    ctx.font='32px Arial'; ctx.textAlign='left'; ctx.textBaseline='middle';
+    ctx.fillText(_it.icon, 26, _cy+_cardH/2);
+    // nome
+    ctx.font='bold 13px Courier New'; ctx.fillStyle=_it.col; ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+    ctx.fillText(_it.name, 68, _cy+22);
+    // preço
+    ctx.font='bold 11px Courier New'; ctx.fillStyle='#FFD700';
+    ctx.fillText(_it.price, 68, _cy+38);
+    // descrição — 2 linhas
+    var _lines=_it.desc.split('\n');
+    ctx.font='9px Courier New'; ctx.fillStyle='#ffffff88';
+    ctx.fillText(_lines[0], 68, _cy+55);
+    if(_lines[1]) ctx.fillText(_lines[1], 68, _cy+67);
+    // estoque / status
+    ctx.font='bold 8px Courier New'; ctx.fillStyle=_it.col+'aa'; ctx.textAlign='right';
+    ctx.fillText(_it.stock, W-18, _cy+22);
+    // botão comprar
+    var _hasWallet=!!walletAddress, _isCoin=_mi===0;
+    var _canBuy=_isCoin?(coinCount>=80&&shieldStock<3):_hasWallet;
+    ctx.fillStyle=_canBuy?_it.col+'22':'#ffffff08';
+    ctx.strokeStyle=_canBuy?_it.col+'bb':'#ffffff22'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.roundRect(W-100, _cy+_cardH-30, 86, 22, 6); ctx.fill(); ctx.stroke();
+    ctx.font='bold 8px Courier New'; ctx.fillStyle=_canBuy?_it.col:'#ffffff44';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(_isCoin?'COMPRAR':'VER NA SHOP', W-57, _cy+_cardH-19);
+    ctx.textBaseline='alphabetic';
+    _cy+=_cardH+8;
+  }
+  ctx.textAlign='center';
+  ctx.font='8px Courier New'; ctx.fillStyle='#ffffff22';
+  ctx.fillText('toque em VER NA SHOP para comprar via Base Network', W/2, _cy+10);
+}
 
 // ─── LEADERBOARD TAB ────────────────────────────────────────────────
 function drawLeaderboardTab() {
@@ -4689,6 +4768,8 @@ function loop(ts) {
       drawShopTab();
     } else if(idleTab==='leaderboard'){
       drawLeaderboardTab();
+    } else if(idleTab==='market'){
+      drawMarketTab();
     }
     return;
   }
@@ -5634,11 +5715,13 @@ function handleClick(ex, ey) {
   // ── IDLE tabs click
   if(gameState === 'idle') {
     if(idleTab==='shop'){
-      // Char selector tabs (4 personagens)
-      var _ctw=92,_cgap=7,_ctx0=W/2-Math.round((4*(_ctw+_cgap)-_cgap)/2);
-      for(var _ci2=0;_ci2<4;_ci2++){
+      // Char selector tabs — só personagens desbloqueados
+      var _visC=[{idx:0,u:true},{idx:1,u:gengarUnlocked},{idx:2,u:wormUnlocked},{idx:3,u:alienUnlocked}].filter(function(c){return c.u;});
+      var _ctw=Math.min(110,Math.floor((W-16)/(_visC.length+0.3*(_visC.length-1)))-4), _cgap=6;
+      var _ctx0=Math.round(W/2-(_visC.length*(_ctw+_cgap)-_cgap)/2);
+      for(var _ci2=0;_ci2<_visC.length;_ci2++){
         var _cx2=_ctx0+_ci2*(_ctw+_cgap);
-        if(cx>=_cx2&&cx<=_cx2+_ctw&&cy>=58&&cy<=86){ shopChar=_ci2; shopSelColor=0; beep(440,880,0.06,'sine',0.08); return; }
+        if(cx>=_cx2&&cx<=_cx2+_ctw&&cy>=58&&cy<=86){ shopChar=_visC[_ci2].idx; shopSelColor=0; beep(440,880,0.06,'sine',0.08); return; }
       }
       // Fan orbs
       for(var _fi3=0;_fi3<5;_fi3++){
@@ -5700,6 +5783,18 @@ function handleClick(ex, ey) {
       if(!wormUnlocked   && shopChar===2 && walletAddress && cx>=W/2-90 && cx<=W/2+90 && cy>=382 && cy<=418){ unlockCharWithUSDC(2); return; }
       if(!alienUnlocked  && shopChar===3 && walletAddress && cx>=W/2-90 && cx<=W/2+90 && cy>=382 && cy<=418){ unlockCharWithUSDC(3); return; }
     }
+    // Market tab: botão VER NA SHOP redireciona para shop
+    if(idleTab==='market'){
+      var _mCardH=88, _mcy=80;
+      for(var _mii=0;_mii<4;_mii++){
+        var _mbY=_mcy+_mCardH-30;
+        if(cx>=W-100&&cx<=W-14&&cy>=_mbY&&cy<=_mbY+22){
+          if(_mii===0){ idleTab='shop'; shopChar=0; beep(440,660,0.08,'sine',0.1); return; }
+          else { idleTab='shop'; shopChar=0; beep(440,660,0.08,'sine',0.1); return; }
+        }
+        _mcy+=_mCardH+8;
+      }
+    }
     // Leaderboard tab: botão wallet
     if(idleTab==='leaderboard'){
       var wy3=H/2+104;
@@ -5711,8 +5806,8 @@ function handleClick(ex, ey) {
         if(cx>=W/2-30&&cx<=W/2+30&&cy>=wy3+38&&cy<=wy3+54){ disconnectWallet(); return; }
       }
     }
-    var labels=['play','shop','leaderboard'], tw=110, th=44, gap=6;
-    var total=3*(tw+gap)-gap, tx0=W/2-total/2, ty=H-58;
+    var labels=['play','shop','leaderboard','market'], tw=82, th=44, gap=5;
+    var total=4*(tw+gap)-gap, tx0=Math.round(W/2-total/2), ty=H-58;
     for(var ti=0;ti<labels.length;ti++) {
       var tx=tx0+ti*(tw+gap);
       if(cx>=tx&&cx<=tx+tw&&cy>=ty&&cy<=ty+th) {
