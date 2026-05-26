@@ -1182,11 +1182,8 @@ function drawLeaderboardTab() {
     ctx.fillStyle='#00FF88'; ctx.font='bold 10px Courier New'; ctx.textAlign='center'; ctx.textBaseline='middle';
     ctx.fillText('⛓ '+walletShort+' · Base Network', W/2, wy+13);
     ctx.textBaseline='alphabetic';
-    // disconnect
-    ctx.fillStyle='#ffffff0a'; ctx.strokeStyle='#ffffff22'; ctx.lineWidth=1;
-    ctx.beginPath(); ctx.roundRect(W/2-28,wy+30,56,14,4); ctx.fill(); ctx.stroke();
-    ctx.font='7px Courier New'; ctx.fillStyle='#ffffff44'; ctx.textAlign='center';
-    ctx.fillText('disconnect', W/2, wy+40);
+    ctx.fillStyle='#00FF8844'; ctx.font='7px Courier New'; ctx.textAlign='center';
+    ctx.fillText('tap to disconnect', W/2, wy+30);
   } else {
     var wbp=0.97+0.03*Math.sin(frame*0.1);
     ctx.save(); ctx.translate(W/2, wy+13); ctx.scale(wbp,wbp);
@@ -1199,7 +1196,7 @@ function drawLeaderboardTab() {
   }
 
   // ── Stats row ──
-  var statsY = walletAddress ? wy+52 : wy+38;
+  var statsY = walletAddress ? wy+40 : wy+38;
   var rows=[
     { label:'LAST SCORE', val:lastScore > 0 ? lastScore : '–',  color:'#00D4FF', icon:'🎮' },
     { label:'BEST SCORE', val:highScore,  color:'#FFD700', icon:'🏆' },
@@ -1651,7 +1648,7 @@ function resetGame() {
   lives = 3; // reset base — extraHeartStock é consumido em flap() ao iniciar nova run
   invincible = 0; starPower = 0; stars = [];
   slowMoActive = 0; checkpointUsed = false; heartUsed = false; dizzyTimer = 0; deathOfferTimer = 0; checkpointFlash = 0;
-  slowMoStock = 0; localStorage.setItem('bleuSlowMo', 0); // não cumulativo entre runs
+  // slowMoStock e extraHeartStock NÃO são zerados — persistem para próxima run (limite já aplicado na compra)
   deadChest={active:false,opened:false,coins:0,anim:0,clicks:0};
   shield = 0; shieldPickedUp = 0;
   shieldStock = 0; localStorage.setItem('bleuShieldStock', 0); // reseta ao morrer — compra denovo
@@ -5434,22 +5431,6 @@ function loop(ts) {
     ctx.beginPath(); ctx.roundRect(W/2-38, 72, 76*progress, 3, 2); ctx.fill();
     // lives + star power HUD
     drawLivesHUD();
-    // ── Checkpoint flash overlay ──
-    if(checkpointFlash > 0){
-      var _cpfa = checkpointFlash > 120 ? 1 : checkpointFlash/120; // fade-out nos últimos 2s
-      ctx.save(); ctx.globalAlpha = _cpfa * 0.92;
-      ctx.fillStyle='rgba(0,4,18,0.82)';
-      ctx.beginPath(); ctx.roundRect(W/2-130,H/2-52,260,88,14); ctx.fill();
-      ctx.strokeStyle='#FFD700'; ctx.lineWidth=2; ctx.globalAlpha=_cpfa;
-      ctx.stroke();
-      ctx.fillStyle='#FFD700'; ctx.font='bold 22px Courier New'; ctx.textAlign='center'; ctx.textBaseline='middle';
-      ctx.shadowColor='#FFD700'; ctx.shadowBlur=18;
-      ctx.fillText('🃏  CHECKPOINT!', W/2, H/2-18);
-      ctx.shadowBlur=0; ctx.fillStyle='#00FF88'; ctx.font='11px Courier New';
-      ctx.fillText('volta com 1 vida · invencível por 4s', W/2, H/2+16);
-      ctx.textBaseline='alphabetic'; ctx.restore();
-      checkpointFlash--;
-    }
     // best
     if(highScore > 0 && score > 0){
       ctx.textAlign = 'center';
@@ -5559,6 +5540,31 @@ function loop(ts) {
       }
       } // fecha else do shield
     }
+  }
+  // ── Checkpoint flash — renderiza no TOPO de tudo durante o jogo ──
+  if(checkpointFlash > 0 && (gameState==='playing'||gameState==='hurt')){
+    var _cpfa = checkpointFlash > 120 ? 1 : checkpointFlash/120;
+    ctx.save();
+    // Fundo escuro sólido
+    ctx.globalAlpha = _cpfa;
+    ctx.fillStyle='rgba(0,4,18,0.93)';
+    ctx.beginPath(); ctx.roundRect(W/2-138,H/2-56,276,96,16); ctx.fill();
+    ctx.strokeStyle='#FFD700'; ctx.lineWidth=2.5; ctx.stroke();
+    // Brilho dourado interno
+    ctx.fillStyle='rgba(255,215,0,0.06)';
+    ctx.beginPath(); ctx.roundRect(W/2-138,H/2-56,276,96,16); ctx.fill();
+    // Texto principal
+    ctx.fillStyle='#FFD700'; ctx.font='bold 24px Courier New';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.shadowColor='#FFD700'; ctx.shadowBlur=22;
+    ctx.fillText('🃏  CHECKPOINT!', W/2, H/2-20);
+    ctx.shadowBlur=0;
+    ctx.fillStyle='#00FF88'; ctx.font='bold 11px Courier New';
+    ctx.fillText('volta com 1 vida · invencível por 4s', W/2, H/2+12);
+    ctx.fillStyle='#ffffff66'; ctx.font='9px Courier New';
+    ctx.fillText('carta de checkpoint usada', W/2, H/2+30);
+    ctx.textBaseline='alphabetic'; ctx.restore();
+    checkpointFlash--;
   }
 
   // ── MID-GAME SHOP OVERLAY (entre fases) ──
@@ -6133,15 +6139,12 @@ function handleClick(ex, ey) {
         }
       }
     }
-    // Leaderboard tab: botão wallet — wy3=H/2-110 espelha o drawLeaderboardTab (wy=H/2-110)
+    // Leaderboard tab: badge wallet toggle (conecta ou desconecta com 1 toque)
     if(idleTab==='leaderboard'){
       var wy3=H/2-110;
-      if(!walletAddress){
-        // CONECTAR CARTEIRA: botão de 220×26 centrado em (W/2, wy3+13)
-        if(cx>=W/2-110&&cx<=W/2+110&&cy>=wy3&&cy<=wy3+26){ connectWallet(); return; }
-      } else {
-        // DESCONECTAR: roundRect(W/2-28,wy+30,56,14) → wy3+30 a wy3+44
-        if(cx>=W/2-28&&cx<=W/2+28&&cy>=wy3+30&&cy<=wy3+44){ disconnectWallet(); return; }
+      // Zona = badge 224×26 + hint abaixo (~36px total)
+      if(cx>=W/2-112&&cx<=W/2+112&&cy>=wy3&&cy<=wy3+36){
+        walletAddress ? disconnectWallet() : connectWallet(); return;
       }
     }
     var labels=['play','shop','leaderboard','market'], tw=82, th=44, gap=5;
