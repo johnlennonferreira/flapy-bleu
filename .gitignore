@@ -5,5 +5,9 @@
 # Sistema
 desktop.ini
 Thumbs.db
+ffmpeg2pass*
 
 .vercel
+
+# IMPORTANTE: .well-known/ NÃO deve ser ignorado — é necessário para o Mini App
+# !.well-known/

@@ -3,9 +3,42 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>Flapy Bleu</title>
+<title>Flapy Bleu — Tap to Flap on Base</title>
+
+<!-- ── Base Mini App identifiers ── -->
+<meta name="base:app_id"                content="6a1452bd0c68b51c687fbd42" />
 <meta name="talentapp:project_verification" content="4c1863c29413b0c71845a5b77412a4d65997749be322e16c1365bd071bcb96b5b0648b194e5b8607c3e98a42377b95b116e2e238a3218ca62214f8dfd8d2f04e">
-<meta name="base:app_id" content="6a1452bd0c68b51c687fbd42" />
+
+<!-- ── Open Graph / Social preview ── -->
+<meta property="og:title"       content="Flapy Bleu — Tap to Flap on Base" />
+<meta property="og:description" content="10 phases, 4 characters, USDC power-ups. The crypto Flappy Bird on Base blockchain." />
+<meta property="og:image"       content="https://flapy-bleu.vercel.app/splash.png" />
+<meta property="og:url"         content="https://flapy-bleu.vercel.app" />
+<meta property="og:type"        content="website" />
+<meta name="twitter:card"       content="summary_large_image" />
+<meta name="twitter:title"      content="Flapy Bleu — Tap to Flap on Base" />
+<meta name="twitter:image"      content="https://flapy-bleu.vercel.app/splash.png" />
+
+<!-- ── Farcaster Mini App embed — aparece quando link é compartilhado no Warpcast/Base ── -->
+<meta name="fc:miniapp" content='{"version":"1","imageUrl":"https://flapy-bleu.vercel.app/splash.png","button":{"title":"🐦 Play Flapy Bleu","action":{"type":"launch_frame","name":"Flapy Bleu","url":"https://flapy-bleu.vercel.app","splashImageUrl":"https://flapy-bleu.vercel.app/splash.png","splashBackgroundColor":"#00050f"}}}' />
+
+<!-- ── Farcaster Mini App SDK — dismiss splash + wallet bridge ── -->
+<script type="module">
+  import { sdk } from 'https://esm.sh/@farcaster/miniapp-sdk@latest';
+  // Expõe SDK globalmente para o código do jogo
+  window._fcSdk = sdk;
+  // Injeta provider como window.ethereum quando rodando dentro de cliente Farcaster/Base
+  // (MetaMask não existe dentro do Mini App — a wallet vem do SDK)
+  try {
+    var _prov = await sdk.wallet.getEthereumProvider();
+    if (_prov && !window.ethereum) {
+      window.ethereum = _prov;
+      console.log('[MiniApp] Wallet provider injetado via Farcaster SDK');
+    }
+  } catch(e) { console.log('[MiniApp] Fora de cliente Farcaster — usando wallet nativa'); }
+  // Dispensa a splash screen do cliente — SEM isso a tela de loading fica congelada
+  try { await sdk.actions.ready(); } catch(e) {}
+</script>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html { height: 100%; }

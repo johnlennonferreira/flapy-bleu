@@ -1,0 +1,33 @@
+{
+  "accountAssociation": {
+    "header":    "COLE_AQUI_O_HEADER_GERADO_EM_WARPCAST",
+    "payload":   "COLE_AQUI_O_PAYLOAD_GERADO_EM_WARPCAST",
+    "signature": "COLE_AQUI_A_SIGNATURE_GERADA_EM_WARPCAST"
+  },
+  "miniapp": {
+    "version":              "1",
+    "name":                 "Flapy Bleu",
+    "iconUrl":              "https://flapy-bleu.vercel.app/icon.png",
+    "homeUrl":              "https://flapy-bleu.vercel.app",
+    "imageUrl":             "https://flapy-bleu.vercel.app/splash.png",
+    "buttonTitle":          "🐦 Play Flapy Bleu",
+    "splashImageUrl":       "https://flapy-bleu.vercel.app/splash.png",
+    "splashBackgroundColor":"#00050f",
+    "subtitle":             "Flap through Base blockchain",
+    "description":          "A Flappy Bird game built on Base. Fly through 10 unique crypto phases, collect power-ups, compete on-chain and earn USDC rewards.",
+    "tagline":              "Tap to flap. Earn on Base.",
+    "primaryCategory":      "games",
+    "tags":                 ["game", "base", "crypto", "arcade", "flappy"],
+    "screenshotUrls": [
+      "https://flapy-bleu.vercel.app/screenshots/phase1.png",
+      "https://flapy-bleu.vercel.app/screenshots/phase2.png",
+      "https://flapy-bleu.vercel.app/screenshots/phase3.png",
+      "https://flapy-bleu.vercel.app/screenshots/phase4.png"
+    ],
+    "ogTitle":              "Flapy Bleu — Tap to Flap on Base",
+    "ogDescription":        "10 phases, 4 characters, USDC power-ups. The crypto Flappy Bird on Base blockchain.",
+    "ogImageUrl":           "https://flapy-bleu.vercel.app/splash.png",
+    "requiredChains":       ["eip155:8453"],
+    "noindex":              false
+  }
+}

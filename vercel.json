@@ -1,0 +1,19 @@
+{
+  "headers": [
+    {
+      "source": "/.well-known/farcaster.json",
+      "headers": [
+        { "key": "Content-Type",                "value": "application/json" },
+        { "key": "Access-Control-Allow-Origin", "value": "*"                }
+      ]
+    },
+    {
+      "source": "/icon.png",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=86400" }]
+    },
+    {
+      "source": "/splash.png",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=86400" }]
+    }
+  ]
+}
