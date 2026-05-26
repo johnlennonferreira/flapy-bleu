@@ -4623,10 +4623,10 @@ function drawMidGameShop() {
   ctx.fillStyle = '#00D4FF';
   ctx.fillText(_pv.name || 'BASE NETWORK', W/2, 88);
 
-  // Coins display
+  // Coins display — dragon coins (🐉), não diamantes
   ctx.font = 'bold 13px Courier New';
   ctx.fillStyle = '#FFD700';
-  ctx.fillText('💎 ' + coinCount, W/2, 112);
+  ctx.fillText('🐉 ' + coinCount + ' coins', W/2, 112);
 
   // ── Shield card — just above CONTINUE button ──
   var _cx = W/2 - 65, _cy = 310, _cw = 130, _ch = 158;
@@ -4650,20 +4650,9 @@ function drawMidGameShop() {
   ctx.font = '8px Courier New'; ctx.fillStyle = '#ffffff55';
   ctx.fillText(shieldStock >= 3 ? 'MAX 3/3' : shieldStock + '/3', W/2, _cy + 100);
 
-  // Buy button inside card
-  if(shieldStock < 3){
-    var _bby = _cy + 113;
-    ctx.fillStyle = _canBuy ? '#FFD70022' : '#ff444418';
-    ctx.strokeStyle = _canBuy ? '#FFD700' : '#ff4444';
-    ctx.lineWidth = 1.2;
-    ctx.beginPath(); ctx.roundRect(_cx+10, _bby, _cw-20, 26, 7); ctx.fill(); ctx.stroke();
-    ctx.font = 'bold 11px Courier New';
-    ctx.fillStyle = _canBuy ? '#FFD700' : '#ff6644';
-    ctx.fillText('🐉 80', W/2, _bby + 16);
-  }
-
-  ctx.font = '9px Courier New'; ctx.fillStyle = '#ffffff33';
-  ctx.fillText('tap the card to buy (max 3)', W/2, _cy + _ch + 14);
+  // Sem botão de compra aqui — compra de shield na SHOP ou MARKET
+  ctx.font = '8px Courier New'; ctx.fillStyle = '#ffffff22';
+  ctx.fillText('compre na loja entre partidas', W/2, _cy + _ch - 8);
 
   // ── CONTINUAR button ──
   var _btnY = H - 78;
@@ -5765,19 +5754,7 @@ function handleClick(ex, ey) {
     };
     // CONTINUAR button: centered at H-78
     if(cy >= H-97 && cy <= H-59){ _mgClose(); return; }
-    // Shield card: _cx=W/2-65, _cy=132, _cw=130, _ch=158
-    if(cx >= W/2-65 && cx <= W/2+65 && cy >= 310 && cy <= 468){
-      if(shieldStock>=3){ beep(220,150,0.1,'sawtooth',0.06); return; }
-      if(coinCount>=80){
-        coinCount-=80; if(coinCount<0)coinCount=0; localStorage.setItem('bleuCoins',coinCount);
-        shieldStock++; localStorage.setItem('bleuShieldStock',shieldStock);
-        beep(523,1047,0.22,'sine',0.13);
-        [659,784].forEach(function(f,i){setTimeout(function(){beep(f,f,0.1,'sine',0.09);},i*60);});
-        spawnParticles(bleu.x, bleu.y, '#00FF88', 8);
-      } else { beep(220,150,0.1,'sawtooth',0.06); }
-      return;
-    }
-    return; // consume all other clicks on overlay
+    return; // consume all other clicks on overlay — shield só na shop/market
   }
 
   // ── PRESTIGE — qualquer toque após animação mínima continua
@@ -5962,15 +5939,15 @@ function handleClick(ex, ey) {
         }
       }
     }
-    // Leaderboard tab: botão wallet
+    // Leaderboard tab: botão wallet — wy3=H/2-110 espelha o drawLeaderboardTab (wy=H/2-110)
     if(idleTab==='leaderboard'){
-      var wy3=H/2+104;
+      var wy3=H/2-110;
       if(!walletAddress){
-        // CONECTAR CARTEIRA: wy3+4 a wy3+40
-        if(cx>=W/2-110&&cx<=W/2+110&&cy>=wy3+4&&cy<=wy3+40){ connectWallet(); return; }
+        // CONECTAR CARTEIRA: botão de 220×26 centrado em (W/2, wy3+13)
+        if(cx>=W/2-110&&cx<=W/2+110&&cy>=wy3&&cy<=wy3+26){ connectWallet(); return; }
       } else {
-        // DESCONECTAR: wy3+38 a wy3+54
-        if(cx>=W/2-30&&cx<=W/2+30&&cy>=wy3+38&&cy<=wy3+54){ disconnectWallet(); return; }
+        // DESCONECTAR: roundRect(W/2-28,wy+30,56,14) → wy3+30 a wy3+44
+        if(cx>=W/2-28&&cx<=W/2+28&&cy>=wy3+30&&cy<=wy3+44){ disconnectWallet(); return; }
       }
     }
     var labels=['play','shop','leaderboard','market'], tw=82, th=44, gap=5;
