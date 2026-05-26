@@ -627,6 +627,22 @@ function drawShopTab() {
   ctx.font='11px Courier New'; ctx.fillStyle='#FFD700';
   ctx.fillText('🐉 '+coinCount.toLocaleString()+' / 100,000', W/2, 50);
 
+  // ── Wallet toggle — top right ──
+  ctx.save();
+  if(walletAddress){
+    ctx.fillStyle='#00FF8822'; ctx.strokeStyle='#00FF8855'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.roundRect(W-84,6,80,20,6); ctx.fill(); ctx.stroke();
+    ctx.fillStyle='#00FF88'; ctx.font='bold 7px Courier New'; ctx.textAlign='right'; ctx.textBaseline='middle';
+    ctx.fillText('⛓ '+walletShort, W-7, 16);
+  } else {
+    ctx.fillStyle='#0052FF18'; ctx.strokeStyle='#0052FF55'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.roundRect(W-84,6,80,20,6); ctx.fill(); ctx.stroke();
+    ctx.fillStyle='#6699cc'; ctx.font='bold 7px Courier New'; ctx.textAlign='right'; ctx.textBaseline='middle';
+    ctx.fillText('⛓ CONNECT', W-7, 16);
+  }
+  ctx.textBaseline='alphabetic'; ctx.textAlign='center';
+  ctx.restore();
+
   // ── Character selector tabs — só personagens desbloqueados ──
   var _allChars=[
     {idx:0,name:'BLEU',   unlocked:true},
@@ -1178,7 +1194,7 @@ function drawLeaderboardTab() {
     ctx.beginPath(); ctx.roundRect(-110,-13,220,26,8); ctx.fill();
     ctx.strokeStyle='#00D4FF55'; ctx.lineWidth=1.5; ctx.stroke();
     ctx.fillStyle='#fff'; ctx.font='bold 11px Courier New'; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText('💎  CONNECT WALLET', 0, 0);
+    ctx.fillText('⛓  CONNECT WALLET', 0, 0);
     ctx.textBaseline='alphabetic'; ctx.restore();
   }
 
@@ -4990,13 +5006,7 @@ function loop(ts) {
         ctx.fillText('⛓ '+walletShort+' · connected', W/2, wy0+16);
         ctx.textBaseline='alphabetic';
         ctx.fillStyle='#00FF8866'; ctx.font='8px Courier New';
-        ctx.fillText('scores saved on Base', W/2, wy0+40);
-        // Disconnect button
-        ctx.fillStyle='#ffffff08'; ctx.strokeStyle='#ffffff22'; ctx.lineWidth=1;
-        ctx.beginPath(); ctx.roundRect(W/2-36,wy0+46,72,18,6); ctx.fill(); ctx.stroke();
-        ctx.fillStyle='#ffffff44'; ctx.font='7px Courier New'; ctx.textAlign='center'; ctx.textBaseline='middle';
-        ctx.fillText('disconnect', W/2, wy0+55);
-        ctx.textBaseline='alphabetic';
+        ctx.fillText('tap to disconnect', W/2, wy0+40);
       } else {
         // Not connected — subtle secondary CTA (wallet is optional, don't scare casual players)
         var wp = 0.98+0.02*Math.sin(frame*0.08);
@@ -5005,7 +5015,7 @@ function loop(ts) {
         ctx.beginPath(); ctx.roundRect(-96,-14,192,28,10); ctx.fill();
         ctx.strokeStyle='#0052FF55'; ctx.lineWidth=1; ctx.stroke();
         ctx.fillStyle='#6699cc'; ctx.font='10px Courier New'; ctx.textAlign='center'; ctx.textBaseline='middle';
-        ctx.fillText('💎  connect wallet', 0, 0);
+        ctx.fillText('⛓  connect wallet', 0, 0);
         ctx.textBaseline='alphabetic'; ctx.restore();
         ctx.fillStyle='#ffffff22'; ctx.font='8px Courier New'; ctx.textAlign='center';
         ctx.fillText('optional  ·  save scores  ·  unlock skins on-chain', W/2, wy0+38);
@@ -5751,7 +5761,7 @@ function loop(ts) {
       ctx.fillStyle='#0052FF22'; ctx.strokeStyle='#0052FF88'; ctx.lineWidth=1.5;
       ctx.beginPath(); ctx.roundRect(-108,-14,216,30,8); ctx.fill(); ctx.stroke();
       ctx.fillStyle='#00D4FF'; ctx.font='bold 10px Courier New'; ctx.textAlign='center'; ctx.textBaseline='middle';
-      ctx.fillText('💎  CONNECT WALLET  →  SAVE ON BASE', 0, 0);
+      ctx.fillText('⛓  CONNECT WALLET  →  SAVE ON BASE', 0, 0);
       ctx.textBaseline='alphabetic'; ctx.restore();
     }
     if(shareFlash>0) shareFlash--;
@@ -5950,6 +5960,8 @@ function handleClick(ex, ey) {
   // ── IDLE tabs click
   if(gameState === 'idle') {
     if(idleTab==='shop'){
+      // Wallet toggle top-right
+      if(cx>=W-84&&cx<=W-4&&cy>=6&&cy<=26){ walletAddress ? disconnectWallet() : connectWallet(); return; }
       // Char selector tabs — só personagens desbloqueados
       var _visC=[{idx:0,u:true},{idx:1,u:gengarUnlocked},{idx:2,u:wormUnlocked},{idx:3,u:alienUnlocked}].filter(function(c){return c.u;});
       var _ctw=Math.min(110,Math.floor((W-16)/(_visC.length+0.3*(_visC.length-1)))-4), _cgap=6;
@@ -6053,11 +6065,9 @@ function handleClick(ex, ey) {
       if(cx>=W/2-88&&cx<=W/2+88&&cy>=H/2+32&&cy<=H/2+68){
         flap(); return;
       }
-      if(!walletAddress){
-        if(cx>=W/2-100&&cx<=W/2+100&&cy>=wy0c&&cy<=wy0c+32){ connectWallet(); return; }
-      } else {
-        // Disconnect button: wy0+46 to wy0+64
-        if(cx>=W/2-36&&cx<=W/2+36&&cy>=wy0c+46&&cy<=wy0c+64){ disconnectWallet(); return; }
+      // Wallet toggle — same button connects or disconnects
+      if(cx>=W/2-100&&cx<=W/2+100&&cy>=wy0c&&cy<=wy0c+32){
+        walletAddress ? disconnectWallet() : connectWallet(); return;
       }
     }
 // Character select (legacy, play tab)
