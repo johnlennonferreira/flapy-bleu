@@ -4549,45 +4549,12 @@ function drawLivesHUD() {
   }
   ctx.globalAlpha=1;
 
-  // Slow-mo HUD — barra azul abaixo dos corações
-  if(slowMoActive > 0) {
-    var _smPct = slowMoActive / 2700;
-    var _smCol = _smPct > 0.4 ? '#00D4FF' : _smPct > 0.15 ? '#0088ff' : '#ff4444';
-    ctx.fillStyle = '#00000033';
-    ctx.beginPath(); ctx.roundRect(6, 37, 54, 5, 2); ctx.fill();
-    ctx.fillStyle = _smCol; ctx.globalAlpha = 0.85;
-    ctx.beginPath(); ctx.roundRect(6, 37, 54 * _smPct, 5, 2); ctx.fill();
-    ctx.globalAlpha = 1;
-    ctx.fillStyle = _smCol; ctx.font = 'bold 7px Courier New'; ctx.textAlign = 'left';
-    ctx.fillText('SLOW', 62, 42);
-  }
-
   // Carta de checkpoint no HUD — ícone pequeno
   if(checkpointStock > 0) {
     var _cpX = 8 + Math.max(3, lives) * 17 + 4;
     ctx.font = '12px Arial'; ctx.globalAlpha = 0.9;
     ctx.fillText('🃏', _cpX, 34);
     ctx.globalAlpha = 1;
-  }
-
-  // Slow-mo stock — card clicável na HUD (y=46 a y=66, x=4 a x=78)
-  if(slowMoStock > 0 && slowMoActive === 0 && (gameState==='playing'||gameState==='hurt')){
-    ctx.save();
-    var _smPulse = 0.6 + 0.4*Math.abs(Math.sin(frame*0.09));
-    ctx.globalAlpha = _smPulse;
-    // card de fundo
-    ctx.fillStyle='#00D4FF22'; ctx.strokeStyle='#00D4FF88'; ctx.lineWidth=1.2;
-    ctx.beginPath(); ctx.roundRect(4, 46, 72, 20, 4); ctx.fill(); ctx.stroke();
-    // ícone + contagem + label TAP
-    ctx.globalAlpha = 1;
-    ctx.font = '12px Arial'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-    ctx.fillText('🐢', 7, 57);
-    ctx.font = 'bold 8px Courier New'; ctx.fillStyle = '#00D4FF';
-    ctx.fillText('x'+slowMoStock, 22, 57);
-    ctx.fillStyle = '#00D4FFaa'; ctx.font = '7px Courier New';
-    ctx.fillText('TAP', 46, 57);
-    ctx.textBaseline = 'alphabetic';
-    ctx.restore();
   }
 
   // ── Slow-mo: botão grande na esquerda em baixo (fácil de tocar no mobile) ──
@@ -5936,9 +5903,8 @@ function handleClick(ex, ey) {
 
   // ── Slow-mo: tap no card topo (y=46-66) OU no botão grande em baixo (circle r=28 em 34,H-162) ──
   if((gameState==='playing'||gameState==='hurt') && slowMoStock>0 && slowMoActive===0){
-    var _smHit = (cy>=46&&cy<=66&&cx>=4&&cx<=76); // card topo
     var _smBdx=cx-34, _smBdy=cy-(H-162);
-    _smHit = _smHit || (_smBdx*_smBdx+_smBdy*_smBdy<=22*22); // círculo em baixo (r=18 visual + margem)
+    var _smHit = (_smBdx*_smBdx+_smBdy*_smBdy<=22*22); // círculo em baixo
     if(_smHit){
       slowMoStock--; localStorage.setItem('bleuSlowMo',slowMoStock); slowMoActive=2700;
       beep(300,600,0.18,'sine',0.14);
