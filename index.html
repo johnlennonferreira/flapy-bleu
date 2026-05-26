@@ -1404,6 +1404,7 @@ var checkpointFlash=0;      // frames de overlay "CHECKPOINT!" após uso automá
 var extraHeartStock=parseInt(localStorage.getItem('bleuExtraHeart')||'0'); // corações extras — persistido
 var deathOfferTimer=0;    // countdown de oferta na tela de morte (frames)
 var shield=0, shieldItems=[], shieldBreak=0; // escudo power-up
+var fireStars=[]; var firePower=0;            // estrela vermelha — modo bola de fogo
 var shieldPickedUp=0; // escudos pegos em jogo nesta fase (só valem até fim da fase)
 // Speed lines para star power
 var speedLines = [];
@@ -1646,7 +1647,7 @@ function resetGame() {
   idleTab = 'play'; scorePopups = []; scoreGlow = 0; chestType = 'normal'; shopOverlay = false; paused = false;
   combo = 0; comboFlash = 0; coinsThisRun = 0; milestoneIdx = 0; recFlash = 0;
   lives = 3; // reset base — extraHeartStock é consumido em flap() ao iniciar nova run
-  invincible = 0; starPower = 0; stars = [];
+  invincible = 0; starPower = 0; stars = []; firePower = 0; fireStars = [];
   slowMoActive = 0; checkpointUsed = false; heartUsed = false; dizzyTimer = 0; deathOfferTimer = 0; checkpointFlash = 0;
   // slowMoStock e extraHeartStock NÃO são zerados — persistem para próxima run (limite já aplicado na compra)
   deadChest={active:false,opened:false,coins:0,anim:0,clicks:0};
@@ -4559,17 +4560,30 @@ function drawLivesHUD() {
 
   // ── Slow-mo: botão grande na esquerda em baixo (fácil de tocar no mobile) ──
   if(slowMoStock > 0 && slowMoActive === 0 && (gameState==='playing'||gameState==='hurt')){
-    var _smBx=34, _smBy=H-162, _smBr=18; // ligeiramente menor que pause (r=22)
+    var _smBx=34, _smBy=H-162, _smBr=18;
     ctx.save();
     var _smBpulse = 0.7 + 0.3*Math.abs(Math.sin(frame*0.1));
+    // Fundo sólido escuro para contraste
+    ctx.globalAlpha = 0.82;
+    ctx.fillStyle='#000c24';
+    ctx.beginPath(); ctx.arc(_smBx, _smBy, _smBr, 0, Math.PI*2); ctx.fill();
+    // Borda neon pulsante
     ctx.globalAlpha = _smBpulse;
-    ctx.fillStyle='#00D4FF22'; ctx.strokeStyle='#00D4FFcc'; ctx.lineWidth=2;
-    ctx.beginPath(); ctx.arc(_smBx, _smBy, _smBr, 0, Math.PI*2); ctx.fill(); ctx.stroke();
-    ctx.globalAlpha=1;
-    ctx.font='18px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText('🐢', _smBx, _smBy-2);
-    ctx.font='bold 8px Courier New'; ctx.fillStyle='#00D4FF';
-    ctx.fillText('x'+slowMoStock, _smBx, _smBy+14);
+    ctx.strokeStyle='#00D4FFdd'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.arc(_smBx, _smBy, _smBr, 0, Math.PI*2); ctx.stroke();
+    // Halo suave
+    ctx.globalAlpha = _smBpulse * 0.3;
+    ctx.fillStyle='#00D4FF';
+    ctx.beginPath(); ctx.arc(_smBx, _smBy, _smBr+5, 0, Math.PI*2); ctx.fill();
+    // Emoji tartaruga — grande e com sombra
+    ctx.globalAlpha = 1;
+    ctx.shadowColor='#00D4FF'; ctx.shadowBlur=8;
+    ctx.font='20px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('🐢', _smBx, _smBy-1);
+    ctx.shadowBlur=0;
+    // Contagem
+    ctx.font='bold 9px Courier New'; ctx.fillStyle='#00EEFF';
+    ctx.fillText('x'+slowMoStock, _smBx, _smBy+15);
     ctx.textBaseline='alphabetic'; ctx.restore();
   }
   // Se slow-mo ativo: anel de progresso ao redor do botão
@@ -4626,6 +4640,35 @@ function drawLivesHUD() {
       ctx.globalAlpha=1;
     }
   }
+}
+
+// ─── FIRE STAR — estrela vermelha extremamente rara ──────────────
+function drawFireStarItem(x, y) {
+  var pulse = 1 + 0.22 * Math.sin(frame * 0.16);
+  var r = 15 * pulse;
+  ctx.save(); ctx.translate(x, y); ctx.rotate(-frame * 0.06);
+  ctx.globalAlpha = 0.20 + 0.12 * Math.sin(frame * 0.22);
+  ctx.fillStyle = '#FF2200';
+  ctx.beginPath(); ctx.arc(0, 0, r*1.9, 0, Math.PI*2); ctx.fill();
+  ctx.globalAlpha = 0.38 + 0.15 * Math.sin(frame * 0.22);
+  ctx.fillStyle = '#FF6600';
+  ctx.beginPath(); ctx.arc(0, 0, r*1.35, 0, Math.PI*2); ctx.fill();
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = '#FF2200';
+  ctx.beginPath();
+  for(var i=0;i<5;i++){
+    var a=(i*4*Math.PI/5)-Math.PI/2, a2=a+2*Math.PI/5;
+    if(i===0) ctx.moveTo(Math.cos(a)*r, Math.sin(a)*r);
+    else      ctx.lineTo(Math.cos(a)*r, Math.sin(a)*r);
+    ctx.lineTo(Math.cos(a2)*r*0.42, Math.sin(a2)*r*0.42);
+  }
+  ctx.closePath(); ctx.fill();
+  ctx.strokeStyle='#FFaa00'; ctx.lineWidth=1.8; ctx.stroke();
+  ctx.rotate(frame*0.06);
+  ctx.font='bold '+Math.round(r*0.8)+'px Arial';
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText('🔥', 0, 1); // 🔥
+  ctx.restore();
 }
 
 // ─── MAIN BACKGROUND DRAW ────────────────────
@@ -5086,9 +5129,9 @@ function loop(ts) {
     // ─── STAR POWER-UP spawn ─────────────────
     if(slowMoActive > 0) slowMoActive--;
     var _slowMult = slowMoActive > 0 ? 0.72 : 1; // 28% mais lento quando ativo
-    var spd = phasePaused ? 0 : ph.speed * (starPower > 0 ? 2.2 : 1) * _slowMult;
-    // Estrela: rara, só aparece sem escudo na tela e sem sobreposição
-    if(frame % 420 === 60 && Math.random() < 0.12 && starPower === 0 && shieldItems.length === 0) {
+    var spd = phasePaused ? 0 : ph.speed * (starPower > 0 ? 2.2 : firePower > 0 ? 3.0 : 1) * _slowMult;
+    // Estrela azul: rara, só aparece sem escudo na tela e sem sobreposição
+    if(frame % 420 === 60 && Math.random() < 0.12 && starPower === 0 && firePower === 0 && shieldItems.length === 0) {
       var sy2 = lastGapCenter + (Math.random() - 0.5) * 40;
       sy2 = Math.max(80, Math.min(H - 110, sy2));
       stars.push({x: W+18, y: sy2});
@@ -5108,6 +5151,71 @@ function loop(ts) {
         if(navigator.vibrate) navigator.vibrate([30,20,60]);
       }
     }
+    // ─── FIRE STAR — extremamente rara (≈25× mais rara que a azul) ──────
+    if(frame % 1260 === 630 && Math.random() < 0.04 && firePower===0 && starPower===0 && fireStars.length===0 && stars.length===0){
+      var fsy2 = lastGapCenter + (Math.random()-0.5)*70;
+      fsy2 = Math.max(80, Math.min(H-110, fsy2));
+      fireStars.push({x: W+18, y: fsy2});
+    }
+    for(var fsi=fireStars.length-1; fsi>=0; fsi--){
+      fireStars[fsi].x -= spd;
+      if(fireStars[fsi].x < -20){ fireStars.splice(fsi,1); continue; }
+      drawFireStarItem(fireStars[fsi].x, fireStars[fsi].y);
+      var fsdx=fireStars[fsi].x-bleu.x, fsdy=fireStars[fsi].y-bleu.y;
+      if(Math.sqrt(fsdx*fsdx+fsdy*fsdy) < 26){
+        firePower = 240; // 4s de caos
+        fireStars.splice(fsi,1); fireStars=[]; stars=[];
+        spawnParticles(bleu.x,bleu.y,'#FF4400',20);
+        spawnParticles(bleu.x,bleu.y,'#FFaa00',14);
+        spawnParticles(bleu.x,bleu.y,'#ffffff',8);
+        beep(180,360,0.45,'sawtooth',0.22);
+        [280,220,160].forEach(function(f,i){setTimeout(function(){beep(f,f*0.85,0.25,'sawtooth',0.14);},i*90);});
+        if(navigator.vibrate) navigator.vibrate([60,20,100,20,140]);
+        screenShake=10;
+      }
+    }
+    // ─── FIRE POWER — bola de fogo desgovernada ──────────────────────
+    if(firePower > 0){
+      firePower--;
+      var _ff = firePower < 60 ? firePower/60 : 1;
+      // Movimento caótico — impulso aleatório de vy a cada 22 frames
+      if(frame % 22 === 0) bleu.vy = (Math.random()-0.5) * 16;
+      bleu.vy += 0.35; if(bleu.vy>13) bleu.vy=13; if(bleu.vy<-13) bleu.vy=-13;
+      bleu.y += bleu.vy;
+      // Quica nas paredes
+      if(bleu.y+14 > H-80){ bleu.y=H-80-14; bleu.vy=-Math.abs(bleu.vy)*0.85; screenShake=3; }
+      if(bleu.y-14 < 22)  { bleu.y=22+14;   bleu.vy= Math.abs(bleu.vy)*0.85; screenShake=3; }
+      // Destrói pipes ao tocar
+      for(var fpi=pipes.length-1; fpi>=0; fpi--){
+        var _fp=pipes[fpi];
+        if(bleu.x+12 > _fp.x && bleu.x-12 < _fp.x+(_fp.bodyW||24)){
+          var _inTop = bleu.y-12 < _fp.topH;
+          var _inBot = bleu.y+12 > _fp.botY;
+          if(_inTop || _inBot){
+            spawnParticles(_fp.x+12, _inTop?_fp.topH:_fp.botY, '#FF4400',10);
+            spawnParticles(_fp.x+12, _inTop?_fp.topH:_fp.botY, '#FFaa00',6);
+            pipes.splice(fpi,1);
+            beep(120,60,0.25,'sawtooth',0.12); screenShake=Math.max(screenShake,4);
+          }
+        }
+      }
+      // Screen orange tint
+      ctx.globalAlpha=_ff*0.18; ctx.fillStyle='#FF4400'; ctx.fillRect(0,0,W,H); ctx.globalAlpha=1;
+      // Aura de fogo ao redor do pássaro
+      var _faR=34+7*Math.abs(Math.sin(frame*0.35));
+      ctx.globalAlpha=(0.35+0.22*Math.sin(frame*0.5))*_ff;
+      var _fag=ctx.createRadialGradient(bleu.x,bleu.y,6,bleu.x,bleu.y,_faR);
+      _fag.addColorStop(0,'#ffffff99'); _fag.addColorStop(0.35,'#FF440077'); _fag.addColorStop(1,'#FF440000');
+      ctx.fillStyle=_fag;
+      ctx.beginPath(); ctx.arc(bleu.x,bleu.y,_faR,0,Math.PI*2); ctx.fill();
+      ctx.globalAlpha=1;
+      // Rastro de fogo a cada 2 frames
+      if(frame%2===0){ spawnParticles(bleu.x-10,bleu.y,'#FF4400',2); }
+      if(frame%4===0){ spawnParticles(bleu.x-14,bleu.y,'#FFaa00',2); }
+      // Fim do firePower — recuperação
+      if(firePower===0){ invincible=80; spawnParticles(bleu.x,bleu.y,'#FFaa00',16); beep(350,180,0.3,'sawtooth',0.16); }
+    }
+
     if(starPower>0){ starPower--;
       var slFade = starPower < 60 ? starPower/60 : 1;
       // ── Screen edge chromatic glow ──
@@ -5235,7 +5343,7 @@ function loop(ts) {
           prestigeAnim = 0;
           gameState = 'prestige';
           playPrestigeMusic();
-          pipes = []; stars = []; shieldItems = [];
+          pipes = []; stars = []; shieldItems = []; fireStars = [];
           spawnParticles(W/2, H/2, '#FFD700', 40);
           spawnParticles(W/2, H/2, '#00D4FF', 25);
           spawnParticles(W/2, H/2, '#FF44BB', 20);
@@ -5257,7 +5365,7 @@ function loop(ts) {
           bleu.vy = 0;
           bleu.y  = H / 2;
           // clear screen and center gap so player has safe passage on transition
-          pipes = []; stars = []; shieldItems = [];
+          pipes = []; stars = []; shieldItems = []; fireStars = [];
           // Pickups de fase expiram — apenas shields comprados persistem
           shield = Math.max(0, shield - shieldPickedUp);
           shieldPickedUp = 0;
@@ -5444,9 +5552,9 @@ function loop(ts) {
     }
 
     // Bounds (chão/teto) matam sempre — mesmo com invencível/star power
-    var _hitBounds = !phasePaused && starPower===0 && invincible===0 && (bleu.y+14 > H-80 || bleu.y-14 < 22);
+    var _hitBounds = !phasePaused && starPower===0 && firePower===0 && invincible===0 && (bleu.y+14 > H-80 || bleu.y-14 < 22);
     // Canos só importam quando não está protegido
-    var _hitPipes  = !phasePaused && starPower===0 && invincible===0 && hitTestPipes();
+    var _hitPipes  = !phasePaused && starPower===0 && firePower===0 && invincible===0 && hitTestPipes();
     if(gameState==='playing' && (_hitBounds || _hitPipes)){
       // Escudo absorve QUALQUER batida — nunca perde escudo E vida ao mesmo tempo
       if(shield>0){
@@ -5852,6 +5960,7 @@ function flap() {
     // slowMoStock e checkpointStock ficam disponíveis para uso em jogo
   }
   else if(gameState==='playing') {
+    if(firePower > 0) return; // desgovernado — sem controle do jogador
     if(phasePaused){ if(shopOverlay) return; phasePaused=false; phaseFlash=0; bleu.vy=-4; bleuSquish=6; return; } // pula animação
     bleu.vy=-7.5; bleu.flap=0; bleuSquish=8; bleuFlapTimer=18;
     if(activeChar===1 && gengarUnlocked) {
