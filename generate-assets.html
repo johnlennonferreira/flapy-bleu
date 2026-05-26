@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<title>Flapy Bleu — Gerar Assets</title>
+<style>
+  body { background:#00050f; color:#fff; font-family:'Courier New',monospace; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; gap:24px; }
+  canvas { border:2px solid #0052FF; border-radius:8px; }
+  button { background:#0052FF; color:#fff; border:none; padding:14px 36px; border-radius:10px; font-size:16px; font-family:'Courier New',monospace; cursor:pointer; font-weight:bold; }
+  button:hover { background:#0044DD; }
+  .row { display:flex; gap:24px; align-items:flex-start; flex-wrap:wrap; justify-content:center; }
+  .box { display:flex; flex-direction:column; align-items:center; gap:8px; }
+  label { color:#00D4FF; font-size:12px; }
+  h1 { color:#0052FF; margin:0; }
+  p { color:#ffffff66; font-size:12px; }
+</style>
+</head>
+<body>
+<h1>🐦 Flapy Bleu — Asset Generator</h1>
+<p>Clique "Baixar Tudo" para gerar icon.png, splash.png e screenshots.</p>
+<div class="row">
+  <div class="box"><label>icon.png (200×200)</label><canvas id="cIcon" width="200" height="200"></canvas></div>
+  <div class="box"><label>splash.png (800×533)</label><canvas id="cSplash" width="800" height="533"></canvas></div>
+</div>
+<div class="row">
+  <div class="box"><label>phase1.png (400×711)</label><canvas id="cP1" width="400" height="711"></canvas></div>
+  <div class="box"><label>phase2.png (400×711)</label><canvas id="cP2" width="400" height="711"></canvas></div>
+  <div class="box"><label>phase3.png (400×711)</label><canvas id="cP3" width="400" height="711"></canvas></div>
+</div>
+<button onclick="downloadAll()">⬇ Baixar Tudo</button>
+<script>
+// ── Palettes ──────────────────────────────────────────────────
+var PHASES_VIS = [
+  { bg:['#020812','#040d18'], ground:'#030a12', glow:'#00ff41', pipe:['#00e676','#004d20'], name:'PERPDEX TERMINAL' },
+  { bg:['#55aaee','#88ccff'], ground:'#3a8c2a', glow:'#0052FF', pipe:['#0052FF','#003399'], name:'BASE NETWORK' },
+  { bg:['#1a3a6b','#4e88c8'], ground:'#5c7090', glow:'#FFE066', pipe:['#8899aa','#5577aa'], name:'TO THE MOON' },
+  { bg:['#040e06','#091c0a'], ground:'#071408', glow:'#66BB6A', pipe:['#8D6E63','#5D4037'], name:'CRYPTO FOREST' },
+];
+
+// ── Draw Bleu character ───────────────────────────────────────
+function drawBleu(ctx, x, y, scale, frame) {
+  scale = scale || 1; frame = frame || 0;
+  ctx.save(); ctx.translate(x, y); ctx.scale(scale, scale);
+  // Body
+  var bg = ctx.createRadialGradient(-4,-4,2,0,0,22);
+  bg.addColorStop(0,'#66aaff'); bg.addColorStop(0.5,'#0052FF'); bg.addColorStop(1,'#0033aa');
+  ctx.beginPath(); ctx.ellipse(0,0,20,17,0,0,Math.PI*2); ctx.fillStyle=bg; ctx.fill();
+  ctx.strokeStyle='#003399'; ctx.lineWidth=1.5; ctx.stroke();
+  // Belly
+  var belly=ctx.createRadialGradient(3,6,1,3,6,10);
+  belly.addColorStop(0,'#aaccff88'); belly.addColorStop(1,'transparent');
+  ctx.beginPath(); ctx.ellipse(3,6,9,7,0,0,Math.PI*2); ctx.fillStyle=belly; ctx.fill();
+  // Wing
+  var flap = Math.sin(frame*0.25)*0.5;
+  ctx.save(); ctx.translate(2,2); ctx.rotate(flap);
+  ctx.beginPath(); ctx.ellipse(0,0,12,5,0.5,0,Math.PI*2);
+  var wg=ctx.createLinearGradient(-12,0,12,0); wg.addColorStop(0,'#88aaff'); wg.addColorStop(1,'#0044cc');
+  ctx.fillStyle=wg; ctx.fill(); ctx.strokeStyle='#003399'; ctx.lineWidth=1; ctx.stroke();
+  ctx.restore();
+  // Eyes
+  ctx.beginPath(); ctx.ellipse(-8,-3,6,6,0,0,Math.PI*2); ctx.fillStyle='#fff'; ctx.fill();
+  ctx.beginPath(); ctx.ellipse(-8,-3,3.5,3.5,0,0,Math.PI*2); ctx.fillStyle='#111'; ctx.fill();
+  ctx.beginPath(); ctx.ellipse(-6.5,-4.5,1.2,1.2,0,0,Math.PI*2); ctx.fillStyle='#fff'; ctx.fill();
+  ctx.beginPath(); ctx.ellipse(-6,-1.5,0.8,0.8,0,0,Math.PI*2); ctx.fillStyle='#4466ff66'; ctx.fill();
+  // Cheeks
+  ctx.globalAlpha=0.45; ctx.fillStyle='#ff6699';
+  ctx.beginPath(); ctx.ellipse(-12,2,4,2.5,0,0,Math.PI*2); ctx.fill();
+  ctx.globalAlpha=1;
+  // Beak
+  ctx.beginPath(); ctx.moveTo(-16,0); ctx.lineTo(-22,2); ctx.lineTo(-16,4); ctx.closePath();
+  ctx.fillStyle='#FFD700'; ctx.fill();
+  // Ears / head bumps
+  ctx.fillStyle='#0044cc';
+  ctx.beginPath(); ctx.ellipse(-4,-15,4,6,0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(5,-14,3,5,-0.2,0,Math.PI*2); ctx.fill();
+  // Pink ear centers
+  ctx.fillStyle='#ff88bb';
+  ctx.beginPath(); ctx.ellipse(-4,-15,2,3.5,0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(5,-14,1.5,2.8,-0.2,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+
+// ── Draw pipe ────────────────────────────────────────────────
+function drawPipe(ctx, x, topH, botY, H, col1, col2) {
+  var W2=32;
+  // Top pipe
+  var g=ctx.createLinearGradient(x,0,x+W2,0);
+  g.addColorStop(0,col2); g.addColorStop(0.35,col1); g.addColorStop(1,col2);
+  ctx.fillStyle=g; ctx.fillRect(x,0,W2,topH);
+  ctx.fillStyle=col2; ctx.fillRect(x-4,topH-18,W2+8,18);
+  // Bottom pipe
+  ctx.fillStyle=g; ctx.fillRect(x,botY,W2,H-botY);
+  ctx.fillStyle=col2; ctx.fillRect(x-4,botY,W2+8,18);
+}
+
+// ── Draw ground ──────────────────────────────────────────────
+function drawGround(ctx, W, H, color, lineColor) {
+  ctx.fillStyle=color; ctx.fillRect(0,H-55,W,55);
+  ctx.strokeStyle=lineColor; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(0,H-55); ctx.lineTo(W,H-55); ctx.stroke();
+}
+
+// ── Draw stars/coins decoration ───────────────────────────────
+function drawStar(ctx, x, y, r, color) {
+  ctx.save(); ctx.translate(x,y);
+  ctx.beginPath();
+  for(var i=0;i<5;i++){
+    var a=i*Math.PI*2/5 - Math.PI/2;
+    var ai=a+Math.PI/5;
+    i===0?ctx.moveTo(Math.cos(a)*r,Math.sin(a)*r):ctx.lineTo(Math.cos(a)*r,Math.sin(a)*r);
+    ctx.lineTo(Math.cos(ai)*(r*0.4),Math.sin(ai)*(r*0.4));
+  }
+  ctx.closePath(); ctx.fillStyle=color; ctx.fill(); ctx.restore();
+}
+
+// ── ICON (200×200) ────────────────────────────────────────────
+function drawIcon() {
+  var c=document.getElementById('cIcon'), ctx=c.getContext('2d');
+  var W=200, H=200;
+  // Background gradient
+  var bg=ctx.createRadialGradient(100,100,10,100,100,120);
+  bg.addColorStop(0,'#0a1a3a'); bg.addColorStop(0.6,'#00050f'); bg.addColorStop(1,'#000208');
+  ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
+  // Outer glow ring
+  ctx.save();
+  var ring=ctx.createRadialGradient(100,100,78,100,100,98);
+  ring.addColorStop(0,'transparent'); ring.addColorStop(0.7,'#0052FF44'); ring.addColorStop(1,'#00D4FF88');
+  ctx.fillStyle=ring;
+  ctx.beginPath(); ctx.arc(100,100,98,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+  // Neon border
+  ctx.save();
+  ctx.strokeStyle='#0052FF'; ctx.lineWidth=4;
+  ctx.shadowColor='#0052FF'; ctx.shadowBlur=20;
+  ctx.beginPath(); ctx.arc(100,100,90,0,Math.PI*2); ctx.stroke();
+  ctx.restore();
+  // Candlestick decorations (background)
+  var candles=[
+    {x:38, h:60, bull:true}, {x:62, h:40, bull:false},
+    {x:138, h:50, bull:false},{x:162,h:70,bull:true}
+  ];
+  candles.forEach(function(cd){
+    ctx.globalAlpha=0.35;
+    ctx.fillStyle = cd.bull ? '#00e676' : '#ff1744';
+    ctx.fillRect(cd.x-5, 130-cd.h, 10, cd.h);
+    ctx.fillRect(cd.x-2, 128-cd.h-12, 4, 14);
+    ctx.globalAlpha=1;
+  });
+  // Grid lines
+  ctx.globalAlpha=0.08;
+  ctx.strokeStyle='#0052FF'; ctx.lineWidth=1;
+  for(var i=0;i<6;i++){
+    var gy=30+i*28;
+    ctx.beginPath(); ctx.moveTo(20,gy); ctx.lineTo(180,gy); ctx.stroke();
+  }
+  ctx.globalAlpha=1;
+  // Dollar signs floating
+  ctx.font='bold 13px Courier New'; ctx.globalAlpha=0.18;
+  [['$',45,55],['$',155,60],['$',70,165],['$',140,155],['G',50,130],['G',160,110]].forEach(function(t){
+    ctx.fillStyle='#00ff41'; ctx.fillText(t[0],t[1],t[2]);
+  });
+  ctx.globalAlpha=1;
+  // Speed lines (subtle)
+  ctx.globalAlpha=0.12; ctx.strokeStyle='#0052FF'; ctx.lineWidth=1.5;
+  [[-30,85,20,95],[170,70,210,80],[-20,115,30,108],[165,130,210,122]].forEach(function(l){
+    ctx.beginPath(); ctx.moveTo(l[0],l[1]); ctx.lineTo(l[2],l[3]); ctx.stroke();
+  });
+  ctx.globalAlpha=1;
+  // Clip to circle
+  ctx.save();
+  ctx.beginPath(); ctx.arc(100,100,86,0,Math.PI*2); ctx.clip();
+  // Draw Bleu (large, centered)
+  ctx.shadowColor='#0052FF'; ctx.shadowBlur=18;
+  drawBleu(ctx, 105, 108, 3.2, 12);
+  ctx.shadowBlur=0;
+  ctx.restore();
+  // Inner ring highlight
+  ctx.save();
+  ctx.strokeStyle='#00D4FF44'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.arc(100,100,86,0,Math.PI*2); ctx.stroke();
+  ctx.restore();
+}
+
+// ── SPLASH (800×533, 3:2) ─────────────────────────────────────
+function drawSplash() {
+  var c=document.getElementById('cSplash'), ctx=c.getContext('2d');
+  var W=800, H=533;
+  // Sky gradient — Base Network theme
+  var sky=ctx.createLinearGradient(0,0,0,H);
+  sky.addColorStop(0,'#001a4d'); sky.addColorStop(0.5,'#0033aa'); sky.addColorStop(1,'#0052FF');
+  ctx.fillStyle=sky; ctx.fillRect(0,0,W,H);
+  // Stars
+  ctx.fillStyle='#ffffff'; ctx.globalAlpha=0.6;
+  [[80,60],[200,30],[350,80],[500,45],[650,70],[720,25],[760,90],[150,110],[420,35],[580,100]].forEach(function(s){
+    ctx.beginPath(); ctx.arc(s[0],s[1],1.5,0,Math.PI*2); ctx.fill();
+  });
+  ctx.globalAlpha=1;
+  // Clouds
+  function cloud(x,y,s){ ctx.fillStyle='#ffffff18';
+    [[0,0,40],[25,-8,35],[50,5,38],[-20,5,30]].forEach(function(b){ ctx.beginPath(); ctx.arc(x+b[0]*s,y+b[1]*s,b[2]*s,0,Math.PI*2); ctx.fill(); }); }
+  cloud(100,100,0.7); cloud(600,80,0.9); cloud(400,140,0.6);
+  // Left pipe (pair)
+  drawPipe(ctx, 180, 200, 330, H-55, '#0052FF', '#003399');
+  // Right pipe (pair)
+  drawPipe(ctx, 520, 160, 310, H-55, '#0052FF', '#003399');
+  // "BASE" text on pipes
+  ctx.save(); ctx.translate(196,265); ctx.rotate(-Math.PI/2);
+  ctx.font='bold 11px Courier New'; ctx.fillStyle='#ffffff55';
+  ctx.textAlign='center'; ctx.fillText('BASE',0,0); ctx.restore();
+  ctx.save(); ctx.translate(536,235); ctx.rotate(-Math.PI/2);
+  ctx.font='bold 11px Courier New'; ctx.fillStyle='#ffffff55';
+  ctx.textAlign='center'; ctx.fillText('BASE',0,0); ctx.restore();
+  // Ground
+  ctx.fillStyle='#3a8c2a'; ctx.fillRect(0,H-55,W,55);
+  ctx.strokeStyle='#0052FF'; ctx.lineWidth=3;
+  ctx.beginPath(); ctx.moveTo(0,H-55); ctx.lineTo(W,H-55); ctx.stroke();
+  // Ground pattern
+  ctx.globalAlpha=0.3; ctx.strokeStyle='#4aac3a'; ctx.lineWidth=1;
+  for(var i=0;i<W;i+=40){ ctx.beginPath(); ctx.moveTo(i,H-55); ctx.lineTo(i+20,H); ctx.stroke(); }
+  ctx.globalAlpha=1;
+  // Bleu (main character, large)
+  ctx.shadowColor='#0052FF'; ctx.shadowBlur=30;
+  drawBleu(ctx, 280, 270, 4.5, 8);
+  ctx.shadowBlur=0;
+  // Star power-up
+  ctx.save(); ctx.translate(420,270);
+  var rg=ctx.createRadialGradient(0,0,0,0,0,22);
+  rg.addColorStop(0,'#ffffff'); rg.addColorStop(0.3,'#00D4FF'); rg.addColorStop(1,'#00D4FF00');
+  ctx.fillStyle=rg; ctx.beginPath(); ctx.arc(0,0,22,0,Math.PI*2); ctx.fill();
+  drawStar(ctx,0,0,14,'#00D4FF');
+  ctx.restore();
+  // Score display
+  ctx.save();
+  ctx.shadowColor='#0052FF66'; ctx.shadowBlur=20;
+  ctx.fillStyle='rgba(0,4,18,0.85)'; ctx.strokeStyle='#0052FF';
+  ctx.lineWidth=2; ctx.beginPath(); ctx.roundRect(W/2-70,30,140,80,12); ctx.fill(); ctx.stroke();
+  ctx.shadowBlur=0;
+  ctx.fillStyle='#ffffff'; ctx.font='bold 52px Courier New'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText('47', W/2, 72);
+  ctx.fillStyle='#0052FF'; ctx.font='bold 11px Courier New'; ctx.fillText('PHASE 2', W/2, 98);
+  ctx.restore();
+  // Hearts HUD
+  for(var h=0;h<3;h++){ ctx.fillStyle='#FF1744'; ctx.font='22px Arial'; ctx.fillText('♥',22+h*28,38); }
+  // "FLAPY BLEU" title
+  ctx.save();
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.font='bold 54px Courier New'; ctx.shadowColor='#0052FF'; ctx.shadowBlur=30;
+  ctx.strokeStyle='#003399'; ctx.lineWidth=6; ctx.strokeText('FLAPY BLEU', W/2, H-100);
+  ctx.fillStyle='#ffffff'; ctx.fillText('FLAPY BLEU', W/2, H-100);
+  ctx.shadowBlur=0;
+  ctx.font='16px Courier New'; ctx.fillStyle='#00D4FF'; ctx.fillText('TAP TO FLAP  ·  PLAY ON BASE', W/2, H-68);
+  // Base logo area
+  ctx.font='bold 13px Courier New'; ctx.fillStyle='#0052FFaa';
+  ctx.fillText('🔵 built on Base blockchain', W/2, H-30);
+  ctx.restore();
+  // Phase label
+  ctx.textAlign='right'; ctx.font='bold 12px Courier New'; ctx.fillStyle='#0052FF88';
+  ctx.fillText('BASE NETWORK', W-16, H-16);
+}
+
+// ── PHASE SCREENSHOTS ────────────────────────────────────────
+function drawPhase(id, phaseName, bgTop, bgBot, groundColor, glowColor, pipeA, pipeB, score) {
+  var c=document.getElementById(id), ctx=c.getContext('2d');
+  var W=400, H=711;
+  // Sky
+  var sky=ctx.createLinearGradient(0,0,0,H);
+  sky.addColorStop(0,bgTop); sky.addColorStop(1,bgBot);
+  ctx.fillStyle=sky; ctx.fillRect(0,0,W,H);
+  // Pipe pair
+  drawPipe(ctx, 240, 230, 380, H-80, pipeA, pipeB);
+  // Ground
+  ctx.fillStyle=groundColor; ctx.fillRect(0,H-80,W,80);
+  ctx.strokeStyle=glowColor; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(0,H-80); ctx.lineTo(W,H-80); ctx.stroke();
+  // Bleu
+  ctx.shadowColor=glowColor; ctx.shadowBlur=16;
+  drawBleu(ctx, 90, H/2-20, 3.2, 6);
+  ctx.shadowBlur=0;
+  // Score box
+  ctx.fillStyle='rgba(0,4,18,0.85)'; ctx.strokeStyle=glowColor; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.roundRect(W/2-50,30,100,70,10); ctx.fill(); ctx.stroke();
+  ctx.fillStyle='#fff'; ctx.font='bold 42px Courier New'; ctx.textAlign='center';
+  ctx.fillText(score, W/2, 80);
+  // Phase label
+  ctx.fillStyle=glowColor; ctx.font='bold 10px Courier New';
+  ctx.fillText(phaseName.toUpperCase(), W/2, 120);
+  // Hearts
+  for(var h=0;h<3;h++){ ctx.fillStyle='#FF1744'; ctx.font='18px Arial'; ctx.textAlign='left'; ctx.fillText('♥',14+h*22,28); }
+  // Phase top-left
+  ctx.fillStyle=glowColor; ctx.font='bold 11px Courier New'; ctx.textAlign='left';
+  ctx.fillText(phaseName.split(' ')[0]+' '+phaseName.split(' ')[1], 14, 46);
+  // Phase name bottom
+  ctx.fillStyle=glowColor+'88'; ctx.font='bold 11px Courier New'; ctx.textAlign='right';
+  ctx.fillText(phaseName.toUpperCase(), W-10, H-10);
+}
+
+// ── MAIN ─────────────────────────────────────────────────────
+drawIcon();
+drawSplash();
+drawPhase('cP1','PHASE 1','#020812','#040d18','#030a12','#00ff41','#00e676','#004d20',11);
+drawPhase('cP2','PHASE 2','#55aaee','#88ccff','#3a8c2a','#0052FF','#0052FF','#003399',27);
+drawPhase('cP3','PHASE 3','#1a3a6b','#4e88c8','#5c7090','#FFE066','#8899cc','#5577aa',43);
+
+function downloadCanvas(id, filename) {
+  var c = document.getElementById(id);
+  var a = document.createElement('a');
+  a.href = c.toDataURL('image/png');
+  a.download = filename;
+  a.click();
+}
+
+function downloadAll() {
+  downloadCanvas('cIcon',   'icon.png');
+  setTimeout(function(){ downloadCanvas('cSplash', 'splash.png'); }, 400);
+  setTimeout(function(){ downloadCanvas('cP1',     'phase1.png'); }, 800);
+  setTimeout(function(){ downloadCanvas('cP2',     'phase2.png'); }, 1200);
+  setTimeout(function(){ downloadCanvas('cP3',     'phase3.png'); }, 1600);
+}
+</script>
+</body>
+</html>
