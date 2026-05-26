@@ -104,27 +104,30 @@ function beep(f1, f2, dur, type, vol) {
 }
 
 // ─── FASES (10 fases, muda a cada 15 pontos) ──────────────────
-// Dificuldade progressiva e justa — retorno de dopamina garantido
-// Fase 9 é respiro intencional (loop dopamínico: tensão → alívio → tensão)
+// Hitbox r=14 → diâmetro 28px. Flap sobe ~67px. Zona segura = gap-28px.
+// Regra de ouro: gapMin ≥ 90px (zona segura 62px). Dificuldade via VELOCIDADE, não gap.
+// Fase 9 é respiro intencional (loop dopamínico: tensão → alívio → tensão → boss P10).
 const PHASES = [
-  { speed: 1.85, gapMin:132, gapMax:144, label:'PHASE 1'  }, // intro — confortável
-  { speed: 1.95, gapMin:124, gapMax:136, label:'PHASE 2'  }, // aperta levemente
-  { speed: 2.1,  gapMin:118, gapMax:128, label:'PHASE 3'  }, // desafio real
-  { speed: 2.25, gapMin:112, gapMax:124, label:'PHASE 4'  }, // close calls frequentes
-  { speed: 2.35, gapMin:106, gapMax:118, label:'PHASE 5'  }, // tensão sobe
-  { speed: 2.45, gapMin:102, gapMax:114, label:'PHASE 6'  }, // território Flappy Bird
-  { speed: 2.55, gapMin: 98, gapMax:110, label:'PHASE 7'  }, // difícil de verdade
-  { speed: 2.6,  gapMin: 94, gapMax:106, label:'PHASE 8'  }, // muito difícil
-  { speed: 2.2,  gapMin:116, gapMax:130, label:'PHASE 9'  }, // respiro — alivia tensão
-  { speed: 2.75, gapMin: 90, gapMax:102, label:'PHASE 10' }, // hardcore — poucos chegam
+  { speed: 1.80, gapMin:156, gapMax:172, label:'PHASE 1'  }, // intro — aprenda o ritmo, gap enorme
+  { speed: 1.95, gapMin:142, gapMax:158, label:'PHASE 2'  }, // aperta suavemente, ainda generoso
+  { speed: 2.10, gapMin:130, gapMax:146, label:'PHASE 3'  }, // desafio real começa
+  { speed: 2.25, gapMin:120, gapMax:136, label:'PHASE 4'  }, // close calls divertidos
+  { speed: 2.40, gapMin:110, gapMax:126, label:'PHASE 5'  }, // tensão sobe — concentração
+  { speed: 2.52, gapMin:102, gapMax:116, label:'PHASE 6'  }, // território Flappy Bird clássico
+  { speed: 2.65, gapMin: 96, gapMax:110, label:'PHASE 7'  }, // difícil mas 100% justo
+  { speed: 2.76, gapMin: 92, gapMax:106, label:'PHASE 8'  }, // muito difícil — beira do limite
+  { speed: 2.35, gapMin:138, gapMax:156, label:'PHASE 9'  }, // RESPIRO TOTAL — alívio de dopamina
+  { speed: 2.90, gapMin: 90, gapMax:104, label:'PHASE 10' }, // boss fight — hardcore, 100% passável
 ];
 function getPhaseIdx() { return Math.min(9, Math.floor(score / 15)); }
 function getPhase() {
   var ph = PHASES[getPhaseIdx()];
   if(prestigeLevel <= 0) return ph;
-  var mult   = 1 + prestigeLevel * 0.08;
-  var gapCut = prestigeLevel * 3;
-  return { speed: ph.speed * mult, gapMin: Math.max(72, ph.gapMin - gapCut), gapMax: Math.max(82, ph.gapMax - gapCut), label: ph.label };
+  // Prestige: dificuldade vem de VELOCIDADE (justa), não de redução de gap (punitiva)
+  var mult   = 1 + prestigeLevel * 0.07;            // até 1.70× velocidade no P10
+  var gapCut = Math.floor(prestigeLevel * 1.2);      // corte mínimo: max 12px no P10
+  var minFloor = 90;                                  // NUNCA abaixo de 90px — sempre passável
+  return { speed: ph.speed * mult, gapMin: Math.max(minFloor, ph.gapMin - gapCut), gapMax: Math.max(minFloor + 12, ph.gapMax - gapCut), label: ph.label };
 }
 
 // ─── PHASE VISUALS ────────────────────────────────
@@ -2913,22 +2916,25 @@ function makePipe(x) {
   const p   = getPhase();
   const pi  = getPhaseIdx();
 
-  // Gap size: varia dentro da faixa da fase, com pequena variância extra
+  // Gap size: varia dentro da faixa da fase
   const gap = p.gapMin + Math.random() * (p.gapMax - p.gapMin);
 
   // ── Movimento vertical dinâmico ──
-  // maxShift maior = saltos maiores entre obstáculos (topo → fundo → meio)
-  const maxShift = 105 - pi * 3.5; // P1=105  P10=70 — mais variação que antes
-  // Anti-cluster: empurra o próximo gap NA DIREÇÃO OPOSTA ao extremo atual.
-  // Se o último gap estava embaixo → próximo tende a ir para cima, e vice-versa.
-  // Isso força a alternância natural topo/baixo/meio sem ser previsível.
-  const pull = -0.14 * (lastGapCenter - H / 2);
+  // maxShift: proporcional ao gap para que o salto nunca exija mais de ~1.5 flaps
+  // Phase 1 (gap~164): maxShift≈72 — suave e previsível para aprender
+  // Phase 10 (gap~97): maxShift≈52 — controlado mesmo em alta velocidade
+  // Phase 9 (respiro, gap~147): maxShift≈65 — variado mas gostoso
+  const maxShift = Math.round(gap * 0.44);
+  // Anti-cluster robusto: pull mais forte nas extremidades (0.22 vs 0.14 antes)
+  // Garante que o jogo nunca fique "preso" numa extremidade por 3+ pipes seguidos
+  const pull = -0.22 * (lastGapCenter - H / 2);
   // Movimento delta: aleatório ± maxShift + bias anti-cluster
   const delta = (Math.random() - 0.5) * 2 * maxShift + pull;
   let center  = lastGapCenter + delta;
 
-  const minC = 118 + gap / 2;
-  const maxC = H - 82 - gap / 2;
+  // minC/maxC: margem de 112px do topo e 88px do chão — garante gap visualmente centrado
+  const minC = 112 + gap / 2;
+  const maxC = H - 88 - gap / 2;
   center = Math.max(minC, Math.min(maxC, center));
   lastGapCenter = center;
 
@@ -5115,11 +5121,12 @@ function loop(ts) {
     if(bleuFlapTimer > 0) bleuFlapTimer--;
 
     // spawn de pipes — progressivamente mais frequente
-    // spawnEvery: mais lento nas primeiras fases → mais rápido no final
-    var spawnEvery = Math.max(60, 96 - pi * 4);
+    // spawnEvery: P1=108f (~1.8s) → P10=65f (~1.1s) | sem pressa no início
+    // Nota: a VELOCIDADE dos canos já aumenta a dificuldade — frequência é secundária
+    var spawnEvery = Math.max(65, 108 - pi * 4.8);
     if(!phasePaused && frame % spawnEvery === 0){
-      // Guard: não spawnar se o cano anterior ainda está perto da borda direita
-      // bodyW(42) + fins(14*2) + margem(90) = mín 160px de espaço visual
+      // Guard: garante espaço mínimo entre canos — nunca dois sobrepostos
+      // Espaço mínimo: bodyW(42) + margens(118) = 160px — confortável para reação
       var _lastP = pipes.length > 0 ? pipes[pipes.length - 1] : null;
       if(!_lastP || (W + 10 - _lastP.x) >= 160){
         pipes.push(makePipe(W + 10));
