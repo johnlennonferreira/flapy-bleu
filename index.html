@@ -833,56 +833,101 @@ function drawShopTab() {
   // ── ITEMS ROW — só mostra quando personagem está desbloqueado ──
   var _charLocked = (shopChar===1&&!gengarUnlocked)||(shopChar===2&&!wormUnlocked)||(shopChar===3&&!alienUnlocked);
   if(!_charLocked) {
-    var _ir = { y:460, w:94, h:82, gap:5 };
+    var _ir = { y:414, w:94, h:112, gap:5 };
+    var _icons  = ['🛡','⚗','♥','🎯']; // 🛡⚗♥🎯
+    var _icEmoj = ['🛡','⚗','♥','🎯'];
     var _cards = [
-      // Shield (coins)
-      { label:'SHIELD',     sub: shieldStock>=3?'MAX':shieldStock+'/3', col:'#00FF88',
-        canBuy: coinCount>=80 && shieldStock<3, btnLabel:'🐉 80',      idx:0 },
-      // Slow-Mo (USDC)
-      { label:'SLOW-MO',    sub: slowMoStock>0?'x'+slowMoStock+' — 45s':'45s', col:'#00D4FF',
-        canBuy: !!walletAddress, btnLabel:'USDC $0.25',               idx:1 },
-      // Coração (USDC)
-      { label:'+CORAÇÃO',   sub: extraHeartStock>0?'x'+extraHeartStock+' owned':'até +2', col:'#FF6680',
-        canBuy: !!walletAddress && extraHeartStock<2, btnLabel:'USDC $0.25', idx:2 },
-      // Checkpoint (USDC)
-      { label:'CHECKPOINT', sub: checkpointStock>0?'PRONTO':'1 uso', col:'#FFD700',
-        canBuy: !!walletAddress && checkpointStock<1, btnLabel:'USDC $0.50', idx:3 }
+      { label:'SHIELD',     price:'🐉 80 coins', col:'#00FF88',
+        canBuy: coinCount>=80 && shieldStock<3,
+        maxed: shieldStock>=3, stock: shieldStock+'/3' },
+      { label:'SLOW-MO',    price:'USDC $0.25',  col:'#00D4FF',
+        canBuy: !!walletAddress,
+        maxed: false, stock: slowMoStock>0?'x'+slowMoStock:'' },
+      { label:'+CORAÇÃO',   price:'USDC $0.25',  col:'#FF6680',
+        canBuy: !!walletAddress && extraHeartStock<2,
+        maxed: extraHeartStock>=2, stock: extraHeartStock>0?'x'+extraHeartStock:'' },
+      { label:'CHECKPOINT', price:'USDC $0.50',  col:'#FFD700',
+        canBuy: !!walletAddress && checkpointStock<1,
+        maxed: checkpointStock>=1, stock: checkpointStock>0?'✓':'' }
     ];
     var _ix0 = Math.round((W - (4*_ir.w + 3*_ir.gap)) / 2);
+    var _pulse = 0.85 + 0.15*Math.abs(Math.sin(frame*0.05)); // pulsação suave
     for(var _ci2=0; _ci2<4; _ci2++){
-      var _cd = _cards[_ci2];
-      var _cx2 = _ix0 + _ci2*(_ir.w+_ir.gap);
+      var _cd   = _cards[_ci2];
+      var _cx2  = _ix0 + _ci2*(_ir.w+_ir.gap);
+      var _mid  = _cx2 + _ir.w/2;
       var _isOwned = (_ci2===0&&shieldStock>0)||(_ci2===1&&slowMoStock>0)||(_ci2===2&&extraHeartStock>0)||(_ci2===3&&checkpointStock>0);
-      // Card bg
-      ctx.fillStyle = _isOwned ? _cd.col+'15' : '#ffffff07';
-      ctx.strokeStyle = _isOwned ? _cd.col+'66' : '#ffffff1a';
-      ctx.lineWidth=1.2;
-      ctx.beginPath(); ctx.roundRect(_cx2, _ir.y, _ir.w, _ir.h, 10); ctx.fill(); ctx.stroke();
-      // Ícone
-      ctx.font='20px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
-      ctx.fillText(['🛡','⚗','♥','🃏'][_ci2], _cx2+_ir.w/2, _ir.y+18);
+
+      // ── Card: fundo + borda dupla (glow) ──
+      ctx.fillStyle = _isOwned ? _cd.col+'1a' : '#0a1428';
+      ctx.beginPath(); ctx.roundRect(_cx2, _ir.y, _ir.w, _ir.h, 10); ctx.fill();
+      // camada glow externa
+      ctx.strokeStyle = _cd.col + '55'; ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.roundRect(_cx2, _ir.y, _ir.w, _ir.h, 10); ctx.stroke();
+      // borda interna nítida
+      ctx.strokeStyle = _cd.col + 'cc'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.roundRect(_cx2, _ir.y, _ir.w, _ir.h, 10); ctx.stroke();
+
+      // ── Ícone: círculo colorido + emoji grande ──
+      var _iconCy = _ir.y + 26;
+      // círculo de fundo pulsante
+      ctx.fillStyle = _cd.col + '30';
+      ctx.beginPath(); ctx.arc(_mid, _iconCy, 17, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle = _cd.col + '88'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(_mid, _iconCy, 19*_pulse, 0, Math.PI*2); ctx.stroke();
+      // emoji
+      ctx.font = '20px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(_icEmoj[_ci2], _mid, _iconCy);
       ctx.textBaseline='alphabetic';
-      // Label + sub
-      ctx.font='bold 8px Courier New'; ctx.fillStyle=_cd.col;
-      ctx.fillText(_cd.label, _cx2+_ir.w/2, _ir.y+36);
-      ctx.font='7px Courier New'; ctx.fillStyle='#ffffff44';
-      ctx.fillText(_cd.sub, _cx2+_ir.w/2, _ir.y+46);
-      // Buy button
-      var _bY = _ir.y+50;
-      var _maxed = (_ci2===0&&shieldStock>=3)||(_ci2===2&&extraHeartStock>=2)||(_ci2===3&&checkpointStock>=1);
-      if(_maxed){
-        ctx.fillStyle=_cd.col+'55'; ctx.font='bold 7px Courier New';
-        ctx.fillText('✓ PRONTO', _cx2+_ir.w/2, _bY+10);
+
+      // ── Nome ──
+      ctx.font = 'bold 9px Courier New'; ctx.fillStyle = _cd.col;
+      ctx.textAlign='center';
+      ctx.fillText(_cd.label, _mid, _ir.y + 51);
+
+      // ── Estoque (se houver) ──
+      if(_cd.stock){
+        ctx.font = '8px Courier New'; ctx.fillStyle = _cd.col+'bb';
+        ctx.fillText(_cd.stock, _mid, _ir.y + 62);
+      }
+
+      // ── Botão comprar ──
+      var _bY = _ir.y + 68;
+      var _bW = _ir.w - 8, _bH = 36;
+      var _bX = _cx2 + 4;
+      if(_cd.maxed){
+        // Já possui o máximo
+        ctx.fillStyle = _cd.col+'22';
+        ctx.beginPath(); ctx.roundRect(_bX, _bY, _bW, _bH, 8); ctx.fill();
+        ctx.font='bold 8px Courier New'; ctx.fillStyle=_cd.col+'cc';
+        ctx.textBaseline='middle'; ctx.fillText('✓ MÁXIMO', _mid, _bY+_bH/2); ctx.textBaseline='alphabetic';
       } else if(!walletAddress && _ci2>0){
-        ctx.fillStyle='#ffffff22'; ctx.font='6px Courier New';
-        ctx.fillText('conecte carteira', _cx2+_ir.w/2, _bY+10);
+        // Sem carteira
+        ctx.fillStyle = '#ffffff08';
+        ctx.beginPath(); ctx.roundRect(_bX, _bY, _bW, _bH, 8); ctx.fill();
+        ctx.strokeStyle='#ffffff22'; ctx.lineWidth=1;
+        ctx.beginPath(); ctx.roundRect(_bX, _bY, _bW, _bH, 8); ctx.stroke();
+        ctx.font='7px Courier New'; ctx.fillStyle='#ffffff33';
+        ctx.textBaseline='middle'; ctx.fillText('conecte carteira', _mid, _bY+_bH/2); ctx.textBaseline='alphabetic';
       } else {
-        ctx.fillStyle=_cd.canBuy?_cd.col+'22':'#ffffff08';
-        ctx.strokeStyle=_cd.canBuy?_cd.col+'aa':'#ffffff22'; ctx.lineWidth=1;
-        ctx.beginPath(); ctx.roundRect(_cx2+4,_bY,_ir.w-8,26,6); ctx.fill(); ctx.stroke();
-        ctx.fillStyle=_cd.canBuy?_cd.col:'#ffffff33';
-        ctx.font='bold 7px Courier New'; ctx.textBaseline='middle';
-        ctx.fillText(_cd.btnLabel, _cx2+_ir.w/2, _bY+13); ctx.textBaseline='alphabetic';
+        // Botão ativo — glow triplo
+        var _bc = _cd.canBuy ? _cd.col : '#666688';
+        // glow externo
+        ctx.strokeStyle = _bc+'44'; ctx.lineWidth = 5;
+        ctx.beginPath(); ctx.roundRect(_bX, _bY, _bW, _bH, 8); ctx.stroke();
+        // glow médio
+        ctx.strokeStyle = _bc+'77'; ctx.lineWidth = 2.5;
+        ctx.beginPath(); ctx.roundRect(_bX, _bY, _bW, _bH, 8); ctx.stroke();
+        // preenchimento + borda nítida
+        ctx.fillStyle = _cd.canBuy ? _bc+'22' : '#ffffff06';
+        ctx.strokeStyle = _bc+'ee'; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.roundRect(_bX, _bY, _bW, _bH, 8); ctx.fill(); ctx.stroke();
+        // preço em destaque
+        ctx.font = 'bold 8px Courier New'; ctx.fillStyle = _cd.canBuy ? _bc : '#ffffff44';
+        ctx.textBaseline='middle';
+        ctx.fillText(_cd.price, _mid, _bY + _bH/2 - 4);
+        ctx.textBaseline='alphabetic';
       }
     }
   } // end if(!_charLocked)
@@ -5743,11 +5788,11 @@ function handleClick(ex, ey) {
       }
       // ── ITEMS ROW — 4 cards (shield/slowmo/heart/checkpoint) — só se char desbloqueado ──
       var _charLockedClick=(shopChar===1&&!gengarUnlocked)||(shopChar===2&&!wormUnlocked)||(shopChar===3&&!alienUnlocked);
-      var _ir2={y:460,w:94,h:82,gap:5};
+      var _ir2={y:414,w:94,h:112,gap:5};
       var _ix02=Math.round((W-(4*_ir2.w+3*_ir2.gap))/2);
       if(!_charLockedClick) for(var _ii=0;_ii<4;_ii++){
         var _icx=_ix02+_ii*(_ir2.w+_ir2.gap);
-        if(cx>=_icx&&cx<=_icx+_ir2.w&&cy>=_ir2.y+50&&cy<=_ir2.y+_ir2.h){
+        if(cx>=_icx&&cx<=_icx+_ir2.w&&cy>=_ir2.y+68&&cy<=_ir2.y+_ir2.h){
           if(_ii===0){ // Shield — coins
             if(shieldStock>=3){ beep(220,150,0.1,'sawtooth',0.06); return; }
             if(coinCount>=80){
