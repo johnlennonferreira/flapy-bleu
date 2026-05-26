@@ -107,16 +107,16 @@ function beep(f1, f2, dur, type, vol) {
 // Dificuldade progressiva e justa — retorno de dopamina garantido
 // Fase 9 é respiro intencional (loop dopamínico: tensão → alívio → tensão)
 const PHASES = [
-  { speed: 1.85, gapMin:138, gapMax:150, label:'PHASE 1'  }, // intro — já exige atenção
-  { speed: 1.95, gapMin:128, gapMax:140, label:'PHASE 2'  }, // aperta
-  { speed: 2.1,  gapMin:120, gapMax:133, label:'PHASE 3'  }, // desafio real
-  { speed: 2.25, gapMin:112, gapMax:126, label:'PHASE 4'  }, // close calls frequentes
-  { speed: 2.35, gapMin:106, gapMax:120, label:'PHASE 5'  }, // tensão sobe
-  { speed: 2.45, gapMin:100, gapMax:114, label:'PHASE 6'  }, // território Flappy Bird
-  { speed: 2.55, gapMin: 95, gapMax:108, label:'PHASE 7'  }, // difícil de verdade
-  { speed: 2.6,  gapMin: 91, gapMax:104, label:'PHASE 8'  }, // muito difícil
-  { speed: 2.2,  gapMin:116, gapMax:132, label:'PHASE 9'  }, // respiro — alivia tensão (loop dopamina)
-  { speed: 2.75, gapMin: 87, gapMax: 99, label:'PHASE 10' }, // hardcore — poucos chegam
+  { speed: 1.85, gapMin:116, gapMax:126, label:'PHASE 1'  }, // intro — já exige atenção
+  { speed: 1.95, gapMin:108, gapMax:118, label:'PHASE 2'  }, // aperta
+  { speed: 2.1,  gapMin:102, gapMax:112, label:'PHASE 3'  }, // desafio real
+  { speed: 2.25, gapMin: 96, gapMax:108, label:'PHASE 4'  }, // close calls frequentes
+  { speed: 2.35, gapMin: 91, gapMax:103, label:'PHASE 5'  }, // tensão sobe
+  { speed: 2.45, gapMin: 87, gapMax: 98, label:'PHASE 6'  }, // território Flappy Bird
+  { speed: 2.55, gapMin: 83, gapMax: 94, label:'PHASE 7'  }, // difícil de verdade
+  { speed: 2.6,  gapMin: 80, gapMax: 91, label:'PHASE 8'  }, // muito difícil
+  { speed: 2.2,  gapMin:100, gapMax:114, label:'PHASE 9'  }, // respiro — alivia tensão (loop dopamina)
+  { speed: 2.75, gapMin: 76, gapMax: 87, label:'PHASE 10' }, // hardcore — poucos chegam
 ];
 function getPhaseIdx() { return Math.min(9, Math.floor(score / 15)); }
 function getPhase() {
@@ -1141,7 +1141,8 @@ var runPhase=0; // fase mais longe desta run
 var bestPhaseEver=parseInt(localStorage.getItem('bleuBestPhase')||'0');
 var shareFlash=0; // feedback do botão compartilhar
 var deadTapCount=0; // exige 3 toques para reiniciar (anti-acidente)
-var prestigeLevel=parseInt(localStorage.getItem('bleuPrestige')||'0'); // NG+ prestige
+var prestigeLevel=0; // NG+ prestige — sempre 0 ao iniciar; só sobe dentro da run ao completar prestige
+var bestPrestige=parseInt(localStorage.getItem('bleuBestPrestige')||'0'); // máximo histórico (leaderboard)
 var prestigeAnim=0;    // frame counter para tela prestige
 var prestigeCoinsReward=0; // coins ganhos no prestige atual
 const MILESTONES=[5,10,25,50,100];
@@ -1366,6 +1367,7 @@ function resetGame() {
   phaseShopPending = false;
   shieldItems = []; shieldBreak = 0;
   runPhase = 0; shareFlash = 0; bleuAngle = 0; bleuFlapTimer = 0; phantomFartParticles = []; deadTapCount = 0;
+  prestigeLevel = 0; // cada run começa do zero — sem NG+ herdado
   // lastScore mantido — rank tab mostra última pontuação da run anterior
 }
 resetGame();
@@ -4787,9 +4789,9 @@ function loop(ts) {
           lastScore = score; localStorage.setItem('bleuLastScore', lastScore);
           saveTop5(score);
           submitWalletScore(score);
-          // Award prestige
+          // Award prestige — sobe só nesta run; salva máximo histórico para leaderboard
           prestigeLevel++;
-          localStorage.setItem('bleuPrestige', prestigeLevel);
+          if(prestigeLevel > bestPrestige){ bestPrestige = prestigeLevel; localStorage.setItem('bleuBestPrestige', bestPrestige); }
           prestigeCoinsReward = 100 + prestigeLevel * 50;
           coinCount += prestigeCoinsReward; if(coinCount>100000)coinCount=100000; localStorage.setItem('bleuCoins', coinCount);
           // Enter prestige screen
