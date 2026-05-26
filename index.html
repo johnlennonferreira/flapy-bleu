@@ -4449,14 +4449,27 @@ function drawLivesHUD() {
     ctx.globalAlpha = 1;
   }
 
-  // Wallet badge top-right
+  // Slow-mo stock — ícone 🐢 pulsando quando tem elixir e não está ativo
+  if(slowMoStock > 0 && slowMoActive === 0 && (gameState==='playing'||gameState==='hurt')){
+    ctx.save();
+    ctx.globalAlpha = 0.55 + 0.45*Math.abs(Math.sin(frame*0.07));
+    ctx.font = '14px Arial'; ctx.textAlign = 'left';
+    ctx.fillText('🐢', 4, 44);
+    if(slowMoStock > 1){
+      ctx.globalAlpha = 1; ctx.fillStyle='#00D4FF';
+      ctx.font='bold 8px Courier New'; ctx.fillText('x'+slowMoStock, 20, 44);
+    }
+    ctx.restore();
+  }
+
+  // Wallet badge top-right — posição recuada para não sobreposição com ícone de som
   if(walletAddress){
     ctx.save();
     ctx.globalAlpha = 0.7 + 0.3*Math.sin(frame*0.05);
     ctx.fillStyle='#00FF8833'; ctx.strokeStyle='#00FF8877'; ctx.lineWidth=1;
-    ctx.beginPath(); ctx.roundRect(W-86, 6, 80, 16, 5); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.roundRect(W-110, 6, 82, 16, 5); ctx.fill(); ctx.stroke();
     ctx.fillStyle='#00FF88'; ctx.font='bold 7px Courier New'; ctx.textAlign='right'; ctx.textBaseline='middle';
-    ctx.fillText('⛓ '+walletShort, W-10, 14);
+    ctx.fillText('⛓ '+walletShort, W-32, 14);
     ctx.textBaseline='alphabetic'; ctx.globalAlpha=1;
     ctx.restore();
   }
@@ -5716,8 +5729,12 @@ function handleClick(ex, ey) {
   var rect = canvas.getBoundingClientRect();
   var scaleX = W/rect.width, scaleY = H/rect.height;
   var cx = (ex-rect.left)*scaleX, cy = (ey-rect.top)*scaleY;
-  // Mute toggle — top-right corner (ticker area, always accessible)
-  if(cy >= 0 && cy <= 22 && cx >= W-50 && cx <= W) {
+  // Wallet badge click — desconectar carteira
+  if(walletAddress && cy >= 5 && cy <= 23 && cx >= W-112 && cx <= W-27) {
+    disconnectWallet(); return;
+  }
+  // Mute toggle — ícone de som no canto superior direito (área menor, não sobrepõe wallet)
+  if(cy >= 0 && cy <= 22 && cx >= W-24 && cx <= W) {
     muted = !muted;
     document.getElementById('mute').textContent = muted ? '🔇 MUTE' : '🔊 SFX';
     if(muted){ if(_curAudio) _curAudio.pause(); if(_presAudio) _presAudio.pause(); }
