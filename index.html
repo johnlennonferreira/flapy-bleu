@@ -540,7 +540,7 @@ function drawAwardScreen() {
 // ─── IDLE TABS ───────────────────────────────────────────────
 function drawIdleTabs() {
   var labels=['PLAY','SHOP','RANK','MARKET'], keys=['play','shop','leaderboard','market'];
-  var icons=['▶','🛒','🏆','⚗'];
+  var icons=['▶','🛒','🏆','🐢'];
   var tw=82, th=44, gap=5, total=labels.length*(tw+gap)-gap;
   var tx0=Math.round(W/2-total/2), ty=H-58;
   ctx.textAlign='center';
@@ -552,7 +552,7 @@ function drawIdleTabs() {
     ctx.beginPath(); ctx.roundRect(tx,ty,tw,th,8); ctx.fill(); ctx.stroke();
     // icone — MARKET mostra item rotativo
     var _icon=icons[ti];
-    if(ti===3){ var _mItems=['⚗','♥','🃏']; _icon=_mItems[Math.floor(frame/60)%3]; }
+    if(ti===3){ var _mItems=['🐢','♥','🃏']; _icon=_mItems[Math.floor(frame/60)%3]; }
     ctx.font=act?'16px Arial':'14px Arial';
     ctx.fillStyle=act?'#fff':'#ffffffbb';
     ctx.textBaseline='middle';
@@ -834,8 +834,8 @@ function drawShopTab() {
   var _charLocked = (shopChar===1&&!gengarUnlocked)||(shopChar===2&&!wormUnlocked)||(shopChar===3&&!alienUnlocked);
   if(!_charLocked) {
     var _ir = { y:414, w:94, h:112, gap:5 };
-    var _icons  = ['🛡','⚗','♥','🎯']; // 🛡⚗♥🎯
-    var _icEmoj = ['🛡','⚗','♥','🎯'];
+    var _icons  = ['🛡','🐢','♥','🎯']; // 🛡🐢♥🎯
+    var _icEmoj = ['🛡','🐢','♥','🎯'];
     var _cards = [
       { label:'SHIELD',     price:'🐉 80 coins', col:'#00FF88',
         canBuy: coinCount>=80 && shieldStock<3,
@@ -1021,7 +1021,7 @@ function drawMarketTab() {
     { icon:'🛡', col:'#00FF88', name:'SHIELD',
       tag:'🐉 80 coins',           tagCol:'#FFD700',
       desc:'Absorve 1 impacto. Ativa ao iniciar a run.' },
-    { icon:'⚗', col:'#00D4FF', name:'SLOW-MO',
+    { icon:'🐢', col:'#00D4FF', name:'SLOW-MO',
       tag:'USDC $0.25 · Base Network', tagCol:'#00D4FF',
       desc:'Velocidade -28% por 45s (1 fase inteira).' },
     { icon:'♥', col:'#FF6680', name:'+CORAÇÃO',
