@@ -249,13 +249,13 @@ function _initMusic() {
   if(_musicInited) return; _musicInited = true;
   for(var _mi = 0; _mi < 10; _mi++) {
     var _a = new Audio('music/phase' + (_mi + 1) + '.mp3');
-    _a.loop = true; _a.volume = 0.30; _a.preload = 'none';
+    _a.loop = true; _a.volume = 0.18; _a.preload = 'none';
     _phaseAudio.push(_a);
   }
   _starAudio = new Audio('music/star.mp3');
-  _starAudio.loop = true; _starAudio.volume = 0.36; _starAudio.preload = 'none';
+  _starAudio.loop = true; _starAudio.volume = 0.20; _starAudio.preload = 'none';
   _presAudio = new Audio('music/prestige.mp3');
-  _presAudio.loop = false; _presAudio.volume = 0.42; _presAudio.preload = 'none';
+  _presAudio.loop = false; _presAudio.volume = 0.22; _presAudio.preload = 'none';
 }
 
 function _playAudio(a) {
