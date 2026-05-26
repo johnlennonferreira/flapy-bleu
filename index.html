@@ -560,6 +560,160 @@ function drawPrestigeScreen() {
   ctx.globalAlpha = 1; ctx.textBaseline='alphabetic';
 }
 
+// ─── LEGENDARY UNLOCK SCREEN — NG+5 SECRETO ─────────────────────────────────
+function drawLegendaryUnlockScreen() {
+  var _t = legendaryAnim;
+  var _shk = Math.max(0, 22 - _t) * 0.55;
+  var _sx = _shk > 0 ? (Math.random()-0.5)*_shk : 0;
+  var _sy = _shk > 0 ? (Math.random()-0.5)*_shk : 0;
+  var _pulse = 0.5 + 0.5*Math.sin(_t * 0.07);
+
+  // Fundo: crimson-preto profundo (distinto do prestige azul-preto)
+  var _bg = ctx.createLinearGradient(0, 0, 0, H);
+  _bg.addColorStop(0,'#1A0006'); _bg.addColorStop(0.45,'#0D0002'); _bg.addColorStop(1,'#000000');
+  ctx.fillStyle = _bg; ctx.fillRect(0, 0, W, H);
+
+  // ── FAÍSCAS DE FOGO caindo continuamente ──
+  var _nSp = _isMobile ? 22 : 44;
+  for(var _fi=0; _fi<_nSp; _fi++){
+    var _fp = ((_t*1.8 + _fi*19) % 100) / 100;
+    var _fx = (_fi * 93 + 7) % W;
+    var _fA = Math.min(1, _fp*3) * Math.max(0, 1 - _fp*1.25);
+    if(_fA < 0.02) continue;
+    ctx.globalAlpha = _fA * (0.5 + 0.5*Math.sin(_fi*1.3));
+    ctx.fillStyle = _fi%3===0?'#FFD700':_fi%3===1?'#FF6600':'#FF2200';
+    ctx.beginPath(); ctx.arc(_fx, _fp*H, 0.8+(_fi%3)*0.55, 0, Math.PI*2); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  ctx.save(); ctx.translate(W/2+_sx, H/2+_sy);
+
+  // ── ANÉIS DE EXPLOSÃO (3 ondas) ──
+  for(var _ri=0; _ri<3; _ri++){
+    var _rAge = _t - _ri*9;
+    if(_rAge < 0) continue;
+    var _rR = Math.min(_rAge*5.5, 230);
+    var _rA = Math.max(0, 1 - _rAge/38);
+    if(_rA < 0.01) continue;
+    ctx.save(); ctx.globalAlpha = _rA;
+    ctx.strokeStyle = _ri===0?'#FFD700':_ri===1?'#FF6600':'#FF0055';
+    ctx.lineWidth = 3 - _ri*0.5;
+    ctx.beginPath(); ctx.arc(0, 0, _rR, 0, Math.PI*2); ctx.stroke();
+    ctx.restore();
+  }
+
+  // ── BADGE NG+5 ──
+  var _bdIn = Math.min(1, Math.max(0, (_t-14)/20));
+  if(_bdIn > 0){
+    ctx.globalAlpha = _bdIn;
+    ctx.save(); ctx.scale(0.6+_bdIn*0.4, 0.6+_bdIn*0.4);
+    ctx.font='bold 52px Courier New'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillStyle='#FF330015'; ctx.fillText('P5', 0, -128);
+    var _p5g=ctx.createLinearGradient(-35,0,35,0);
+    _p5g.addColorStop(0,'#FF6600'); _p5g.addColorStop(0.5,'#FFD700'); _p5g.addColorStop(1,'#FF6600');
+    ctx.fillStyle=_p5g; ctx.shadowColor='#FF7700'; ctx.shadowBlur=32;
+    ctx.fillText('P5', 0, -128); ctx.shadowBlur=0;
+    ctx.strokeStyle='#FF660066'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.arc(0, -128, 42, 0, Math.PI*2); ctx.stroke();
+    ctx.restore();
+  }
+
+  // ── TÍTULO LEGENDARY ──
+  var _tIn = Math.min(1, Math.max(0, (_t-24)/20));
+  if(_tIn > 0){
+    ctx.globalAlpha = _tIn;
+    ctx.save(); ctx.scale(0.7+_tIn*0.3, 0.7+_tIn*0.3);
+    ctx.scale(1+0.025*Math.sin(_t*0.09), 1+0.025*Math.sin(_t*0.09));
+    ctx.font='bold 28px Courier New'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillStyle='#FF000033'; ctx.fillText('⚓  LEGENDARY  ⚓', 2, -90+2);
+    var _tg=ctx.createLinearGradient(-110,0,110,0);
+    _tg.addColorStop(0,'#FF2200'); _tg.addColorStop(0.3,'#FF8800'); _tg.addColorStop(0.65,'#FFD700'); _tg.addColorStop(1,'#FF8800');
+    ctx.fillStyle=_tg; ctx.shadowColor='#FF7700'; ctx.shadowBlur=36;
+    ctx.fillText('⚓  LEGENDARY  ⚓', 0, -90); ctx.shadowBlur=0;
+    ctx.restore();
+  }
+
+  // ── SUBTÍTULO VIKING BOAT ──
+  var _nIn = Math.min(1, Math.max(0, (_t-36)/18));
+  if(_nIn > 0){
+    ctx.globalAlpha = _nIn;
+    ctx.save(); ctx.scale(1+0.03*Math.sin(_t*0.14), 1+0.03*Math.sin(_t*0.14));
+    ctx.font='bold 17px Courier New'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillStyle='#FFD700'; ctx.shadowColor='#FFD700'; ctx.shadowBlur=18;
+    ctx.fillText('VIKING BOAT', 0, -62); ctx.shadowBlur=0;
+    ctx.restore();
+  }
+
+  // ── BARCO REVELADO ──
+  var _bIn = Math.min(1, Math.max(0, (_t-46)/26));
+  if(_bIn > 0){
+    // Halo dourado
+    if(!_isMobile){
+      ctx.save(); ctx.globalAlpha = _bIn*0.75;
+      var _hl=ctx.createRadialGradient(0,8,0,0,8,60+_pulse*14);
+      _hl.addColorStop(0,'#FFD70040'); _hl.addColorStop(0.5,'#FF660022'); _hl.addColorStop(1,'#FF000000');
+      ctx.fillStyle=_hl; ctx.beginPath(); ctx.ellipse(0,8,70,54,0,0,Math.PI*2); ctx.fill();
+      ctx.restore();
+    }
+    // Órbita de faíscas ao redor do barco
+    var _nOrb = _isMobile ? 9 : 16;
+    for(var _ob=0; _ob<_nOrb; _ob++){
+      var _oa = (_ob/_nOrb)*Math.PI*2 + _t*0.042;
+      var _orx = Math.cos(_oa)*(42 + Math.sin(_t*0.06+_ob)*7);
+      var _ory = Math.sin(_oa)*(30 + Math.cos(_t*0.06+_ob)*5);
+      ctx.globalAlpha = _bIn*(0.35+0.45*Math.abs(Math.sin(_oa*2)));
+      ctx.fillStyle = _ob%3===0?'#FFD700':_ob%3===1?'#FF7700':'#FF0044';
+      ctx.beginPath(); ctx.arc(_orx, _ory+8, 1.2+(_ob%3)*0.5, 0, Math.PI*2); ctx.fill();
+    }
+    ctx.globalAlpha = _bIn;
+    // O barco em si — grande, bobbing
+    var _bob2 = Math.sin(_t*0.048)*3.5;
+    ctx.save(); ctx.translate(0, _bob2); ctx.scale(2.85, 2.85);
+    drawBoat(0, 0, _t*0.14, 0);
+    ctx.restore();
+  }
+  ctx.globalAlpha = 1;
+
+  // ── SUBTEXTO ──
+  var _sIn = Math.min(1, Math.max(0, (_t-64)/16));
+  if(_sIn > 0){
+    ctx.globalAlpha = _sIn;
+    ctx.font='bold 10px Courier New'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillStyle='#FF8833'; ctx.fillText('5 LOOPS CONQUISTADOS', 0, 80);
+    ctx.font='9px Courier New'; ctx.fillStyle='#ffffff55';
+    ctx.fillText('THE SEAS BOW BEFORE YOU', 0, 94);
+  }
+
+  // ── RECOMPENSA ──
+  var _cIn = Math.min(1, Math.max(0, (_t-74)/16));
+  if(_cIn > 0){
+    ctx.globalAlpha = _cIn;
+    ctx.font='bold 24px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillStyle='#FFD700'; ctx.shadowColor='#FFD700'; ctx.shadowBlur=16;
+    ctx.fillText('+'+prestigeCoinsReward, 0, 114); ctx.shadowBlur=0;
+    ctx.font='8px Courier New'; ctx.fillStyle='#FFD700aa';
+    ctx.fillText('🐉 legendary reward', 0, 129);
+  }
+
+  // ── BOTÃO TAP TO CLAIM ──
+  var _btIn = Math.min(1, Math.max(0, (_t-88)/16)) * (0.8+0.2*Math.sin(_t*0.13));
+  if(_btIn > 0){
+    ctx.globalAlpha = _btIn;
+    ctx.save(); ctx.scale(0.97+0.03*Math.sin(_t*0.11), 0.97+0.03*Math.sin(_t*0.11));
+    var _btG=ctx.createLinearGradient(-100,0,100,0);
+    _btG.addColorStop(0,'#3D0000'); _btG.addColorStop(0.35,'#CC4400'); _btG.addColorStop(0.5,'#FFD700'); _btG.addColorStop(0.65,'#CC4400'); _btG.addColorStop(1,'#3D0000');
+    ctx.fillStyle=_btG; ctx.strokeStyle='#FFD700'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.roundRect(-100,-19,200,38,12); ctx.fill(); ctx.stroke();
+    ctx.fillStyle='#000'; ctx.font='bold 14px Courier New';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('⚓  TAP TO CLAIM', 0, 0);
+    ctx.restore();
+  }
+
+  ctx.restore(); // translate center
+  ctx.globalAlpha=1; ctx.textBaseline='alphabetic';
+}
+
 function drawAwardScreen() {
   ctx.fillStyle='rgba(0,5,20,.88)'; ctx.fillRect(0,0,W,H);
   var cx=W/2; ctx.textAlign='center';
@@ -1204,16 +1358,20 @@ function drawMarketTab() {
   ctx.font='bold 8px Courier New'; ctx.fillStyle='#ffffff33'; ctx.textAlign='left';
   ctx.fillText('── UNLOCKABLE CHARACTERS ──────────────', 10, _cy+9); _cy+=14;
 
+  var _secretEntry = boatUnlocked
+    ? { col:'#FFD700',   name:'VIKING BOAT ⚓', req:'NG+5 LEGENDARY · desbloqueado!', unlocked:true,  charIdx:-1 }
+    : { col:'#FFD70088', name:'??? SECRET',      req:'NG+5 · complete 5 loops',        unlocked:false, charIdx:-1 };
   var _charDefs=[
     { icon:'?', col:'#aa44ff', name:'PHANTOM', req:'NG+1 · clear all 10 phases once  ', unlocked:gengarUnlocked, charIdx:1 },
     { icon:'?', col:'#88dd44', name:'WORM',    req:'NG+2 · complete 2 loops           ', unlocked:wormUnlocked,   charIdx:2 },
     { icon:'?', col:'#44FF88', name:'ALIEN',   req:'NG+3 · complete 3 loops           ', unlocked:alienUnlocked,  charIdx:3 },
-    { icon:'?', col:'#FFD70088', name:'??? SECRET', req:'NG+5 · coming soon', unlocked:false, charIdx:-1 },
+    _secretEntry,
   ];
   for(var _ci=0;_ci<_charDefs.length;_ci++){
     var _ch=_charDefs[_ci];
     var _isSecret=_ch.charIdx<0;
-    var _h=_isSecret?_hNoBtn:_hBtn;
+    // Boat desbloqueado precisa de altura com botão EQUIP
+    var _h=(_isSecret && !_ch.unlocked)?_hNoBtn:_hBtn;
     _cardBase(_cy, _h, _ch.unlocked?'✓':(_isSecret?'★':'?'), _ch.col, _ch.unlocked);
     ctx.textAlign='left';
     ctx.font='bold 11px Courier New'; ctx.fillStyle=_ch.unlocked?_ch.col:_ch.col+'cc';
@@ -1232,8 +1390,23 @@ function drawMarketTab() {
         })(_ch.charIdx,_ch.col,_cy,_h);
       }
     } else {
-      ctx.font='8px Courier New'; ctx.fillStyle='#ffffff22';
-      ctx.fillText('coming soon', 58, _cy+38);
+      if(_ch.unlocked){
+        // Viking Boat desbloqueado — botão EQUIP dourado
+        ctx.font='8px Courier New'; ctx.fillStyle='#FFD700aa'; ctx.textAlign='left';
+        ctx.fillText('⚓ legendary unlock', 58, _cy+38);
+        var _isEq=activeChar===4;
+        var _bBt={x:W-76,y:_cy+7,w:62,h:34};
+        ctx.fillStyle=_isEq?'#FFD70012':'#FFD70028'; ctx.strokeStyle=_isEq?'#FFD70055':'#FFD700cc'; ctx.lineWidth=1.5;
+        ctx.beginPath(); ctx.roundRect(_bBt.x,_bBt.y,_bBt.w,_bBt.h,6); ctx.fill(); ctx.stroke();
+        ctx.font='bold 7px Courier New'; ctx.fillStyle='#FFD700';
+        ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText(_isEq?'⚓ ON':'⚓ EQUIP',_bBt.x+_bBt.w/2,_bBt.y+_bBt.h/2);
+        ctx.textBaseline='alphabetic'; ctx.textAlign='left';
+        if(!_isEq)(function(_b){ _marketBtns.push({rect:_b,action:function(){ activeChar=4; _ls.set('bleuChar','4'); beep(523,1047,0.15,'sine',0.12); spawnParticles(W/2,H/2,'#FFD700',10); }}); })(_bBt);
+      } else {
+        ctx.font='8px Courier New'; ctx.fillStyle='#ffffff22'; ctx.textAlign='left';
+        ctx.fillText('coming soon', 58, _cy+38);
+      }
     }
     if(_ch.unlocked){
       ctx.font='bold 7px Courier New'; ctx.fillStyle=_ch.col+'cc'; ctx.textAlign='right';
@@ -1506,6 +1679,7 @@ var menuTapReady=true; // false após morte definitiva — exige 2 toques para i
 var prestigeLevel=0; // NG+ prestige — sempre 0 ao iniciar; só sobe dentro da run ao completar prestige
 var bestPrestige=parseInt(_ls.get('bleuBestPrestige','0')); // máximo histórico (leaderboard)
 var prestigeAnim=0;    // frame counter para tela prestige
+var legendaryAnim=0;   // frame counter para tela legendary unlock (NG+5 secreto)
 var prestigeCoinsReward=0; // coins ganhos no prestige atual
 const MILESTONES=[5,10,25,50,100];
 var activeChar=parseInt(_ls.get('bleuChar','0'));
@@ -1519,10 +1693,11 @@ var unlockedColorsWorm=_ls.getJSON('bleuColsW',[]);
 // Phantom: zerar o jogo 1× (bestPrestige >= 1)
 // Worm:    zerar em modo NG+1 (bestPrestige >= 2)
 // Alien:   zerar em modo NG+2 (bestPrestige >= 3)
-// Viking (futuro): bestPrestige >= 5
+// Viking Boat: NG+5 SECRETO — nunca aparece na shop, revelado em tela LEGENDARY
 var gengarUnlocked = bestPrestige >= 1 || localStorage.getItem('bleuGengar') === '1';
 var wormUnlocked   = bestPrestige >= 2 || localStorage.getItem('bleuWorm')   === '1';
 var alienUnlocked  = bestPrestige >= 3 || localStorage.getItem('bleuAlien')  === '1';
+var boatUnlocked   = bestPrestige >= 5 || localStorage.getItem('bleuBoat')   === '1';
 var activeColorAlien=parseInt(_ls.get('bleuColorA','0'));
 var unlockedColorsAlien=_ls.getJSON('bleuColsA',[]);
 var shopChar=0, shopSelColor=0;
@@ -2919,12 +3094,232 @@ function drawAlien(x, y, flapAnim, angle) {
   ctx.restore();
 }
 
+// ─── VIKING BOAT — LEGENDARY CHARACTER (NG+5 SECRETO) ───────────────────────
+function drawBoat(x, y, flapAnim, angle) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(typeof angle === 'number' ? angle : 0);
+  ctx.lineJoin='round'; ctx.lineCap='round';
+
+  // ── Personality drivers ──
+  var _bAng      = typeof angle === 'number' ? angle : 0;
+  var _bFastFall = _bAng > 0.55;   // pânico: remos caóticos, vela rasgando
+  var _bRising   = _bAng < -0.2;   // triunfal: remos sincronizados, vela cheia
+  var _bWobble   = (typeof dizzyTimer !== 'undefined' && dizzyTimer > 0)
+                   ? Math.sin(frame * 0.5) * 3.5 : 0;
+  var _ft   = (typeof bleuFlapTimer !== 'undefined') ? bleuFlapTimer : 0;
+  var _ftp  = (_ft > 0) ? (1 - _ft/18) : 0;
+  var _pulse = 0.5 + 0.5*Math.sin(frame * 0.06);
+  // Balanço da vela: caos no pânico, cheia no impulso, suave idle
+  var _sailBow = _bFastFall ? Math.sin(frame*0.55)*7 - 1
+               : _bRising   ? 5
+               : Math.sin(frame*0.025)*1.5;
+  // Cabeça do dragão treme de medo
+  var _dPanic = _bFastFall ? Math.sin(frame*0.38)*2 : 0;
+
+  ctx.save(); ctx.translate(_bWobble, 0);
+
+  // ── ESTEIRA D'ÁGUA (atrás do barco = esquerda) ──
+  if(!_bFastFall && !_isMobile){
+    ctx.globalAlpha = 0.18 + _pulse*0.08;
+    ctx.strokeStyle='#aaddff'; ctx.lineWidth=1;
+    for(var _wi=0; _wi<3; _wi++){
+      var _wd = Math.sin(frame*0.08+_wi*1.2);
+      ctx.beginPath();
+      ctx.moveTo(-18-_wi*7, 4+_wd); ctx.quadraticCurveTo(-21-_wi*7, 7+_wd, -24-_wi*7, 4+_wd);
+      ctx.stroke();
+    }
+    ctx.globalAlpha=1;
+  }
+
+  // ── IMPULSO DE FLAP (rastro dourado embaixo) ──
+  if(_ft > 0){
+    var _bPow = 1 - _ftp;
+    ctx.globalAlpha = _bPow * 0.72;
+    ctx.fillStyle='#FFD700';
+    ctx.beginPath(); ctx.ellipse(0, 13, 14*_bPow+4, 5*_bPow+2, 0, 0, Math.PI*2); ctx.fill();
+    ctx.globalAlpha=1;
+  }
+
+  // ── ORNAMENTO DE POPA (poste traseiro curvo) ──
+  ctx.beginPath();
+  ctx.moveTo(-15,-3);
+  ctx.quadraticCurveTo(-20,-9,-17,-14);
+  ctx.quadraticCurveTo(-14,-17,-11,-15);
+  ctx.quadraticCurveTo(-9,-12,-12,-10);
+  ctx.strokeStyle='#7B4A1A'; ctx.lineWidth=2.5; ctx.stroke();
+  ctx.beginPath(); ctx.arc(-11,-15,2.2,0,Math.PI*2);
+  ctx.fillStyle='#CC8833'; ctx.fill(); ctx.strokeStyle='#5D2A00'; ctx.lineWidth=0.8; ctx.stroke();
+
+  // ── CASCO PRINCIPAL ──
+  ctx.beginPath();
+  ctx.moveTo(-15,-3);
+  ctx.lineTo(8,-3);
+  ctx.quadraticCurveTo(11,-3,12,0);  // conexão proa
+  ctx.quadraticCurveTo(5,10,-10,8);  // quilha curva
+  ctx.quadraticCurveTo(-15,7,-16,3);
+  ctx.closePath();
+  ctx.fillStyle='#6B3F16'; ctx.fill();
+  ctx.strokeStyle='#3B1F06'; ctx.lineWidth=1.5; ctx.stroke();
+  // Veios da madeira
+  ctx.strokeStyle='#3B1F0688'; ctx.lineWidth=0.7;
+  for(var _pl=0;_pl<3;_pl++){
+    ctx.beginPath();
+    ctx.moveTo(-14,_pl*3); ctx.quadraticCurveTo(-2,_pl*3+2,9,_pl*3-1);
+    ctx.stroke();
+  }
+
+  // ── ESCUDOS NO CASCO ──
+  var _shC=[['#BB1111','#FF3333'],['#BB8800','#FFD700'],['#003EBB','#2266FF']];
+  for(var _si=0;_si<3;_si++){
+    var _sx=-8+_si*8;
+    ctx.beginPath(); ctx.arc(_sx,1,4,0,Math.PI*2);
+    ctx.fillStyle=_shC[_si][0]; ctx.fill();
+    ctx.strokeStyle='#5D2A00'; ctx.lineWidth=1; ctx.stroke();
+    ctx.beginPath(); ctx.arc(_sx,1,2.7,0,Math.PI*2);
+    ctx.strokeStyle=_shC[_si][1]+'88'; ctx.lineWidth=0.8; ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(_sx-2.5,1); ctx.lineTo(_sx+2.5,1);
+    ctx.moveTo(_sx,-1.5); ctx.lineTo(_sx,3.5);
+    ctx.strokeStyle='#ffffff44'; ctx.lineWidth=0.7; ctx.stroke();
+  }
+
+  // ── MASTRO ──
+  var _mX=-3;
+  ctx.beginPath(); ctx.moveTo(_mX,-3); ctx.lineTo(_mX,-27);
+  ctx.strokeStyle='#8B5E2A'; ctx.lineWidth=2.2; ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(_mX-12,-24); ctx.lineTo(_mX+8,-24);
+  ctx.strokeStyle='#6B4A1A'; ctx.lineWidth=1.8; ctx.stroke();
+  // Cordame
+  ctx.globalAlpha=0.38; ctx.strokeStyle='#8B7040'; ctx.lineWidth=0.7;
+  ctx.beginPath();
+  ctx.moveTo(_mX-12,-24); ctx.lineTo(-15,-3);
+  ctx.moveTo(_mX+8,-24);  ctx.lineTo(8,-3);
+  ctx.stroke(); ctx.globalAlpha=1;
+
+  // ── VELA NÓRDICA ──
+  var _sL=_mX-12, _sR=_mX+8, _sTop=-24, _sBot=-4;
+  ctx.beginPath();
+  ctx.moveTo(_sL,_sTop);
+  ctx.quadraticCurveTo(_sL+_sailBow,(_sTop+_sBot)/2, _sL+1,_sBot);
+  ctx.lineTo(_sR+1,_sBot);
+  ctx.quadraticCurveTo(_sR+_sailBow+3,(_sTop+_sBot)/2, _sR,_sTop);
+  ctx.closePath();
+  if(!_isMobile){
+    var _sg=ctx.createLinearGradient(_sL,0,_sR,0);
+    _sg.addColorStop(0,'#AA0E0E'); _sg.addColorStop(0.26,'#AA0E0E');
+    _sg.addColorStop(0.26,'#E8D49A'); _sg.addColorStop(0.5,'#E8D49A');
+    _sg.addColorStop(0.5,'#AA0E0E'); _sg.addColorStop(0.74,'#AA0E0E');
+    _sg.addColorStop(0.74,'#E8D49A'); _sg.addColorStop(1,'#E8D49A');
+    ctx.fillStyle=_sg;
+  } else { ctx.fillStyle='#AA0E0E'; }
+  ctx.fill(); ctx.strokeStyle='#7A0808'; ctx.lineWidth=1; ctx.stroke();
+  // Runa Algiz (proteção) na vela
+  if(!_isMobile){
+    var _symY=(_sTop+_sBot)/2+_sailBow*0.18;
+    ctx.globalAlpha=0.42; ctx.strokeStyle='#E8D49A'; ctx.lineWidth=1;
+    ctx.beginPath();
+    ctx.moveTo(_mX,_symY-5); ctx.lineTo(_mX,_symY+5);
+    ctx.moveTo(_mX-4,_symY-1); ctx.lineTo(_mX,_symY-5);
+    ctx.moveTo(_mX+4,_symY-1); ctx.lineTo(_mX,_symY-5);
+    ctx.stroke(); ctx.globalAlpha=1;
+  }
+
+  // ── CABEÇA DO DRAGÃO (proa — direita) ──
+  ctx.save(); ctx.translate(12, -3+_dPanic);
+  // Pescoço
+  ctx.beginPath(); ctx.moveTo(0,0); ctx.quadraticCurveTo(4,-2,7,-5);
+  ctx.strokeStyle='#8B5E2A'; ctx.lineWidth=5; ctx.stroke();
+  ctx.strokeStyle='#6B3F16'; ctx.lineWidth=3; ctx.stroke();
+  // Crânio
+  ctx.beginPath(); ctx.ellipse(10,-7,7,4.5,-0.15,0,Math.PI*2);
+  ctx.fillStyle='#7B4A1A'; ctx.fill(); ctx.strokeStyle='#3B1F06'; ctx.lineWidth=1; ctx.stroke();
+  // Chifres
+  ctx.beginPath();
+  ctx.moveTo(6,-10); ctx.lineTo(8,-14); ctx.lineTo(9.5,-11);
+  ctx.moveTo(11,-11); ctx.lineTo(14,-14.5); ctx.lineTo(15,-10.5);
+  ctx.fillStyle='#CC8833'; ctx.fill(); ctx.strokeStyle='#88550A'; ctx.lineWidth=0.8; ctx.stroke();
+  // Olho — arregalado no pânico, entrecerrado no impulso
+  var _eO = _bFastFall ? 1.45+Math.sin(frame*0.25)*0.25 : _bRising ? 0.45 : 1.0;
+  ctx.beginPath(); ctx.ellipse(11,-7.5,2.5,2.5*_eO,0,0,Math.PI*2);
+  ctx.fillStyle=_bFastFall?'#FF2200':'#FF7700'; ctx.fill();
+  ctx.beginPath(); ctx.arc(11.5,-7.5,1.2,0,Math.PI*2);
+  ctx.fillStyle='#111'; ctx.fill();
+  ctx.beginPath(); ctx.arc(10.5,-8.2,0.7,0,Math.PI*2);
+  ctx.fillStyle='#ffffff88'; ctx.fill();
+  // Focinho
+  ctx.beginPath(); ctx.ellipse(15,-5.5,4,2.2,0.2,0,Math.PI*2);
+  ctx.fillStyle='#6B3F16'; ctx.fill(); ctx.strokeStyle='#3B1F06'; ctx.lineWidth=0.8; ctx.stroke();
+  // Dentes (sempre à mostra — snarling)
+  var _jO = _bFastFall ? 2.5+Math.sin(frame*0.32)*1.2 : _bRising ? 0.5 : 1.0;
+  ctx.fillStyle='#F0E0B0';
+  for(var _ti=0;_ti<3;_ti++){
+    ctx.beginPath();
+    ctx.moveTo(12.5+_ti*1.8,-3.5+_jO); ctx.lineTo(13+_ti*1.8,-5.3); ctx.lineTo(13.5+_ti*1.8,-3.5+_jO);
+    ctx.fill();
+  }
+  // Língua no pânico
+  if(_bFastFall){
+    ctx.beginPath(); ctx.ellipse(16.5,-2+_jO*0.5,2.2,1.1,0.3,0,Math.PI*2);
+    ctx.fillStyle='#FF3355'; ctx.fill();
+  }
+  // Narina
+  ctx.beginPath(); ctx.ellipse(16,-7,1,0.65,0.3,0,Math.PI*2);
+  ctx.fillStyle='#3B1F06'; ctx.fill();
+  ctx.restore(); // dragon head
+
+  // ── REMOS ANIMADOS ──
+  for(var _oi=0;_oi<3;_oi++){
+    var _ox=-8+_oi*8;
+    var _oPhase=_oi*(Math.PI*2/3);
+    var _oSwing;
+    if(_bFastFall){
+      _oSwing=Math.sin(frame*0.85+_oi*2.5)*32; // caótico!
+    } else if(_bRising){
+      _oSwing=26+Math.sin(flapAnim*1.1)*10; // remada sincronizada
+    } else {
+      _oSwing=13+Math.sin(flapAnim*1.0+_oPhase)*14; // ritmo normal
+    }
+    var _oRad=(_oSwing+22)*Math.PI/180;
+    var _oLen=15;
+    var _oEx=_ox+Math.sin(_oRad)*_oLen, _oEy=5+Math.cos(_oRad)*_oLen;
+    ctx.beginPath(); ctx.moveTo(_ox,5); ctx.lineTo(_oEx,_oEy);
+    ctx.strokeStyle='#9B6830'; ctx.lineWidth=1.8; ctx.stroke();
+    // Pá do remo
+    ctx.save(); ctx.translate(_oEx,_oEy); ctx.rotate(_oRad+Math.PI/6);
+    ctx.beginPath(); ctx.ellipse(0,0,4,1.8,0,0,Math.PI*2);
+    ctx.fillStyle='#6B4A1A'; ctx.fill(); ctx.strokeStyle='#3B1F06'; ctx.lineWidth=0.7; ctx.stroke();
+    ctx.restore();
+  }
+
+  // ── SUOR NO PÂNICO ──
+  if(_bFastFall){
+    ctx.globalAlpha=0.8+Math.sin(frame*0.42)*0.15;
+    ctx.fillStyle='#aaddff';
+    ctx.beginPath(); ctx.arc(20,-15+Math.sin(frame*0.17)*2.5,2,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(24,-11+Math.cos(frame*0.13)*2,1.5,0,Math.PI*2); ctx.fill();
+    ctx.globalAlpha=1;
+  }
+
+  // ── BRILHO DOURADO NO IMPULSO ──
+  if(_bRising && !_isMobile){
+    ctx.globalAlpha=0.12+_pulse*0.1;
+    ctx.fillStyle='#FFD700';
+    ctx.beginPath(); ctx.ellipse(0,-4,26,20,0,0,Math.PI*2); ctx.fill();
+    ctx.globalAlpha=1;
+  }
+
+  ctx.restore(); // wobble
+  ctx.restore(); // main
+}
+
 // ─── CHARACTER DISPATCHER ────────────────────
 function drawCharacter(x, y, flap, angle) {
-  if(activeChar===3 && alienUnlocked)       drawAlien(x, y, flap, angle);
-  else if(activeChar===2 && wormUnlocked)   drawWorm(x, y, flap, angle);
-  else if(activeChar===1 && gengarUnlocked) drawPhantom(x, y, flap, angle);
-  else                                       drawBleu(x, y, flap, angle);
+  if(activeChar===4 && boatUnlocked)         drawBoat(x, y, flap, angle);
+  else if(activeChar===3 && alienUnlocked)   drawAlien(x, y, flap, angle);
+  else if(activeChar===2 && wormUnlocked)    drawWorm(x, y, flap, angle);
+  else if(activeChar===1 && gengarUnlocked)  drawPhantom(x, y, flap, angle);
+  else                                        drawBleu(x, y, flap, angle);
 }
 
 // ─── COLLECTIBLE COIN ────────────────────────
@@ -5587,28 +5982,44 @@ function loop(ts) {
           submitWalletScore(score);
           // Award prestige — sobe só nesta run; salva máximo histórico para leaderboard
           prestigeLevel++;
+          var _newLegendary = false;
           if(prestigeLevel > bestPrestige){
             bestPrestige = prestigeLevel;
             _ls.set('bleuBestPrestige', bestPrestige);
-            // Recalcula unlocks — novos personagens podem ter sido desbloqueados
+            // ── NG+5: VIKING BOAT SECRETO desbloqueado ──
+            if(bestPrestige === 5 && !boatUnlocked){
+              boatUnlocked = true; _ls.set('bleuBoat','1');
+              activeChar = 4; _ls.set('bleuChar','4'); // equipa automaticamente
+              _newLegendary = true;
+            }
             gengarUnlocked = bestPrestige >= 1 || localStorage.getItem('bleuGengar') === '1';
             wormUnlocked   = bestPrestige >= 2 || localStorage.getItem('bleuWorm')   === '1';
             alienUnlocked  = bestPrestige >= 3 || localStorage.getItem('bleuAlien')  === '1';
           }
           prestigeCoinsReward = 100 + prestigeLevel * 50;
           coinCount += prestigeCoinsReward; if(coinCount>100000)coinCount=100000; _ls.set('bleuCoins', coinCount);
-          // Enter prestige screen
-          prestigeAnim = 0;
-          gameState = 'prestige';
-          stopMusic(); playPrestigeMusic();
           pipes = []; stars = []; shieldItems = []; fireStars = [];
-          spawnParticles(W/2, H/2, '#FFD700', 40);
-          spawnParticles(W/2, H/2, '#00D4FF', 25);
-          spawnParticles(W/2, H/2, '#FF44BB', 20);
-          if(navigator.vibrate) navigator.vibrate([80,40,80,40,160]);
-          [523,659,784,880,1047,1319,1568].forEach(function(f,ii){
-            setTimeout(function(){ beep(f,f*1.5,0.3,'sine',0.22); }, ii*90);
-          });
+          stopMusic(); playPrestigeMusic();
+          if(_newLegendary){
+            // ── TELA LEGENDARY — revelação máxima ──
+            legendaryAnim = 0; gameState = 'legendary';
+            spawnParticles(W/2, H/2, '#FFD700', 55);
+            spawnParticles(W/2, H/2, '#FF6600', 38);
+            spawnParticles(W/2, H/2, '#FF0044', 28);
+            if(navigator.vibrate) navigator.vibrate([100,40,100,40,200,60,400]);
+            var _lFan=[196,247,294,392,523,659,784,1047,784,1047,1319,1047,1568];
+            _lFan.forEach(function(f,ii){ setTimeout(function(){ beep(f,f*1.5,0.28,'sine',0.24); }, ii*75); });
+          } else {
+            // Normal prestige screen
+            prestigeAnim = 0; gameState = 'prestige';
+            spawnParticles(W/2, H/2, '#FFD700', 40);
+            spawnParticles(W/2, H/2, '#00D4FF', 25);
+            spawnParticles(W/2, H/2, '#FF44BB', 20);
+            if(navigator.vibrate) navigator.vibrate([80,40,80,40,160]);
+            [523,659,784,880,1047,1319,1568].forEach(function(f,ii){
+              setTimeout(function(){ beep(f,f*1.5,0.3,'sine',0.22); }, ii*90);
+            });
+          }
         }
 
         // phase change detection
@@ -5950,6 +6361,12 @@ function loop(ts) {
     prestigeAnim++;
     drawPrestigeScreen();
   }
+  // ── LEGENDARY UNLOCK ──
+  if(gameState === 'legendary'){
+    updateParticles();
+    legendaryAnim++;
+    drawLegendaryUnlockScreen();
+  }
   // ── DEAD ──
   if(gameState === 'dead'){
     for(var i=0; i<pipes.length; i++) drawObstacle(pipes[i]);
@@ -6230,6 +6647,10 @@ function flap() {
       spawnPhantomFart(bleu.x, bleu.y);
       beep(160,80,0.18,'sawtooth',0.12);
       setTimeout(function(){ beep(90,60,0.12,'sawtooth',0.08); }, 60);
+    } else if(activeChar===4 && boatUnlocked) {
+      // VIKING BOAT: remada + buzina nórdica grave
+      beep(100,55,0.2,'sawtooth',0.14);
+      setTimeout(function(){ beep(65,100,0.12,'triangle',0.1); }, 80);
     } else {
       // BLEU: wing flap sound — whoosh down then up
       beep(380,180,0.06,'triangle',0.13);
@@ -6241,6 +6662,10 @@ function flap() {
   else if(gameState==='prestige') {
     if(prestigeAnim < 40) return; // aguarda animação mínima
     resetGame(); // volta ao menu idle com badge de prestígio — jogador clica para começar
+  }
+  else if(gameState==='legendary') {
+    if(legendaryAnim < 88) return; // aguarda revelação completa do barco
+    resetGame(); // idle com barco equipado
   }
 }
 
@@ -6298,6 +6723,8 @@ function handleClick(ex, ey) {
 
   // ── PRESTIGE — qualquer toque após animação mínima continua
   if(gameState === 'prestige') { flap(); return; }
+  // ── LEGENDARY — toque após revelação completa equipa barco e vai ao idle
+  if(gameState === 'legendary') { flap(); return; }
 
   // ── HURT — qualquer toque retoma
   if(gameState === 'hurt') { flap(); return; }
