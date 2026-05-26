@@ -812,8 +812,69 @@ function drawShopTab() {
   }
   ctx.textAlign='center';
 
-  // ── SHIELD CARD — bottom-left, above tab bar ──
-  if((shopChar===0)||((shopChar===1)&&gengarUnlocked)||((shopChar===2)&&wormUnlocked)||((shopChar===3)&&alienUnlocked)){
+  // ── ITEMS ROW — disponível para todos, 4 cards lado a lado ──
+  {
+    var _ir = { y:350, w:94, h:125, gap:5 };
+    var _cards = [
+      // Shield (coins)
+      { label:'SHIELD',     sub: shieldStock>=3?'MAX':shieldStock+'/3', col:'#00FF88',
+        canBuy: coinCount>=80 && shieldStock<3, btnLabel:'🐉 80',      idx:0 },
+      // Slow-Mo (USDC)
+      { label:'SLOW-MO',    sub: slowMoStock>0?'x'+slowMoStock+' — 45s':'45s / fase', col:'#00D4FF',
+        canBuy: !!walletAddress, btnLabel:'USDC $0.25',               idx:1 },
+      // Coração (USDC)
+      { label:'+CORAÇÃO',   sub: extraHeartStock>0?'x'+extraHeartStock+' owned':'até +2', col:'#FF6680',
+        canBuy: !!walletAddress && extraHeartStock<2, btnLabel:'USDC $0.25', idx:2 },
+      // Checkpoint (USDC)
+      { label:'CHECKPOINT', sub: checkpointStock>0?'PRONTO':'1 uso', col:'#FFD700',
+        canBuy: !!walletAddress && checkpointStock<1, btnLabel:'USDC $0.50', idx:3 }
+    ];
+    var _ix0 = Math.round((W - (4*_ir.w + 3*_ir.gap)) / 2);
+    for(var _ci2=0; _ci2<4; _ci2++){
+      var _cd = _cards[_ci2];
+      var _cx2 = _ix0 + _ci2*(_ir.w+_ir.gap);
+      var _isOwned = (_ci2===0&&shieldStock>0)||(_ci2===1&&slowMoStock>0)||(_ci2===2&&extraHeartStock>0)||(_ci2===3&&checkpointStock>0);
+      // Card bg
+      ctx.fillStyle = _isOwned ? _cd.col+'15' : '#ffffff07';
+      ctx.strokeStyle = _isOwned ? _cd.col+'66' : '#ffffff1a';
+      ctx.lineWidth=1.2;
+      ctx.beginPath(); ctx.roundRect(_cx2, _ir.y, _ir.w, _ir.h, 10); ctx.fill(); ctx.stroke();
+      // Ícone
+      ctx.font='28px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(['🛡','⚗','♥','🃏'][_ci2], _cx2+_ir.w/2, _ir.y+36);
+      ctx.textBaseline='alphabetic';
+      // Label + sub
+      ctx.font='bold 8px Courier New'; ctx.fillStyle=_cd.col;
+      ctx.fillText(_cd.label, _cx2+_ir.w/2, _ir.y+62);
+      ctx.font='7px Courier New'; ctx.fillStyle='#ffffff44';
+      ctx.fillText(_cd.sub, _cx2+_ir.w/2, _ir.y+73);
+      // Buy button
+      var _bY = _ir.y+80;
+      var _maxed = (_ci2===0&&shieldStock>=3)||(_ci2===2&&extraHeartStock>=2)||(_ci2===3&&checkpointStock>=1);
+      if(_maxed){
+        ctx.fillStyle=_cd.col+'55'; ctx.font='bold 7px Courier New';
+        ctx.fillText('✓ PRONTO', _cx2+_ir.w/2, _bY+12);
+      } else if(!walletAddress && _ci2>0){
+        ctx.fillStyle='#ffffff22'; ctx.font='7px Courier New';
+        ctx.fillText('carteira', _cx2+_ir.w/2, _bY+8);
+        ctx.fillText('necessária', _cx2+_ir.w/2, _bY+17);
+      } else {
+        ctx.fillStyle=_cd.canBuy?_cd.col+'22':'#ffffff08';
+        ctx.strokeStyle=_cd.canBuy?_cd.col+'aa':'#ffffff22'; ctx.lineWidth=1;
+        ctx.beginPath(); ctx.roundRect(_cx2+5,_bY,_ir.w-10,36,6); ctx.fill(); ctx.stroke();
+        ctx.fillStyle=_cd.canBuy?_cd.col:'#ffffff33';
+        ctx.font='bold 7px Courier New'; ctx.textBaseline='middle';
+        ctx.fillText(_cd.btnLabel, _cx2+_ir.w/2, _bY+18); ctx.textBaseline='alphabetic';
+        if(_ci2===0){
+          ctx.font='6px Courier New'; ctx.fillStyle='#ffffff33';
+          ctx.fillText('coins', _cx2+_ir.w/2, _bY+28);
+        }
+      }
+    }
+  }
+
+  // ── SHIELD CARD (legacy, hidden — substituído pelo row acima) ──
+  if(false && (shopChar===0)||((shopChar===1)&&gengarUnlocked)||((shopChar===2)&&wormUnlocked)||((shopChar===3)&&alienUnlocked)){
     var _sc = { x:6, y:355, w:108, h:118 };
     var _shdCanBuy = (coinCount>=80) && (shieldStock<3);
     // Card background
@@ -1126,6 +1187,13 @@ var _gndGrad=null, _gndGradPhase=-1;
 var _heavenMist=null, _dungeonMist=null;
 // ── LIVES + POWER-UPS ──
 var lives=3, invincible=0, starPower=0, stars=[];
+// ── Itens de loja ──────────────────────────────────────────────
+var slowMoActive=0;       // frames restantes de slow-mo (2700=45s)
+var slowMoStock=0;        // elixirs no inventário
+var checkpointStock=0;    // cartas de checkpoint no inventário (max 1)
+var checkpointUsed=false; // carta já usada nesta run
+var extraHeartStock=0;    // corações extras comprados, adicionados no próximo start
+var deathOfferTimer=0;    // countdown de oferta na tela de morte (frames)
 var shield=0, shieldItems=[], shieldBreak=0; // escudo power-up
 var shieldPickedUp=0; // escudos pegos em jogo nesta fase (só valem até fim da fase)
 // Speed lines para star power
@@ -1184,7 +1252,10 @@ var USDC_COLOR_PRICES = [
   [0, 100000, 200000, 300000, 400000],  // Worm:    free, $0.10, $0.20, $0.30, $0.40
   [0, 130000, 190000, 270000, 380000],  // Alien:   free, $0.13, $0.19, $0.27, $0.38
 ];
-var USDC_CHAR_UNLOCK = 500000; // $0.50 para desbloquear Phantom ou Worm
+var USDC_CHAR_UNLOCK  = 500000; // $0.50 para desbloquear personagem
+var USDC_SLOWMO       = 250000; // $0.25 elixir slow-mo
+var USDC_HEART        = 250000; // $0.25 coração extra
+var USDC_CHECKPOINT   = 500000; // $0.50 carta de checkpoint
 function fmtUSDC(a6){ return (TESTNET?'[TEST] ':'')+'$'+(a6/1e6).toFixed(2); }
 
 // ─── WALLET ──────────────────────────────────────────────────
@@ -1361,7 +1432,10 @@ function resetGame() {
   screenShake = 0; scorePop = 0; hitFlash = 0; bleuSquish = 0;
   idleTab = 'play'; scorePopups = []; scoreGlow = 0; chestType = 'normal'; shopOverlay = false; paused = false;
   combo = 0; comboFlash = 0; coinsThisRun = 0; milestoneIdx = 0; recFlash = 0;
-  lives = 3; invincible = 0; starPower = 0; stars = [];
+  lives = 3 + Math.min(extraHeartStock, 2); // corações extras acumulados
+  extraHeartStock = 0; // consumidos ao iniciar a run
+  invincible = 0; starPower = 0; stars = [];
+  slowMoActive = 0; checkpointUsed = false; deathOfferTimer = 0;
   deadChest={active:false,opened:false,coins:0,anim:0,clicks:0};
   shield = 0; shieldPickedUp = 0;
   shieldStock = 0; localStorage.setItem('bleuShieldStock', 0); // reseta ao morrer — compra denovo
@@ -4153,12 +4227,35 @@ function drawIdleParticles() {
 // ─── LIVES + STAR POWER HUD ──────────────────
 function drawLivesHUD() {
   ctx.textAlign='left'; ctx.font='bold 13px Arial';
-  for(var li=0;li<3;li++){
-    ctx.globalAlpha = li<lives ? 1 : 0.2;
-    ctx.fillStyle='#FF1744';
+  var maxHearts = Math.max(3, lives + (lives < 3 ? 3 - lives : 0));
+  for(var li=0;li<Math.max(3,lives);li++){
+    ctx.globalAlpha = li<lives ? 1 : 0.18;
+    ctx.fillStyle = li >= 3 ? '#FF88AA' : '#FF1744'; // corações extras em rosa
     ctx.fillText('♥', 8+li*17, 34);
   }
   ctx.globalAlpha=1;
+
+  // Slow-mo HUD — barra azul abaixo dos corações
+  if(slowMoActive > 0) {
+    var _smPct = slowMoActive / 2700;
+    var _smCol = _smPct > 0.4 ? '#00D4FF' : _smPct > 0.15 ? '#0088ff' : '#ff4444';
+    ctx.fillStyle = '#00000033';
+    ctx.beginPath(); ctx.roundRect(6, 37, 54, 5, 2); ctx.fill();
+    ctx.fillStyle = _smCol; ctx.globalAlpha = 0.85;
+    ctx.beginPath(); ctx.roundRect(6, 37, 54 * _smPct, 5, 2); ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = _smCol; ctx.font = 'bold 7px Courier New'; ctx.textAlign = 'left';
+    ctx.fillText('SLOW', 62, 42);
+  }
+
+  // Carta de checkpoint no HUD — ícone pequeno
+  if(checkpointStock > 0) {
+    var _cpX = 8 + Math.max(3, lives) * 17 + 4;
+    ctx.font = '12px Arial'; ctx.globalAlpha = 0.9;
+    ctx.fillText('🃏', _cpX, 34);
+    ctx.globalAlpha = 1;
+  }
+
   // Wallet badge top-right
   if(walletAddress){
     ctx.save();
@@ -4674,7 +4771,9 @@ function loop(ts) {
     }
 
     // ─── STAR POWER-UP spawn ─────────────────
-    var spd = phasePaused ? 0 : ph.speed * (starPower > 0 ? 1.55 : 1); // 0 congela tudo durante transição
+    if(slowMoActive > 0) slowMoActive--;
+    var _slowMult = slowMoActive > 0 ? 0.72 : 1; // 28% mais lento quando ativo
+    var spd = phasePaused ? 0 : ph.speed * (starPower > 0 ? 1.55 : 1) * _slowMult;
     // Estrela: rara, só aparece sem escudo na tela e sem sobreposição
     if(frame % 420 === 60 && Math.random() < 0.12 && starPower === 0 && shieldItems.length === 0) {
       var sy2 = lastGapCenter + (Math.random() - 0.5) * 40;
@@ -5043,27 +5142,43 @@ function loop(ts) {
         bleu.vy = 0;
         gameState = 'hurt'; // para o jogo até o jogador tocar
       } else {
-        // Sem vidas — morte real
-        lives = 0;
-        spawnParticles(bleu.x, bleu.y, '#FFD700', 10);
-        beep(350, 60, 0.5, 'sawtooth', 0.25);
-        if(score > highScore){
-          highScore = score; newRecord = true;
-          localStorage.setItem('bleuHS', highScore);
-          [523,659,784,1047].forEach(function(f,i){
-            setTimeout(function(){ beep(f,f,0.15,'sine',0.14); }, i*85);
-          });
+        // Sem vidas — verifica carta de checkpoint primeiro
+        if(checkpointStock > 0 && !checkpointUsed) {
+          // ── Auto-revive via carta ──
+          checkpointStock--; checkpointUsed = true;
+          lives = 1; invincible = 220;
+          bleu.y = H / 2; bleu.vy = 0;
+          screenShake = 6; hitFlash = 4;
+          spawnParticles(bleu.x, bleu.y, '#FFD700', 18);
+          spawnParticles(bleu.x, bleu.y, '#00D4FF', 10);
+          beep(440, 880, 0.3, 'sine', 0.18);
+          [660, 880, 1047].forEach(function(f,i){ setTimeout(function(){ beep(f,f,0.12,'sine',0.1); }, i*70); });
+          if(navigator.vibrate) navigator.vibrate([20,10,60,10,100]);
+          gameState = 'playing'; // continua sem ir para dead
+        } else {
+          // Morte real — mostra oferta USDC por 12 segundos
+          lives = 0;
+          spawnParticles(bleu.x, bleu.y, '#FFD700', 10);
+          beep(350, 60, 0.5, 'sawtooth', 0.25);
+          if(score > highScore){
+            highScore = score; newRecord = true;
+            localStorage.setItem('bleuHS', highScore);
+            [523,659,784,1047].forEach(function(f,i){
+              setTimeout(function(){ beep(f,f,0.15,'sine',0.14); }, i*85);
+            });
+          }
+          lastScore=score; localStorage.setItem('bleuLastScore',lastScore); totalScore+=score; localStorage.setItem('bleuTotal',totalScore);
+          if(score>0) top5=saveTop5(score);
+          if(runPhase > bestPhaseEver){ bestPhaseEver=runPhase; localStorage.setItem('bleuBestPhase', bestPhaseEver); }
+          gameState='dead'; screenShake=14; hitFlash=8; stopMusic(); deadTapCount=0;
+          if(score>0) submitWalletScore(score);
+          deadChest={active:false,opened:false,coins:0,anim:0,clicks:0};
+          if(comboBest<combo) comboBest=combo;
+          combo=0; comboFlash=0; milestoneIdx=0;
+          if(navigator.vibrate) navigator.vibrate([80,30,80]);
+          // Oferta USDC aparece por 12s se wallet conectada e jogou bem (score>3)
+          if(walletAddress && score > 3) deathOfferTimer = 720; // 12s × 60fps
         }
-        lastScore=score; localStorage.setItem('bleuLastScore',lastScore); totalScore+=score; localStorage.setItem('bleuTotal',totalScore);
-        if(score>0) top5=saveTop5(score);
-        if(runPhase > bestPhaseEver){ bestPhaseEver=runPhase; localStorage.setItem('bleuBestPhase', bestPhaseEver); }
-        gameState='dead'; screenShake=14; hitFlash=8; stopMusic(); deadTapCount=0;
-        if(score>0) submitWalletScore(score);
-        // Death chest disabled (coins only from phase completion)
-        deadChest={active:false,opened:false,coins:0,anim:0,clicks:0};
-        if(comboBest<combo) comboBest=combo;
-        combo=0; comboFlash=0; milestoneIdx=0;
-        if(navigator.vibrate) navigator.vibrate([80,30,80]);
       }
       } // fecha else do shield
     }
@@ -5228,6 +5343,52 @@ function loop(ts) {
     ctx.fillText(shareFlash>0 ? '✓ COPIED!' : '🔗 SHARE', W/2, shareY+1);
     ctx.textBaseline='alphabetic';
 
+    // ── Oferta USDC — aparece por 12s após morte com wallet conectada ──
+    if(deathOfferTimer > 0) {
+      deathOfferTimer--;
+      var _dot = deathOfferTimer / 720; // 1.0 → 0.0
+      var _doSecs = Math.ceil(deathOfferTimer / 60);
+      var _doAlpha = _dot < 0.15 ? _dot / 0.15 : 1; // fade out nos últimos 0.15
+      ctx.save(); ctx.globalAlpha = _doAlpha;
+
+      // Painel de oferta
+      var _doY = H/2 + 148;
+      ctx.fillStyle = 'rgba(0,8,32,0.95)';
+      ctx.beginPath(); ctx.roundRect(W/2-118, _doY, 236, 100, 12); ctx.fill();
+      ctx.strokeStyle = '#0052FFaa'; ctx.lineWidth = 1.5; ctx.stroke();
+      // Barra de countdown
+      ctx.fillStyle = '#0052FF22';
+      ctx.beginPath(); ctx.roundRect(W/2-118, _doY+96, 236, 4, 2); ctx.fill();
+      ctx.fillStyle = _dot > 0.3 ? '#0052FF' : '#FF4444';
+      ctx.beginPath(); ctx.roundRect(W/2-118, _doY+96, 236 * _dot, 4, 2); ctx.fill();
+
+      // Título
+      ctx.textAlign = 'center';
+      ctx.font = 'bold 10px Courier New'; ctx.fillStyle = '#ffffff66';
+      ctx.fillText('CONTINUAR AQUI?  (' + _doSecs + 's)', W/2, _doY + 14);
+
+      // Botão CHECKPOINT — buy or use
+      var _cpY = _doY + 22;
+      var _hasCp = checkpointStock > 0;
+      ctx.fillStyle = _hasCp ? '#00FF8822' : '#0052FF18';
+      ctx.strokeStyle = _hasCp ? '#00FF88bb' : '#0052FFbb'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.roundRect(W/2-110, _cpY, 220, 30, 8); ctx.fill(); ctx.stroke();
+      ctx.font = 'bold 11px Courier New'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = _hasCp ? '#00FF88' : '#66aaff';
+      ctx.fillText(_hasCp ? '🃏  USAR CARTA DE CHECKPOINT' : '🃏  CHECKPOINT  ·  USDC $0.50', W/2, _cpY + 15);
+
+      // Botão CORAÇÃO — buy extra life for next checkpoint attempt
+      var _htY = _cpY + 36;
+      ctx.fillStyle = '#FF174418';
+      ctx.strokeStyle = '#FF1744bb'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.roundRect(W/2-110, _htY, 220, 30, 8); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#FF6680'; ctx.font = 'bold 11px Courier New';
+      ctx.fillText('♥  +1 CORAÇÃO EXTRA  ·  USDC $0.25', W/2, _htY + 15);
+      ctx.textBaseline = 'alphabetic';
+
+      ctx.restore();
+    }
+
     // ── Botão JOGAR DE NOVO — exige 3 toques anti-acidente ──
     var pulse2 = 0.97 + 0.03*Math.sin(frame*0.12);
     // cor e label mudam com progresso dos toques
@@ -5375,6 +5536,13 @@ function handleClick(ex, ey) {
     return;
   }
 
+  // ── Tap no HUD de slow-mo (barra azul, y=37-43) para ativar elixir ──
+  if((gameState==='playing'||gameState==='hurt') && slowMoStock>0 && slowMoActive===0 && cy>=22&&cy<=50&&cx>=0&&cx<=80){
+    slowMoStock--; slowMoActive=2700; // 45s
+    beep(440,660,0.15,'sine',0.12); spawnParticles(bleu.x,bleu.y,'#00D4FF',10);
+    return;
+  }
+
   // ── MID-GAME SHOP (loja entre fases) ──
   if(gameState==='playing' && shopOverlay){
     var _mgClose = function(){
@@ -5449,6 +5617,47 @@ function handleClick(ex, ey) {
       if(!walletAddress) connectWallet();
       return;
     }
+    // ── Ofertas USDC na tela de morte (visíveis por 12s) ──
+    if(deathOfferTimer > 0 && walletAddress) {
+      var _doY2 = H/2 + 148;
+      // Botão CHECKPOINT (y: _doY2+22 a _doY2+52)
+      if(cx>=W/2-110&&cx<=W/2+110&&cy>=_doY2+22&&cy<=_doY2+52){
+        if(checkpointStock > 0) {
+          // Usa carta já comprada
+          checkpointStock--; checkpointUsed=true;
+          lives=1; invincible=220; bleu.y=H/2; bleu.vy=0;
+          gameState='playing'; startMusic(getPhaseIdx());
+          screenShake=6; hitFlash=3; deathOfferTimer=0;
+          spawnParticles(W/2,H/2,'#FFD700',18); spawnParticles(W/2,H/2,'#00D4FF',10);
+          beep(440,880,0.3,'sine',0.18);
+          [660,880,1047].forEach(function(f,i){setTimeout(function(){beep(f,f,0.12,'sine',0.1);},i*70);});
+        } else {
+          // Compra checkpoint via USDC e já usa
+          sendUSDCPurchase(USDC_CHECKPOINT, function(){
+            checkpointUsed=true;
+            lives=1; invincible=220; bleu.y=H/2; bleu.vy=0;
+            gameState='playing'; startMusic(getPhaseIdx());
+            screenShake=6; deathOfferTimer=0;
+            spawnParticles(W/2,H/2,'#FFD700',18);
+            beep(440,880,0.3,'sine',0.18);
+          });
+        }
+        return;
+      }
+      // Botão CORAÇÃO (y: _doY2+58 a _doY2+88)
+      if(cx>=W/2-110&&cx<=W/2+110&&cy>=_doY2+58&&cy<=_doY2+88){
+        sendUSDCPurchase(USDC_HEART, function(){
+          // Revive com 1 coração extra
+          lives=1; invincible=180; bleu.y=H/2; bleu.vy=0;
+          gameState='playing'; startMusic(getPhaseIdx());
+          deathOfferTimer=0;
+          spawnParticles(W/2,H/2,'#FF6680',14);
+          beep(523,880,0.2,'sine',0.14);
+        });
+        return;
+      }
+    }
+
     // Retry — botão JOGAR DE NOVO ou toque fora dos botões
     // Exige 3 toques para evitar reiniciar por acidente
     deadTapCount++;
@@ -5488,17 +5697,41 @@ function handleClick(ex, ey) {
           if(!_ownedC&&shopSelColor>0){ buyColorWithUSDC(shopChar,shopSelColor); return; }
         }
       }
-      // Shield purchase — left card (x:6, y:355, w:108, h:118)
-      if(((shopChar===0)||((shopChar===1)&&gengarUnlocked)||((shopChar===2)&&wormUnlocked)||((shopChar===3)&&alienUnlocked))&&cx>=6&&cx<=114&&cy>=355&&cy<=480){
-        if(shieldStock>=3){ beep(220,150,0.1,'sawtooth',0.06); return; }
-        if(coinCount>=80){
-          coinCount-=80; if(coinCount<0)coinCount=0; localStorage.setItem('bleuCoins',coinCount);
-          shieldStock++; localStorage.setItem('bleuShieldStock',shieldStock);
-          beep(523,1047,0.22,'sine',0.13);
-          [659,784].forEach(function(f,i){setTimeout(function(){beep(f,f,0.1,'sine',0.09);},i*60);});
-          spawnParticles(W/2,H/2,'#00FF88',10);
-        } else { beep(220,150,0.12,'sawtooth',0.08); hitFlash=3; }
-        return;
+      // ── ITEMS ROW — 4 cards (shield/slowmo/heart/checkpoint) ──
+      var _ir2={y:350,w:94,h:125,gap:5};
+      var _ix02=Math.round((W-(4*_ir2.w+3*_ir2.gap))/2);
+      for(var _ii=0;_ii<4;_ii++){
+        var _icx=_ix02+_ii*(_ir2.w+_ir2.gap);
+        if(cx>=_icx&&cx<=_icx+_ir2.w&&cy>=_ir2.y+80&&cy<=_ir2.y+_ir2.h){
+          if(_ii===0){ // Shield — coins
+            if(shieldStock>=3){ beep(220,150,0.1,'sawtooth',0.06); return; }
+            if(coinCount>=80){
+              coinCount-=80; if(coinCount<0)coinCount=0; localStorage.setItem('bleuCoins',coinCount);
+              shieldStock++; localStorage.setItem('bleuShieldStock',shieldStock);
+              beep(523,1047,0.22,'sine',0.13);
+              [659,784].forEach(function(f,i){setTimeout(function(){beep(f,f,0.1,'sine',0.09);},i*60);});
+              spawnParticles(W/2,H/2,'#00FF88',10);
+            } else { beep(220,150,0.12,'sawtooth',0.08); hitFlash=3; }
+          } else if(_ii===1&&walletAddress){ // Slow-Mo — USDC
+            sendUSDCPurchase(USDC_SLOWMO, function(){
+              slowMoStock++;
+              beep(440,880,0.2,'sine',0.14); spawnParticles(W/2,H/2,'#00D4FF',14);
+            });
+          } else if(_ii===2&&walletAddress&&extraHeartStock<2){ // Coração — USDC
+            sendUSDCPurchase(USDC_HEART, function(){
+              extraHeartStock++;
+              beep(523,880,0.2,'sine',0.14); spawnParticles(W/2,H/2,'#FF6680',14);
+            });
+          } else if(_ii===3&&walletAddress&&checkpointStock<1){ // Checkpoint — USDC
+            sendUSDCPurchase(USDC_CHECKPOINT, function(){
+              checkpointStock=1;
+              beep(660,1320,0.25,'sine',0.16);
+              [880,1047].forEach(function(f,i){setTimeout(function(){beep(f,f,0.12,'sine',0.1);},i*80);});
+              spawnParticles(W/2,H/2,'#FFD700',18);
+            });
+          }
+          return;
+        }
       }
       // ── USDC unlock — área do botão (y 382-418, x ±90 do centro) ──
       if(!gengarUnlocked && shopChar===1 && walletAddress && cx>=W/2-90 && cx<=W/2+90 && cy>=382 && cy<=418){ unlockCharWithUSDC(1); return; }
