@@ -4592,7 +4592,7 @@ function drawLivesHUD() {
 
   // ── Slow-mo: botão grande na esquerda em baixo (fácil de tocar no mobile) ──
   if(slowMoStock > 0 && slowMoActive === 0 && (gameState==='playing'||gameState==='hurt')){
-    var _smBx=34, _smBy=H-162, _smBr=24; // acima do botão pause
+    var _smBx=34, _smBy=H-162, _smBr=18; // ligeiramente menor que pause (r=22)
     ctx.save();
     var _smBpulse = 0.7 + 0.3*Math.abs(Math.sin(frame*0.1));
     ctx.globalAlpha = _smBpulse;
@@ -4611,9 +4611,9 @@ function drawLivesHUD() {
     var _smProg = slowMoActive / 2700;
     ctx.save();
     ctx.strokeStyle='#00D4FF'; ctx.lineWidth=3; ctx.globalAlpha=0.6;
-    ctx.beginPath(); ctx.arc(_smBx2, _smBy2, 26, -Math.PI/2, -Math.PI/2 + Math.PI*2*_smProg); ctx.stroke();
+    ctx.beginPath(); ctx.arc(_smBx2, _smBy2, 20, -Math.PI/2, -Math.PI/2 + Math.PI*2*_smProg); ctx.stroke();
     ctx.globalAlpha=0.2; ctx.strokeStyle='#00D4FF';
-    ctx.beginPath(); ctx.arc(_smBx2, _smBy2, 26, 0, Math.PI*2); ctx.stroke();
+    ctx.beginPath(); ctx.arc(_smBx2, _smBy2, 20, 0, Math.PI*2); ctx.stroke();
     ctx.globalAlpha=1; ctx.restore();
   }
 
@@ -5938,7 +5938,7 @@ function handleClick(ex, ey) {
   if((gameState==='playing'||gameState==='hurt') && slowMoStock>0 && slowMoActive===0){
     var _smHit = (cy>=46&&cy<=66&&cx>=4&&cx<=76); // card topo
     var _smBdx=cx-34, _smBdy=cy-(H-162);
-    _smHit = _smHit || (_smBdx*_smBdx+_smBdy*_smBdy<=28*28); // círculo em baixo
+    _smHit = _smHit || (_smBdx*_smBdx+_smBdy*_smBdy<=22*22); // círculo em baixo (r=18 visual + margem)
     if(_smHit){
       slowMoStock--; localStorage.setItem('bleuSlowMo',slowMoStock); slowMoActive=2700;
       beep(300,600,0.18,'sine',0.14);
