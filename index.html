@@ -2266,12 +2266,13 @@ function drawAlien(x, y, flapAnim, angle) {
   // haste fina
   ctx.beginPath(); ctx.moveTo(_antX, _antBaseY); ctx.lineTo(_antX + 2, _antBaseY - 9);
   ctx.lineWidth = 1.3; ctx.strokeStyle = cO; ctx.globalAlpha = 0.85; ctx.stroke(); ctx.globalAlpha = 1;
-  // bolinha no topo da antena — pisca suavemente
+  // bolinha no topo da antena — pisca suavemente (sem shadowBlur)
   var _antGlow = 0.7 + 0.3 * Math.sin(frame * 0.18);
+  // halo de cor via alpha layer
+  ctx.beginPath(); ctx.arc(_antX + 2, _antBaseY - 10, 4.5, 0, Math.PI*2);
+  ctx.fillStyle = cGl; ctx.globalAlpha = _antGlow * 0.35; ctx.fill(); ctx.globalAlpha = 1;
   ctx.beginPath(); ctx.arc(_antX + 2, _antBaseY - 10, 2.2, 0, Math.PI*2);
-  ctx.fillStyle = cGl; ctx.globalAlpha = _antGlow;
-  ctx.shadowColor = cGl; ctx.shadowBlur = 6; ctx.fill();
-  ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+  ctx.fillStyle = cGl; ctx.globalAlpha = _antGlow; ctx.fill(); ctx.globalAlpha = 1;
   // reflexo na bolinha
   ctx.beginPath(); ctx.arc(_antX + 1.2, _antBaseY - 11, 0.7, 0, Math.PI*2);
   ctx.fillStyle = '#ffffff'; ctx.globalAlpha = 0.8; ctx.fill(); ctx.globalAlpha = 1;
@@ -2346,16 +2347,24 @@ function drawAlien(x, y, flapAnim, angle) {
   ctx.beginPath(); ctx.ellipse(-7, 6.5, 12, 2.2, -0.08, 0, Math.PI*2);
   ctx.fillStyle = '#ffffff'; ctx.globalAlpha = 0.28; ctx.fill(); ctx.globalAlpha = 1;
 
-  // ── 11. LUZES GIRATÓRIAS DO DISCO ──
+  // ── 11. LUZES GIRATÓRIAS DO DISCO — sem shadowBlur (loop), usar alpha ──
   var _nLights = 9;
+  // Passa 1: halo suave (uma única fillStyle, todas de uma vez)
+  ctx.fillStyle = cGl;
+  ctx.beginPath();
+  for(var _li = 0; _li < _nLights; _li++) {
+    var _la = (_li / _nLights) * Math.PI * 2 + frame * 0.06;
+    var _lx = Math.cos(_la) * 23.5, _ly = 10 + Math.sin(_la) * 4;
+    ctx.moveTo(_lx + 4, _ly); ctx.arc(_lx, _ly, 4, 0, Math.PI*2);
+  }
+  ctx.globalAlpha = 0.22; ctx.fill(); ctx.globalAlpha = 1;
+  // Passa 2: núcleo brilhante com alpha variável por luz
   for(var _li = 0; _li < _nLights; _li++) {
     var _la = (_li / _nLights) * Math.PI * 2 + frame * 0.06;
     var _lx = Math.cos(_la) * 23.5, _ly = 10 + Math.sin(_la) * 4;
     var _lA = 0.4 + 0.5 * Math.abs(Math.sin(_la * 1.5 + frame * 0.1));
     ctx.beginPath(); ctx.ellipse(_lx, _ly, 2.4, 1.5, _la, 0, Math.PI*2);
-    ctx.fillStyle = cGl; ctx.globalAlpha = _lA;
-    ctx.shadowColor = cGl; ctx.shadowBlur = 4; ctx.fill();
-    ctx.shadowBlur = 0;
+    ctx.fillStyle = cGl; ctx.globalAlpha = _lA; ctx.fill();
   }
   ctx.globalAlpha = 1;
 
@@ -2381,16 +2390,17 @@ function drawCharacter(x, y, flap, angle) {
 // ─── COLLECTIBLE COIN ────────────────────────
 function drawCoin(cx, cy) {
   var r = 9;
-  // Glow
-  ctx.shadowColor = '#88ddff'; ctx.shadowBlur = 12;
-  // Coin body gradient
-  var cg = ctx.createRadialGradient(cx - r*0.3, cy - r*0.3, r*0.08, cx, cy, r);
-  cg.addColorStop(0, '#d8f4ff');
-  cg.addColorStop(0.45, '#88ccff');
-  cg.addColorStop(1, '#3388cc');
-  ctx.fillStyle = cg;
+  // Glow — alpha rings instead of shadowBlur
+  ctx.globalAlpha = 0.18; ctx.fillStyle = '#88ddff';
+  ctx.beginPath(); ctx.arc(cx, cy, r + 6, 0, Math.PI*2); ctx.fill();
+  ctx.globalAlpha = 0.30; ctx.fillStyle = '#88ddff';
+  ctx.beginPath(); ctx.arc(cx, cy, r + 3, 0, Math.PI*2); ctx.fill();
+  ctx.globalAlpha = 1;
+  // Coin body — flat fills (no radialGradient per frame)
+  ctx.fillStyle = '#88ccff';
   ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.fill();
-  ctx.shadowBlur = 0;
+  ctx.fillStyle = '#d8f4ff';
+  ctx.beginPath(); ctx.arc(cx - r*0.25, cy - r*0.25, r * 0.5, 0, Math.PI*2); ctx.fill();
   // Crisp outline
   ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2;
   ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.stroke();
@@ -3324,17 +3334,15 @@ function drawGrotesqueObstacle(p) {
 
 // ─── DRAW ROCKET OBSTACLE (phase 9) — proper rockets, nose at gap ──
 function drawRocketObstacle(p) {
-  var rW = '#e8f0ff', rMid = '#b0c0e0', rDark = '#6070a0';
   var rRed = '#ee2233', rFin = '#0044cc', rFire1 = '#ffdd00', rFire2 = '#ff6600';
+  var rDark = '#6070a0', rMid = '#b0c0e0', rW = '#e8f0ff';
   var cx = p.x + p.bodyW/2;
 
   // dir: -1 = top obstacle (nose DOWN at gap), 1 = bottom obstacle (nose UP at gap)
   function drawRocket(y1, y2, dir) {
     var h = y2 - y1;
     if(h < 24) return;
-    // "gap edge" = where the nose tip points
     var gapEdge = dir < 0 ? y2 : y1;
-    // "wall edge" = attached to ceiling/floor
     var wallEdge = dir < 0 ? y1 : y2;
 
     var noseH  = Math.min(h * 0.2, 30);
@@ -3342,15 +3350,20 @@ function drawRocketObstacle(p) {
     var exhaustH = h - noseH - bodyH;
     var finH   = Math.min(exhaustH * 0.7, 22);
 
-    // Positions (nose at gapEdge, exhaust at wallEdge)
-    var noseBase = gapEdge + dir * noseH;   // where nose ends and body starts
-    var bodyEnd  = noseBase + dir * bodyH;  // where body ends
-    var exhaustEnd = wallEdge;              // = bodyEnd + exhaustH
+    var noseBase = gapEdge + dir * noseH;
+    var bodyEnd  = noseBase + dir * bodyH;
 
-    // ── Exhaust flame (drawn first, behind fins) ──
+    // ── Exhaust flame — NO shadowBlur, use alpha layers instead ──
     var flicker = 0.65 + 0.35 * Math.sin(frame * 0.28);
     var fLen = exhaustH * 1.4 * flicker;
-    ctx.shadowColor = rFire2; ctx.shadowBlur = 18 * flicker;
+    ctx.globalAlpha = 0.5 * flicker;
+    ctx.fillStyle = rFire1;
+    ctx.beginPath();
+    ctx.moveTo(cx - 14, wallEdge);
+    ctx.lineTo(cx, wallEdge + dir * fLen * 1.15);
+    ctx.lineTo(cx + 14, wallEdge);
+    ctx.closePath(); ctx.fill();
+    ctx.globalAlpha = 0.9;
     ctx.fillStyle = rFire1;
     ctx.beginPath();
     ctx.moveTo(cx - 11, wallEdge);
@@ -3363,86 +3376,76 @@ function drawRocketObstacle(p) {
     ctx.lineTo(cx, wallEdge + dir * fLen * 0.7);
     ctx.lineTo(cx + 7, wallEdge);
     ctx.closePath(); ctx.fill();
-    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 1;
 
-    // ── Fins (attached at exhaust section) ──
+    // ── Fins ──
     ctx.fillStyle = rFin;
-    var finBase = bodyEnd; // fins go from bodyEnd toward wallEdge
-    // Left fin
+    var finBase = bodyEnd;
     ctx.beginPath();
-    ctx.moveTo(p.x, finBase);
-    ctx.lineTo(p.x - 14, finBase + dir * finH);
-    ctx.lineTo(p.x, wallEdge);
+    ctx.moveTo(p.x, finBase); ctx.lineTo(p.x - 14, finBase + dir * finH); ctx.lineTo(p.x, wallEdge);
     ctx.closePath(); ctx.fill();
-    // Right fin
     ctx.beginPath();
-    ctx.moveTo(p.x + p.bodyW, finBase);
-    ctx.lineTo(p.x + p.bodyW + 14, finBase + dir * finH);
-    ctx.lineTo(p.x + p.bodyW, wallEdge);
+    ctx.moveTo(p.x + p.bodyW, finBase); ctx.lineTo(p.x + p.bodyW + 14, finBase + dir * finH); ctx.lineTo(p.x + p.bodyW, wallEdge);
     ctx.closePath(); ctx.fill();
     ctx.strokeStyle = '#002299'; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(p.x, finBase); ctx.lineTo(p.x-14, finBase+dir*finH); ctx.lineTo(p.x, wallEdge); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(p.x+p.bodyW, finBase); ctx.lineTo(p.x+p.bodyW+14, finBase+dir*finH); ctx.lineTo(p.x+p.bodyW, wallEdge); ctx.stroke();
 
-    // ── Exhaust nozzle bell ──
-    var ng = ctx.createLinearGradient(p.x, 0, p.x+p.bodyW, 0);
-    ng.addColorStop(0, rDark); ng.addColorStop(0.5, rMid); ng.addColorStop(1, rDark);
-    ctx.fillStyle = ng;
-    ctx.fillRect(p.x + 4, bodyEnd < wallEdge ? bodyEnd : wallEdge, p.bodyW - 8,
-                 Math.abs(wallEdge - bodyEnd));
+    // ── Exhaust nozzle bell — flat fill + edge strips ──
+    var nozzleY = bodyEnd < wallEdge ? bodyEnd : wallEdge;
+    var nozzleH = Math.abs(wallEdge - bodyEnd);
+    ctx.fillStyle = rMid;
+    ctx.fillRect(p.x + 4, nozzleY, p.bodyW - 8, nozzleH);
+    ctx.fillStyle = rDark;
+    ctx.fillRect(p.x + 4, nozzleY, 3, nozzleH);
+    ctx.fillRect(p.x + p.bodyW - 7, nozzleY, 3, nozzleH);
 
-    // ── Body (main cylinder) ──
-    var bg2 = ctx.createLinearGradient(p.x, 0, p.x + p.bodyW, 0);
-    bg2.addColorStop(0, rDark); bg2.addColorStop(0.25, rW); bg2.addColorStop(0.75, rMid); bg2.addColorStop(1, rDark);
-    ctx.fillStyle = bg2;
+    // ── Body (main cylinder) — flat + shine ──
     var bodyTop = noseBase < bodyEnd ? noseBase : bodyEnd;
+    ctx.fillStyle = rMid;
     ctx.fillRect(p.x, bodyTop, p.bodyW, bodyH);
-    // Shine strip
+    // Left dark edge, right mid, center shine
+    ctx.fillStyle = rDark; ctx.fillRect(p.x, bodyTop, 5, bodyH);
+    ctx.fillStyle = rW; ctx.fillRect(p.x + 5, bodyTop, 8, bodyH);
     ctx.fillStyle = '#ffffff44'; ctx.fillRect(p.x + 6, bodyTop + 4, 6, bodyH - 8);
 
-    // "BASE" text on body — vertical
+    // "BASE" text — no shadowBlur, just blue fill
     if(bodyH > 50) {
       ctx.save();
-      ctx.translate(cx, bodyTop + bodyH/2);
-      ctx.rotate(-Math.PI/2);
-      ctx.shadowColor = '#0052FF'; ctx.shadowBlur = 8;
-      ctx.fillStyle = '#0052FF'; ctx.font = 'bold 11px Courier New'; ctx.textAlign = 'center';
+      ctx.translate(cx, bodyTop + bodyH/2); ctx.rotate(-Math.PI/2);
+      ctx.fillStyle = '#4488ff'; ctx.font = 'bold 11px Courier New'; ctx.textAlign = 'center';
       ctx.fillText('BASE', 0, 4);
-      ctx.shadowBlur = 0;
       ctx.restore();
     }
 
-    // Circular porthole window
+    // Porthole window
     var winCY = bodyTop + bodyH * 0.35;
     ctx.fillStyle = '#aaddff';
     ctx.beginPath(); ctx.arc(cx, winCY, 9, 0, Math.PI*2); ctx.fill();
-    ctx.strokeStyle = rDark; ctx.lineWidth = 2; ctx.stroke();
+    ctx.strokeStyle = '#6070a0'; ctx.lineWidth = 2; ctx.stroke();
     ctx.fillStyle = '#ffffff55';
     ctx.beginPath(); ctx.arc(cx - 3, winCY - 3, 3.5, 0, Math.PI*2); ctx.fill();
 
     // ── Nose cone ──
     ctx.fillStyle = rRed;
     ctx.beginPath();
-    ctx.moveTo(cx, gapEdge);                          // tip at gap
-    ctx.lineTo(p.x + 3, noseBase);
-    ctx.lineTo(p.x + p.bodyW - 3, noseBase);
+    ctx.moveTo(cx, gapEdge);
+    ctx.lineTo(p.x + 3, noseBase); ctx.lineTo(p.x + p.bodyW - 3, noseBase);
     ctx.closePath(); ctx.fill();
     ctx.strokeStyle = '#aa0022'; ctx.lineWidth = 1; ctx.stroke();
-    // Nose shine
     ctx.fillStyle = '#ffffff44';
     ctx.beginPath();
     ctx.moveTo(cx + 2, gapEdge + dir*4);
-    ctx.lineTo(p.x + p.bodyW/2 + 6, noseBase);
-    ctx.lineTo(cx + 2, noseBase);
+    ctx.lineTo(p.x + p.bodyW/2 + 6, noseBase); ctx.lineTo(cx + 2, noseBase);
     ctx.closePath(); ctx.fill();
 
     // Body outline
-    ctx.strokeStyle = rDark; ctx.lineWidth = 1.2;
+    ctx.strokeStyle = '#6070a0'; ctx.lineWidth = 1.2;
     ctx.strokeRect(p.x, bodyTop, p.bodyW, bodyH);
   }
 
-  drawRocket(0, p.topH, -1);    // top: nose DOWN at gap
-  drawRocket(p.botY, H-80, 1);  // bottom: nose UP at gap
+  drawRocket(0, p.topH, -1);
+  drawRocket(p.botY, H-80, 1);
 }
 
 // ─── drawObstacle — dispatcher ────────────────
@@ -3820,6 +3823,7 @@ function drawPoisonDrops() {
 
 
 function drawFireworks() {
+  // No shadowBlur — too expensive on mobile. Batch by color instead.
   var bursts = [{x:70,y:100,t:0},{x:290,y:80,t:35},{x:170,y:150,t:65},{x:340,y:120,t:18}];
   var cols = ['#FFD700','#FF4444','#0052FF','#44FF88','#FF44FF','#FF8C00'];
   for(var bi = 0; bi < bursts.length; bi++) {
@@ -3828,30 +3832,51 @@ function drawFireworks() {
       var r2b = bt * 3.5;
       var al = (1 - bt/40) * 0.75;
       ctx.globalAlpha = al;
-      ctx.shadowColor = cols[bi % cols.length]; ctx.shadowBlur = 8;
+      // Batch all sparks into a single path per burst (no per-spark fill)
+      var colMap = {};
       for(var si2 = 0; si2 < 10; si2++) {
         var ang = si2 * Math.PI*2/10 + bi;
-        ctx.fillStyle = cols[(bi + si2) % cols.length];
+        var c = cols[(bi + si2) % cols.length];
+        if(!colMap[c]) colMap[c] = [];
+        colMap[c].push({
+          x: bursts[bi].x + Math.cos(ang)*r2b,
+          y: bursts[bi].y + Math.sin(ang)*r2b
+        });
+      }
+      for(var c2 in colMap) {
+        ctx.fillStyle = c2;
         ctx.beginPath();
-        ctx.arc(bursts[bi].x + Math.cos(ang)*r2b, bursts[bi].y + Math.sin(ang)*r2b, 3, 0, Math.PI*2);
+        var pts = colMap[c2];
+        for(var pi3 = 0; pi3 < pts.length; pi3++) {
+          ctx.moveTo(pts[pi3].x + 3, pts[pi3].y);
+          ctx.arc(pts[pi3].x, pts[pi3].y, 3, 0, Math.PI*2);
+        }
         ctx.fill();
       }
-      ctx.shadowBlur = 0;
       ctx.globalAlpha = 1;
     }
   }
 }
 
+var _p10SunHalo = null;
 function drawCoinbasePlanetBg() {
-  // Bright sun
+  // Bright sun — shadowBlur removed (too expensive on mobile)
   var sunX2 = W - 50, sunY2 = 55;
-  ctx.shadowColor = '#FFE060'; ctx.shadowBlur = 40;
+  // Glow rings as concentric arcs instead of shadowBlur
+  for(var _gi = 3; _gi >= 1; _gi--) {
+    ctx.globalAlpha = 0.07 * _gi;
+    ctx.fillStyle = '#FFE060';
+    ctx.beginPath(); ctx.arc(sunX2, sunY2, 30 + _gi*10, 0, Math.PI*2); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
   ctx.fillStyle = '#FFF7AA';
   ctx.beginPath(); ctx.arc(sunX2, sunY2, 30, 0, Math.PI*2); ctx.fill();
-  ctx.shadowBlur = 0;
-  var sunHalo2 = ctx.createRadialGradient(sunX2, sunY2, 22, sunX2, sunY2, 90);
-  sunHalo2.addColorStop(0,'#FFE06055'); sunHalo2.addColorStop(1,'transparent');
-  ctx.fillStyle = sunHalo2; ctx.fillRect(0,0,W,H);
+  // Cached halo gradient (create once)
+  if(!_p10SunHalo) {
+    _p10SunHalo = ctx.createRadialGradient(sunX2, sunY2, 22, sunX2, sunY2, 90);
+    _p10SunHalo.addColorStop(0,'#FFE06055'); _p10SunHalo.addColorStop(1,'transparent');
+  }
+  ctx.fillStyle = _p10SunHalo; ctx.fillRect(0,0,W,H);
   // Fluffy clouds
   drawClouds(0.45);
   // Fireworks
@@ -4894,10 +4919,13 @@ function loop(ts) {
     var _ps = scorePop>0 ? 1+(scorePop/12)*0.55 : 1;
     ctx.save(); ctx.translate(W/2, 52); ctx.scale(_ps,_ps);
     ctx.font = 'bold 28px Courier New';
-    ctx.shadowColor = pv.glowColor; ctx.shadowBlur = scorePop>0 ? 18 : 8;
+    // Glow via dupla camada (sem shadowBlur — mobile-safe)
+    if(scorePop > 0) {
+      ctx.fillStyle = pv.glowColor; ctx.globalAlpha = 0.45;
+      ctx.fillText(score, 2, 2); ctx.globalAlpha = 1;
+    }
     ctx.fillStyle = '#ffffff';
     ctx.fillText(score, 0, 0);
-    ctx.shadowBlur=0;
     ctx.restore();
     if(scorePop>0) scorePop--;
     // Phase label below score
