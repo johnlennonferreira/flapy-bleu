@@ -21,10 +21,9 @@
     "screenshotUrls": [
       "https://flapy-bleu.vercel.app/screenshots/phase1.png",
       "https://flapy-bleu.vercel.app/screenshots/phase2.png",
-      "https://flapy-bleu.vercel.app/screenshots/phase3.png",
-      "https://flapy-bleu.vercel.app/screenshots/phase4.png"
+      "https://flapy-bleu.vercel.app/screenshots/phase3.png"
     ],
-    "ogTitle":              "Flapy Bleu — Tap to Flap on Base",
+    "ogTitle":              "Flapy Bleu — Play on Base",
     "ogDescription":        "10 phases, 4 characters, USDC power-ups. The crypto Flappy Bird on Base blockchain.",
     "ogImageUrl":           "https://flapy-bleu.vercel.app/splash.png",
     "requiredChains":       ["eip155:8453"],
