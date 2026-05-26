@@ -1460,8 +1460,6 @@ let bleu, pipes, score, frame, gameState, particles, lastGapCenter;
 let phaseFlash = 0, lastPhaseIdx = 0, phasePaused = false;
 let screenShake = 0, scorePop = 0, hitFlash = 0, bleuSquish = 0;
 let coins = [], coinCount = parseInt(_ls.get('bleuCoins','0'));
-// 🎁 DEV GRANT — one-time 1000 coins to test Alien (remove after testing)
-if(!_ls.get('_devGrant1',null)){ coinCount = Math.max(coinCount, 1000); _ls.set('bleuCoins', coinCount); _ls.set('_devGrant1','1'); }
 // 🔄 SHOP v2 — limpa flags de unlock de testes anteriores (personagens agora bloqueados por prestige)
 if(_ls.get('_shopV',null) !== '2'){
   try{ localStorage.removeItem('bleuGengar'); localStorage.removeItem('bleuWorm'); localStorage.removeItem('bleuAlien'); localStorage.removeItem('bleuBestPrestige'); }catch(e){}
