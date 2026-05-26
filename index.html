@@ -1400,9 +1400,10 @@ var lives=3, invincible=0, starPower=0, stars=[];
 var slowMoActive=0;       // frames restantes de slow-mo (2700=45s)
 var slowMoStock=parseInt(localStorage.getItem('bleuSlowMo')||'0');        // elixirs no inventário — persistido
 var checkpointStock=parseInt(localStorage.getItem('bleuCheckpoint')||'0'); // cartas de checkpoint — persistido
-var checkpointUsed=false; // carta já usada nesta run
-var heartUsed=false;      // coração USDC já comprado na morte nesta run
-var dizzyTimer=0;         // frames de estrelinhas de tontura após colisão
+var checkpointUsed=false;   // carta já usada nesta run
+var heartUsed=false;        // coração USDC já comprado na morte nesta run
+var dizzyTimer=0;           // frames de estrelinhas de tontura após colisão
+var checkpointFlash=0;      // frames de overlay "CHECKPOINT!" após uso automático
 var extraHeartStock=parseInt(localStorage.getItem('bleuExtraHeart')||'0'); // corações extras — persistido
 var deathOfferTimer=0;    // countdown de oferta na tela de morte (frames)
 var shield=0, shieldItems=[], shieldBreak=0; // escudo power-up
@@ -1649,7 +1650,7 @@ function resetGame() {
   combo = 0; comboFlash = 0; coinsThisRun = 0; milestoneIdx = 0; recFlash = 0;
   lives = 3; // reset base — extraHeartStock é consumido em flap() ao iniciar nova run
   invincible = 0; starPower = 0; stars = [];
-  slowMoActive = 0; checkpointUsed = false; heartUsed = false; dizzyTimer = 0; deathOfferTimer = 0;
+  slowMoActive = 0; checkpointUsed = false; heartUsed = false; dizzyTimer = 0; deathOfferTimer = 0; checkpointFlash = 0;
   slowMoStock = 0; localStorage.setItem('bleuSlowMo', 0); // não cumulativo entre runs
   deadChest={active:false,opened:false,coins:0,anim:0,clicks:0};
   shield = 0; shieldPickedUp = 0;
@@ -1964,13 +1965,23 @@ function drawPhantom(x, y, flapAnim, angle) {
 
   // ── OUTER ETHEREAL AURA — só durante star power ──
   if(typeof starPower !== 'undefined' && starPower > 0) {
-    var _auraR = 36 + _pulse * 4;
-    var _ag = ctx.createRadialGradient(0, -3, 8, 0, -3, _auraR);
-    _ag.addColorStop(0,   cGl + '00');
-    _ag.addColorStop(0.55, cGl + '22');
-    _ag.addColorStop(1,   cGl + '00');
-    ctx.globalAlpha = 0.55 + _pulse * 0.25;
+    var _auraR = 52 + _pulse * 10; // muito maior e mais épica
+    // Anel branco externo
+    var _ag0 = ctx.createRadialGradient(0, -3, 24, 0, -3, _auraR);
+    _ag0.addColorStop(0, '#ffffff00');
+    _ag0.addColorStop(0.75, '#ffffff18');
+    _ag0.addColorStop(0.9, '#00D4FF44');
+    _ag0.addColorStop(1, '#00D4FF00');
+    ctx.globalAlpha = 0.7 + _pulse * 0.3;
     ctx.beginPath(); ctx.arc(0, -3, _auraR, 0, Math.PI*2);
+    ctx.fillStyle = _ag0; ctx.fill();
+    // Núcleo brilhante
+    var _ag = ctx.createRadialGradient(0, -3, 0, 0, -3, 28);
+    _ag.addColorStop(0, '#ffffff66');
+    _ag.addColorStop(0.5, cGl + '33');
+    _ag.addColorStop(1, cGl + '00');
+    ctx.globalAlpha = 0.5 + _pulse * 0.4;
+    ctx.beginPath(); ctx.arc(0, -3, 28, 0, Math.PI*2);
     ctx.fillStyle = _ag; ctx.fill();
     ctx.globalAlpha = 1;
   }
@@ -4582,6 +4593,33 @@ function drawLivesHUD() {
     ctx.restore();
   }
 
+  // ── Slow-mo: botão grande na esquerda em baixo (fácil de tocar no mobile) ──
+  if(slowMoStock > 0 && slowMoActive === 0 && (gameState==='playing'||gameState==='hurt')){
+    var _smBx=34, _smBy=H-162, _smBr=24; // acima do botão pause
+    ctx.save();
+    var _smBpulse = 0.7 + 0.3*Math.abs(Math.sin(frame*0.1));
+    ctx.globalAlpha = _smBpulse;
+    ctx.fillStyle='#00D4FF22'; ctx.strokeStyle='#00D4FFcc'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.arc(_smBx, _smBy, _smBr, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+    ctx.globalAlpha=1;
+    ctx.font='18px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('🐢', _smBx, _smBy-2);
+    ctx.font='bold 8px Courier New'; ctx.fillStyle='#00D4FF';
+    ctx.fillText('x'+slowMoStock, _smBx, _smBy+14);
+    ctx.textBaseline='alphabetic'; ctx.restore();
+  }
+  // Se slow-mo ativo: anel de progresso ao redor do botão
+  if(slowMoActive > 0 && (gameState==='playing'||gameState==='hurt')){
+    var _smBx2=34, _smBy2=H-162;
+    var _smProg = slowMoActive / 2700;
+    ctx.save();
+    ctx.strokeStyle='#00D4FF'; ctx.lineWidth=3; ctx.globalAlpha=0.6;
+    ctx.beginPath(); ctx.arc(_smBx2, _smBy2, 26, -Math.PI/2, -Math.PI/2 + Math.PI*2*_smProg); ctx.stroke();
+    ctx.globalAlpha=0.2; ctx.strokeStyle='#00D4FF';
+    ctx.beginPath(); ctx.arc(_smBx2, _smBy2, 26, 0, Math.PI*2); ctx.stroke();
+    ctx.globalAlpha=1; ctx.restore();
+  }
+
   // Wallet badge top-right — posição recuada para não sobreposição com ícone de som
   if(walletAddress){
     ctx.save();
@@ -5084,7 +5122,7 @@ function loop(ts) {
     // ─── STAR POWER-UP spawn ─────────────────
     if(slowMoActive > 0) slowMoActive--;
     var _slowMult = slowMoActive > 0 ? 0.72 : 1; // 28% mais lento quando ativo
-    var spd = phasePaused ? 0 : ph.speed * (starPower > 0 ? 1.55 : 1) * _slowMult;
+    var spd = phasePaused ? 0 : ph.speed * (starPower > 0 ? 2.2 : 1) * _slowMult;
     // Estrela: rara, só aparece sem escudo na tela e sem sobreposição
     if(frame % 420 === 60 && Math.random() < 0.12 && starPower === 0 && shieldItems.length === 0) {
       var sy2 = lastGapCenter + (Math.random() - 0.5) * 40;
@@ -5107,26 +5145,43 @@ function loop(ts) {
       }
     }
     if(starPower>0){ starPower--;
-      // ── Speed lines — desvanece nos últimos 60f e reseta ao acabar ──
       var slFade = starPower < 60 ? starPower/60 : 1;
+      // ── Screen edge chromatic glow ──
+      var _sg = ctx.createLinearGradient(0,0,W,0);
+      _sg.addColorStop(0,'#FF000033'); _sg.addColorStop(0.5,'#00000000'); _sg.addColorStop(1,'#0052FF33');
+      ctx.globalAlpha=slFade*0.7;
+      ctx.fillStyle=_sg; ctx.fillRect(0,0,W,H);
+      var _sg2=ctx.createLinearGradient(0,0,0,H);
+      _sg2.addColorStop(0,'#ffffff22'); _sg2.addColorStop(0.5,'#00000000'); _sg2.addColorStop(1,'#FFD70022');
+      ctx.fillStyle=_sg2; ctx.fillRect(0,0,W,H);
+      ctx.globalAlpha=1;
+      // ── Speed lines — mais rápidas e densas ──
       ctx.lineCap='round';
       for(var sl=0;sl<speedLines.length;sl++){
         var line=speedLines[sl];
-        line.y += (Math.random()-0.5)*1.2;
+        line.y += (Math.random()-0.5)*1.8;
         if(line.x===undefined) line.x = W+10;
-        line.x -= line.speed * 2.8;
+        line.x -= line.speed * 5.5; // velocidade triplicada
         if(line.x < -line.len) line.x = W + 10;
-        ctx.globalAlpha = line.alpha * slFade;
-        ctx.strokeStyle = sl%3===0 ? '#00D4FF' : sl%3===1 ? '#ffffff' : '#0052FF';
-        ctx.lineWidth = 1.5;
-        ctx.beginPath(); ctx.moveTo(line.x+line.len, line.y); ctx.lineTo(line.x, line.y); ctx.stroke();
+        ctx.globalAlpha = line.alpha * slFade * 1.4;
+        var _slCols=['#00D4FF','#ffffff','#0052FF','#FF44FF','#FFD700'];
+        ctx.strokeStyle = _slCols[sl%5];
+        ctx.lineWidth = 1 + (sl%3)*0.8;
+        ctx.beginPath(); ctx.moveTo(line.x+line.len*1.8, line.y); ctx.lineTo(line.x, line.y); ctx.stroke();
       }
       ctx.globalAlpha=1; ctx.lineCap='butt';
-      // Aura neon azul ao redor do personagem
-      ctx.globalAlpha=(0.18+0.1*Math.sin(frame*0.3))*slFade;
-      ctx.fillStyle='#00D4FF';
-      ctx.beginPath(); ctx.arc(bleu.x,bleu.y,30,0,Math.PI*2); ctx.fill();
+      // ── Aura épica pulsante ──
+      var _auraR2 = 38 + 8*Math.abs(Math.sin(frame*0.25));
+      ctx.globalAlpha=(0.28+0.18*Math.sin(frame*0.4))*slFade;
+      var _ag2=ctx.createRadialGradient(bleu.x,bleu.y,4,bleu.x,bleu.y,_auraR2);
+      _ag2.addColorStop(0,'#ffffff88'); _ag2.addColorStop(0.4,'#00D4FF66'); _ag2.addColorStop(1,'#00D4FF00');
+      ctx.fillStyle=_ag2;
+      ctx.beginPath(); ctx.arc(bleu.x,bleu.y,_auraR2,0,Math.PI*2); ctx.fill();
       ctx.globalAlpha=1;
+      // ── Rastro de partículas a cada 3 frames ──
+      if(frame%3===0){
+        spawnParticles(bleu.x-10, bleu.y, frame%9===0?'#FFD700':frame%9===3?'#FF44FF':'#00D4FF', 2);
+      }
       // Quando acabar: reset x das linhas e volta música
       if(starPower===0){
         for(var sl2=0;sl2<speedLines.length;sl2++) delete speedLines[sl2].x;
@@ -5233,7 +5288,7 @@ function loop(ts) {
           lastPhaseIdx = newPI;
           phaseFlash   = 190;
           phasePaused  = true;
-          phaseShopPending = true; // open shop when banner animation finishes
+          phaseShopPending = false; // sem popup entre fases — jogo continua automaticamente
           if(newPI > runPhase) runPhase = newPI;
           bleu.vy = 0;
           bleu.y  = H / 2;
@@ -5379,6 +5434,22 @@ function loop(ts) {
     ctx.beginPath(); ctx.roundRect(W/2-38, 72, 76*progress, 3, 2); ctx.fill();
     // lives + star power HUD
     drawLivesHUD();
+    // ── Checkpoint flash overlay ──
+    if(checkpointFlash > 0){
+      var _cpfa = checkpointFlash > 120 ? 1 : checkpointFlash/120; // fade-out nos últimos 2s
+      ctx.save(); ctx.globalAlpha = _cpfa * 0.92;
+      ctx.fillStyle='rgba(0,4,18,0.82)';
+      ctx.beginPath(); ctx.roundRect(W/2-130,H/2-52,260,88,14); ctx.fill();
+      ctx.strokeStyle='#FFD700'; ctx.lineWidth=2; ctx.globalAlpha=_cpfa;
+      ctx.stroke();
+      ctx.fillStyle='#FFD700'; ctx.font='bold 22px Courier New'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.shadowColor='#FFD700'; ctx.shadowBlur=18;
+      ctx.fillText('🃏  CHECKPOINT!', W/2, H/2-18);
+      ctx.shadowBlur=0; ctx.fillStyle='#00FF88'; ctx.font='11px Courier New';
+      ctx.fillText('volta com 1 vida · invencível por 4s', W/2, H/2+16);
+      ctx.textBaseline='alphabetic'; ctx.restore();
+      checkpointFlash--;
+    }
     // best
     if(highScore > 0 && score > 0){
       ctx.textAlign = 'center';
@@ -5456,39 +5527,34 @@ function loop(ts) {
         // Sem vidas — verifica carta de checkpoint primeiro
         if(checkpointStock > 0 && !checkpointUsed) {
           // ── Auto-revive via carta ──
-          checkpointStock--; checkpointUsed = true;
-          lives = 1; invincible = 220; dizzyTimer = 90;
+          checkpointStock--; localStorage.setItem('bleuCheckpoint', checkpointStock);
+          checkpointUsed = true; dizzyTimer = 90; checkpointFlash = 150; // mostra overlay 2.5s
+          lives = 1; invincible = 240;
           bleu.y = H / 2; bleu.vy = 0;
-          screenShake = 6; hitFlash = 4;
-          spawnParticles(bleu.x, bleu.y, '#FFD700', 18);
-          spawnParticles(bleu.x, bleu.y, '#00D4FF', 10);
-          beep(440, 880, 0.3, 'sine', 0.18);
-          [660, 880, 1047].forEach(function(f,i){ setTimeout(function(){ beep(f,f,0.12,'sine',0.1); }, i*70); });
-          if(navigator.vibrate) navigator.vibrate([20,10,60,10,100]);
+          screenShake = 12; hitFlash = 6;
+          spawnParticles(bleu.x, bleu.y, '#FFD700', 28);
+          spawnParticles(bleu.x, bleu.y, '#00D4FF', 16);
+          spawnParticles(bleu.x, bleu.y, '#ffffff', 10);
+          beep(440, 880, 0.35, 'sine', 0.2);
+          [660, 880, 1047, 1320].forEach(function(f,i){ setTimeout(function(){ beep(f,f,0.15,'sine',0.12); }, i*60); });
+          if(navigator.vibrate) navigator.vibrate([20,10,60,10,120]);
           gameState = 'playing'; // continua sem ir para dead
         } else {
-          // Morte real — mostra oferta USDC por 12 segundos
-          lives = 0;
-          spawnParticles(bleu.x, bleu.y, '#FFD700', 10);
+          // Morte definitiva — salva stats e volta ao menu direto
+          spawnParticles(bleu.x, bleu.y, '#FF1744', 12);
           beep(350, 60, 0.5, 'sawtooth', 0.25);
           if(score > highScore){
-            highScore = score; newRecord = true;
-            localStorage.setItem('bleuHS', highScore);
-            [523,659,784,1047].forEach(function(f,i){
-              setTimeout(function(){ beep(f,f,0.15,'sine',0.14); }, i*85);
-            });
+            highScore = score; localStorage.setItem('bleuHS', highScore);
           }
-          lastScore=score; localStorage.setItem('bleuLastScore',lastScore); totalScore+=score; localStorage.setItem('bleuTotal',totalScore);
+          lastScore=score; localStorage.setItem('bleuLastScore',lastScore);
+          totalScore+=score; localStorage.setItem('bleuTotal',totalScore);
           if(score>0) top5=saveTop5(score);
           if(runPhase > bestPhaseEver){ bestPhaseEver=runPhase; localStorage.setItem('bleuBestPhase', bestPhaseEver); }
-          gameState='dead'; screenShake=14; hitFlash=8; stopMusic(); deadTapCount=0;
-          if(score>0) submitWalletScore(score);
-          deadChest={active:false,opened:false,coins:0,anim:0,clicks:0};
           if(comboBest<combo) comboBest=combo;
-          combo=0; comboFlash=0; milestoneIdx=0;
+          if(score>0) submitWalletScore(score);
           if(navigator.vibrate) navigator.vibrate([80,30,80]);
-          // Oferta aparece se: wallet conectada (compra USDC) OU carta de checkpoint disponível
-          if((walletAddress && score > 3) || (checkpointStock > 0 && !checkpointUsed)) deathOfferTimer = 720;
+          stopMusic();
+          resetGame(); // volta ao menu principal
         }
       }
       } // fecha else do shield
@@ -5862,11 +5928,19 @@ function handleClick(ex, ey) {
     return;
   }
 
-  // ── Tap no card de slow-mo (y=46-66, x=4-76) para ativar elixir ──
-  if((gameState==='playing'||gameState==='hurt') && slowMoStock>0 && slowMoActive===0 && cy>=46&&cy<=66&&cx>=4&&cx<=76){
-    slowMoStock--; localStorage.setItem('bleuSlowMo',slowMoStock); slowMoActive=2700; // 45s
-    beep(440,660,0.15,'sine',0.12); spawnParticles(bleu.x,bleu.y,'#00D4FF',10);
-    return;
+  // ── Slow-mo: tap no card topo (y=46-66) OU no botão grande em baixo (circle r=28 em 34,H-162) ──
+  if((gameState==='playing'||gameState==='hurt') && slowMoStock>0 && slowMoActive===0){
+    var _smHit = (cy>=46&&cy<=66&&cx>=4&&cx<=76); // card topo
+    var _smBdx=cx-34, _smBdy=cy-(H-162);
+    _smHit = _smHit || (_smBdx*_smBdx+_smBdy*_smBdy<=28*28); // círculo em baixo
+    if(_smHit){
+      slowMoStock--; localStorage.setItem('bleuSlowMo',slowMoStock); slowMoActive=2700;
+      beep(300,600,0.18,'sine',0.14);
+      beep(440,880,0.12,'sine',0.1);
+      spawnParticles(bleu.x,bleu.y,'#00D4FF',14);
+      spawnParticles(bleu.x,bleu.y,'#ffffff',6);
+      return;
+    }
   }
 
   // ── MID-GAME SHOP (loja entre fases) ──
