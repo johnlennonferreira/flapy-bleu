@@ -29,6 +29,16 @@
 <button id="mute">🔊 SFX</button>
 <script>
 const canvas = document.getElementById('c');
+// ── localStorage safe wrapper — Safari Private Mode lança QuotaExceededError ──
+var _ls = (function(){
+  try { localStorage.setItem('_t','1'); localStorage.removeItem('_t'); } catch(e){}
+  return {
+    get:     function(k,d){ try{ var v=localStorage.getItem(k);  return v===null?d:v; }catch(e){ return d; } },
+    set:     function(k,v){ try{ localStorage.setItem(k,String(v)); }catch(e){} },
+    getJSON: function(k,d){ try{ return JSON.parse(localStorage.getItem(k)||'null')||d; }catch(e){ return d; } },
+    setJSON: function(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }
+  };
+})();
 // roundRect polyfill for older browsers
 if (!CanvasRenderingContext2D.prototype.roundRect) {
   CanvasRenderingContext2D.prototype.roundRect = function(x,y,w,h,r) {
@@ -46,7 +56,22 @@ if (!CanvasRenderingContext2D.prototype.roundRect) {
   };
 }
 const ctx = canvas.getContext('2d', {alpha: false});
-const W = canvas.width, H = canvas.height; // canvas é 400 × 600 — tudo posicionado com W/2, H/2
+// ── DPR scaling — nitidez nativa em Retina/OLED (iPhone, Android) ──────
+// O canvas lógico permanece 400×600 (todas as coordenadas iguais).
+// O backing buffer sobe para 800×1200 em telas 2× e 1200×1800 em 3×.
+// Cap em 2× para não sobrecarregar GPUs de entrada em alta DPR.
+(function(){
+  var dpr = Math.min(window.devicePixelRatio || 1, 2);
+  if(dpr > 1){
+    var lw = canvas.width, lh = canvas.height; // logical 400×600
+    canvas.width  = lw * dpr;
+    canvas.height = lh * dpr;
+    canvas.style.width  = lw + 'px';
+    canvas.style.height = lh + 'px';
+    ctx.scale(dpr, dpr);
+  }
+})();
+const W = 400, H = 600; // coordenadas lógicas sempre 400×600
 
 // ╔══════════════════════════════════════════════════════════════════╗
 // ║  FLAPY BLEU — INDEX DE SEÇÕES (grep pelo nome para ir direto)   ║
@@ -595,20 +620,20 @@ function shopBuyOrEquip() {
   if(equipped) return;
   if(owned || shopSelColor===0) {
     activeChar = shopChar;
-    if(shopChar===0)     { activeColorBleu=shopSelColor;   localStorage.setItem('bleuColorB',''+shopSelColor); }
-    else if(shopChar===1){ activeColorGengar=shopSelColor; localStorage.setItem('bleuColorG',''+shopSelColor); }
-    else if(shopChar===2){ activeColorWorm=shopSelColor;   localStorage.setItem('bleuColorW',''+shopSelColor); }
-    else                 { activeColorAlien=shopSelColor;  localStorage.setItem('bleuColorA',''+shopSelColor); }
-    localStorage.setItem('bleuChar',''+activeChar);
+    if(shopChar===0)     { activeColorBleu=shopSelColor;   _ls.set('bleuColorB',''+shopSelColor); }
+    else if(shopChar===1){ activeColorGengar=shopSelColor; _ls.set('bleuColorG',''+shopSelColor); }
+    else if(shopChar===2){ activeColorWorm=shopSelColor;   _ls.set('bleuColorW',''+shopSelColor); }
+    else                 { activeColorAlien=shopSelColor;  _ls.set('bleuColorA',''+shopSelColor); }
+    _ls.set('bleuChar',''+activeChar);
     beep(523,1047,0.18,'sine',0.12);
   } else if(coinCount>=color.price) {
     coinCount-=color.price; if(coinCount<0) coinCount=0;
-    localStorage.setItem('bleuCoins',coinCount);
-    if(shopChar===0)     { unlockedColorsBleu.push(shopSelColor); localStorage.setItem('bleuColsB',JSON.stringify(unlockedColorsBleu)); activeColorBleu=shopSelColor;   localStorage.setItem('bleuColorB',''+shopSelColor); }
-    else if(shopChar===1){ unlockedColorsGengar.push(shopSelColor); localStorage.setItem('bleuColsG',JSON.stringify(unlockedColorsGengar)); activeColorGengar=shopSelColor; localStorage.setItem('bleuColorG',''+shopSelColor); }
-    else if(shopChar===2){ unlockedColorsWorm.push(shopSelColor); localStorage.setItem('bleuColsW',JSON.stringify(unlockedColorsWorm)); activeColorWorm=shopSelColor;   localStorage.setItem('bleuColorW',''+shopSelColor); }
-    else                 { unlockedColorsAlien.push(shopSelColor); localStorage.setItem('bleuColsA',JSON.stringify(unlockedColorsAlien)); activeColorAlien=shopSelColor; localStorage.setItem('bleuColorA',''+shopSelColor); }
-    activeChar=shopChar; localStorage.setItem('bleuChar',''+activeChar);
+    _ls.set('bleuCoins',coinCount);
+    if(shopChar===0)     { unlockedColorsBleu.push(shopSelColor); _ls.set('bleuColsB',JSON.stringify(unlockedColorsBleu)); activeColorBleu=shopSelColor;   _ls.set('bleuColorB',''+shopSelColor); }
+    else if(shopChar===1){ unlockedColorsGengar.push(shopSelColor); _ls.set('bleuColsG',JSON.stringify(unlockedColorsGengar)); activeColorGengar=shopSelColor; _ls.set('bleuColorG',''+shopSelColor); }
+    else if(shopChar===2){ unlockedColorsWorm.push(shopSelColor); _ls.set('bleuColsW',JSON.stringify(unlockedColorsWorm)); activeColorWorm=shopSelColor;   _ls.set('bleuColorW',''+shopSelColor); }
+    else                 { unlockedColorsAlien.push(shopSelColor); _ls.set('bleuColsA',JSON.stringify(unlockedColorsAlien)); activeColorAlien=shopSelColor; _ls.set('bleuColorA',''+shopSelColor); }
+    activeChar=shopChar; _ls.set('bleuChar',''+activeChar);
     beep(523,1047,0.28,'sine',0.15);
     [659,784,1047].forEach(function(f,ii){setTimeout(function(){beep(f,f,0.12,'sine',0.1);},ii*70);});
     spawnParticles(W/2,H/2,'#FFD700',14);
@@ -1083,7 +1108,7 @@ function drawMarketTab() {
   ctx.fillText('Velocidade -28% por 45s (1 fase).', 58, _cy+27);
   ctx.fillText('Acumula no inventário.', 58, _cy+38);
   var _b0=_drawUSDCBtn(_cy, _hBtn, '#00D4FF', 'COMPRAR', '$0.25', false);
-  if(_b0) _marketBtns.push({rect:_b0, action:function(){ sendUSDCPurchase(USDC_SLOWMO,function(){ slowMoStock++; localStorage.setItem('bleuSlowMo',slowMoStock); beep(440,880,0.2,'sine',0.14); spawnParticles(W/2,H/2,'#00D4FF',14); }); }});
+  if(_b0) _marketBtns.push({rect:_b0, action:function(){ if(slowMoStock>=5) return; sendUSDCPurchase(USDC_SLOWMO,function(){ slowMoStock=Math.min(slowMoStock+1,5); _ls.set('bleuSlowMo',slowMoStock); beep(440,880,0.2,'sine',0.14); spawnParticles(W/2,H/2,'#00D4FF',14); }); }});
   _cy+=_hBtn+_gap;
 
   // +CORAÇÃO
@@ -1096,7 +1121,7 @@ function drawMarketTab() {
   ctx.fillText('+1 vida na próxima partida. Máx +2.', 58, _cy+27);
   ctx.fillText('Possuído: '+extraHeartStock+'/2', 58, _cy+38);
   var _b1=_drawUSDCBtn(_cy, _hBtn, '#FF6680', 'COMPRAR', '$0.25', _heartDis);
-  if(_b1) _marketBtns.push({rect:_b1, action:function(){ if(extraHeartStock<2) sendUSDCPurchase(USDC_HEART,function(){ extraHeartStock++; localStorage.setItem('bleuExtraHeart',extraHeartStock); beep(523,880,0.2,'sine',0.14); spawnParticles(W/2,H/2,'#FF6680',14); }); }});
+  if(_b1) _marketBtns.push({rect:_b1, action:function(){ if(extraHeartStock<2) sendUSDCPurchase(USDC_HEART,function(){ extraHeartStock++; _ls.set('bleuExtraHeart',extraHeartStock); beep(523,880,0.2,'sine',0.14); spawnParticles(W/2,H/2,'#FF6680',14); }); }});
   _cy+=_hBtn+_gap;
 
   // CHECKPOINT
@@ -1109,7 +1134,7 @@ function drawMarketTab() {
   ctx.fillText('Revive no ponto da morte.', 58, _cy+27);
   ctx.fillText('1 uso por partida.', 58, _cy+38);
   var _b2=_drawUSDCBtn(_cy, _hBtn, '#FFD700', 'COMPRAR', '$0.50', _cpDis);
-  if(_b2) _marketBtns.push({rect:_b2, action:function(){ if(checkpointStock<1) sendUSDCPurchase(USDC_CHECKPOINT,function(){ checkpointStock=1; localStorage.setItem('bleuCheckpoint',1); beep(660,1320,0.25,'sine',0.16); spawnParticles(W/2,H/2,'#FFD700',18); }); }});
+  if(_b2) _marketBtns.push({rect:_b2, action:function(){ if(checkpointStock<1) sendUSDCPurchase(USDC_CHECKPOINT,function(){ checkpointStock=1; _ls.set('bleuCheckpoint',1); beep(660,1320,0.25,'sine',0.16); spawnParticles(W/2,H/2,'#FFD700',18); }); }});
   _cy+=_hBtn+_gap;
 
   // ══ SEÇÃO: PERSONAGENS ══
@@ -1255,11 +1280,11 @@ function drawLeaderboardTab() {
 var dailyModal=false, dailyDay=1, dailyReward='coins', dailyRewardVal=50;
 function checkDailyLogin() {
   var today = new Date().toDateString();
-  var dl = JSON.parse(localStorage.getItem('bleuDaily')||'{"date":"","streak":0}');
+  var dl = _ls.getJSON('bleuDaily',{"date":"","streak":0});
   if(dl.date===today) return;
   var yest = new Date(); yest.setDate(yest.getDate()-1);
   var streak = dl.date===yest.toDateString() ? dl.streak+1 : 1;
-  localStorage.setItem('bleuDaily', JSON.stringify({date:today, streak:streak}));
+  _ls.set('bleuDaily', JSON.stringify({date:today, streak:streak}));
   dailyDay = ((streak-1)%7)+1;
   if(dailyDay===2)      { dailyReward='chest'; dailyRewardVal=1; }
   else if(dailyDay===3) { dailyReward='skin';  dailyRewardVal=0; }
@@ -1267,12 +1292,12 @@ function checkDailyLogin() {
   dailyModal=true;
 }
 function claimDailyReward() {
-  if(dailyReward==='coins') { coinCount+=dailyRewardVal; if(coinCount>100000)coinCount=100000; localStorage.setItem('bleuCoins',coinCount); }
+  if(dailyReward==='coins') { coinCount+=dailyRewardVal; if(coinCount>100000)coinCount=100000; _ls.set('bleuCoins',coinCount); }
   else if(dailyReward==='chest') { /* chest disabled for now */ }
   else if(dailyReward==='skin') {
     // Unlock a random Bleu color as daily reward
     var _lockedB=BLEU_COLORS.map(function(_,i){return i;}).filter(function(i){return unlockedColorsBleu.indexOf(i)<0;});
-    if(_lockedB.length>0){ var _nsk=_lockedB[Math.floor(Math.random()*_lockedB.length)]; unlockedColorsBleu.push(_nsk); localStorage.setItem('bleuColsB',JSON.stringify(unlockedColorsBleu)); }
+    if(_lockedB.length>0){ var _nsk=_lockedB[Math.floor(Math.random()*_lockedB.length)]; unlockedColorsBleu.push(_nsk); _ls.set('bleuColsB',JSON.stringify(unlockedColorsBleu)); }
   }
   dailyModal=false;
 }
@@ -1344,7 +1369,7 @@ function updateScorePopups() {
   }
 }
 // ─── HIGHSCORE + TOP 5 ───────────────────────
-let highScore = parseInt(localStorage.getItem('bleuHS') || '0');
+let highScore = parseInt(_ls.get('bleuHS','0'));
 let newRecord = false;
 // Top 5 recordes
 function loadTop5() {
@@ -1355,14 +1380,14 @@ function saveTop5(s) {
   t.push(s);
   t.sort(function(a,b){ return b-a; });
   t = t.slice(0,5);
-  localStorage.setItem('bleuTop5', JSON.stringify(t));
+  _ls.set('bleuTop5', JSON.stringify(t));
   return t;
 }
 var top5 = loadTop5();
 
 // ─── NFT CHARACTER SYSTEM ────────────────────
-var unlockedChars = parseInt(localStorage.getItem('bleuChars') || '1'); // 1=Bleu only, 2=Brett unlocked
-var activeChar    = parseInt(localStorage.getItem('bleuActiveChar') || '0'); // 0=Bleu, 1=Brett
+var unlockedChars = parseInt(_ls.get('bleuChars','1')); // 1=Bleu only
+var activeChar    = parseInt(_ls.get('bleuActiveChar','0')); // 0=Bleu, 1=Brett
 var nftFlash      = 0; // NFT unlock animation counter
 var showCharSel   = false; // show character selector in idle
 
@@ -1370,14 +1395,13 @@ var showCharSel   = false; // show character selector in idle
 let bleu, pipes, score, frame, gameState, particles, lastGapCenter;
 let phaseFlash = 0, lastPhaseIdx = 0, phasePaused = false;
 let screenShake = 0, scorePop = 0, hitFlash = 0, bleuSquish = 0;
-let coins = [], coinCount = parseInt(localStorage.getItem('bleuCoins')||'0');
+let coins = [], coinCount = parseInt(_ls.get('bleuCoins','0'));
 // 🎁 DEV GRANT — one-time 1000 coins to test Alien (remove after testing)
-if(!localStorage.getItem('_devGrant1')){ coinCount = Math.max(coinCount, 1000); localStorage.setItem('bleuCoins', coinCount); localStorage.setItem('_devGrant1','1'); }
+if(!_ls.get('_devGrant1',null)){ coinCount = Math.max(coinCount, 1000); _ls.set('bleuCoins', coinCount); _ls.set('_devGrant1','1'); }
 // 🔄 SHOP v2 — limpa flags de unlock de testes anteriores (personagens agora bloqueados por prestige)
-if(localStorage.getItem('_shopV') !== '2'){
-  localStorage.removeItem('bleuGengar'); localStorage.removeItem('bleuWorm'); localStorage.removeItem('bleuAlien');
-  localStorage.removeItem('bleuBestPrestige');
-  localStorage.setItem('_shopV','2');
+if(_ls.get('_shopV',null) !== '2'){
+  try{ localStorage.removeItem('bleuGengar'); localStorage.removeItem('bleuWorm'); localStorage.removeItem('bleuAlien'); localStorage.removeItem('bleuBestPrestige'); }catch(e){}
+  _ls.set('_shopV','2');
 }
 // _mTimeout/_mPhase/_mPos removidos — substituídos pelo sistema HTML5 Audio
 var completedPhase=0, chestClicks=0, chestBounce=0, chestOpened=false, chestCoins=0, chestOpenAnim=0, awardCoins=0, awardCoinAnim=0;
@@ -1386,7 +1410,7 @@ var bleuFlapTimer=0; // frames of wing animation remaining after a flap
 var phantomFartParticles=[]; // gas puff particles for Phantom character
 var deadChest={active:false,opened:false,coins:0,anim:0};
 var idleTab='play';
-var totalScore=parseInt(localStorage.getItem('bleuTotal')||'0');
+var totalScore=parseInt(_ls.get('bleuTotal','0'));
 var shopOverlay=false, paused=false, phaseShopPending=false;
 var _bgGrad=null, _bgGradPhase=-1;
 var _gndGrad=null, _gndGradPhase=-1;
@@ -1395,13 +1419,13 @@ var _heavenMist=null, _dungeonMist=null;
 var lives=3, invincible=0, starPower=0, stars=[];
 // ── Itens de loja ──────────────────────────────────────────────
 var slowMoActive=0;       // frames restantes de slow-mo (2700=45s)
-var slowMoStock=parseInt(localStorage.getItem('bleuSlowMo')||'0');        // elixirs no inventário — persistido
-var checkpointStock=parseInt(localStorage.getItem('bleuCheckpoint')||'0'); // cartas de checkpoint — persistido
+var slowMoStock=parseInt(_ls.get('bleuSlowMo','0'));        // elixirs no inventário — persistido
+var checkpointStock=parseInt(_ls.get('bleuCheckpoint','0')); // cartas de checkpoint — persistido
 var checkpointUsed=false;   // carta já usada nesta run
 var heartUsed=false;        // coração USDC já comprado na morte nesta run
 var dizzyTimer=0;           // frames de estrelinhas de tontura após colisão
 var checkpointFlash=0;      // frames de overlay "CHECKPOINT!" após uso automático
-var extraHeartStock=parseInt(localStorage.getItem('bleuExtraHeart')||'0'); // corações extras — persistido
+var extraHeartStock=parseInt(_ls.get('bleuExtraHeart','0')); // corações extras — persistido
 var deathOfferTimer=0;    // countdown de oferta na tela de morte (frames)
 var shield=0, shieldItems=[], shieldBreak=0; // escudo power-up
 var fireStars=[]; var firePower=0;            // estrela vermelha — modo bola de fogo
@@ -1410,24 +1434,24 @@ var shieldPickedUp=0; // escudos pegos em jogo nesta fase (só valem até fim da
 var speedLines = [];
 (function(){ for(var i=0;i<18;i++) speedLines.push({ y: Math.random()*600, len: 40+Math.random()*80, speed: 6+Math.random()*8, alpha: 0.3+Math.random()*0.5 }); })();
 var combo=0, comboFlash=0, comboBest=0, recFlash=0, coinsThisRun=0, milestoneIdx=0;
-var lastScore=parseInt(localStorage.getItem('bleuLastScore')||'0');
+var lastScore=parseInt(_ls.get('bleuLastScore','0'));
 var runPhase=0; // fase mais longe desta run
-var bestPhaseEver=parseInt(localStorage.getItem('bleuBestPhase')||'0');
+var bestPhaseEver=parseInt(_ls.get('bleuBestPhase','0'));
 var shareFlash=0; // feedback do botão compartilhar
 var deadTapCount=0; // exige 3 toques para reiniciar (anti-acidente)
 var menuTapReady=true; // false após morte definitiva — exige 2 toques para iniciar (anti-acidente)
 var prestigeLevel=0; // NG+ prestige — sempre 0 ao iniciar; só sobe dentro da run ao completar prestige
-var bestPrestige=parseInt(localStorage.getItem('bleuBestPrestige')||'0'); // máximo histórico (leaderboard)
+var bestPrestige=parseInt(_ls.get('bleuBestPrestige','0')); // máximo histórico (leaderboard)
 var prestigeAnim=0;    // frame counter para tela prestige
 var prestigeCoinsReward=0; // coins ganhos no prestige atual
 const MILESTONES=[5,10,25,50,100];
-var activeChar=parseInt(localStorage.getItem('bleuChar')||'0');
-var activeColorBleu=parseInt(localStorage.getItem('bleuColorB')||'0');
-var activeColorGengar=parseInt(localStorage.getItem('bleuColorG')||'0');
-var activeColorWorm=parseInt(localStorage.getItem('bleuColorW')||'0');
-var unlockedColorsBleu=JSON.parse(localStorage.getItem('bleuColsB')||'[0]');
-var unlockedColorsGengar=JSON.parse(localStorage.getItem('bleuColsG')||'[]');
-var unlockedColorsWorm=JSON.parse(localStorage.getItem('bleuColsW')||'[]');
+var activeChar=parseInt(_ls.get('bleuChar','0'));
+var activeColorBleu=parseInt(_ls.get('bleuColorB','0'));
+var activeColorGengar=parseInt(_ls.get('bleuColorG','0'));
+var activeColorWorm=parseInt(_ls.get('bleuColorW','0'));
+var unlockedColorsBleu=_ls.getJSON('bleuColsB',[0]);
+var unlockedColorsGengar=_ls.getJSON('bleuColsG',[]);
+var unlockedColorsWorm=_ls.getJSON('bleuColsW',[]);
 // Desbloqueio por prestige (conquista) OU por USDC (pagamento permanente)
 // Phantom: zerar o jogo 1× (bestPrestige >= 1)
 // Worm:    zerar em modo NG+1 (bestPrestige >= 2)
@@ -1436,10 +1460,10 @@ var unlockedColorsWorm=JSON.parse(localStorage.getItem('bleuColsW')||'[]');
 var gengarUnlocked = bestPrestige >= 1 || localStorage.getItem('bleuGengar') === '1';
 var wormUnlocked   = bestPrestige >= 2 || localStorage.getItem('bleuWorm')   === '1';
 var alienUnlocked  = bestPrestige >= 3 || localStorage.getItem('bleuAlien')  === '1';
-var activeColorAlien=parseInt(localStorage.getItem('bleuColorA')||'0');
-var unlockedColorsAlien=JSON.parse(localStorage.getItem('bleuColsA')||'[]');
+var activeColorAlien=parseInt(_ls.get('bleuColorA','0'));
+var unlockedColorsAlien=_ls.getJSON('bleuColsA',[]);
 var shopChar=0, shopSelColor=0;
-var shieldStock=parseInt(localStorage.getItem('bleuShieldStock')||'0'); // purchasable shields
+var shieldStock=parseInt(_ls.get('bleuShieldStock','0')); // purchasable shields
 var chestType='normal';
 
 // ─── ONCHAIN CONFIG (TESTNET — Base Sepolia) ─────────────────
@@ -1473,7 +1497,7 @@ function fmtUSDC(a6){ return (TESTNET?'[TEST] ':'')+'$'+(a6/1e6).toFixed(2); }
 var walletAddress    = null;
 var walletShort      = null;
 var walletConnecting = false;
-var walletScores     = JSON.parse(localStorage.getItem('bleuWalletScores')||'[]');
+var walletScores     = _ls.getJSON('bleuWalletScores',[]);
 
 // Restore saved wallet — silently verify it's still authorized (no popup)
 (function() {
@@ -1516,7 +1540,7 @@ function connectWallet() {
     if(accounts && accounts.length>0){
       walletAddress = accounts[0];
       walletShort   = walletAddress.slice(0,6)+'...'+walletAddress.slice(-4);
-      localStorage.setItem('bleuWallet', walletAddress);
+      _ls.set('bleuWallet', walletAddress);
       beep(523,1047,0.22,'sine',0.15);
       [659,784,1047].forEach(function(f,i){setTimeout(function(){beep(f,f*1.5,0.12,'sine',0.12);},i*80);});
       if(navigator.vibrate) navigator.vibrate([30,20,60]);
@@ -1529,7 +1553,7 @@ function connectWallet() {
         if(accounts && accounts.length>0){
           walletAddress = accounts[0];
           walletShort   = walletAddress.slice(0,6)+'...'+walletAddress.slice(-4);
-          localStorage.setItem('bleuWallet', walletAddress);
+          _ls.set('bleuWallet', walletAddress);
           beep(523,1047,0.22,'sine',0.15);
         }
       }).catch(function(){});
@@ -1591,29 +1615,29 @@ function buyColorWithUSDC(charIdx, colorIdx) {
   var prices = USDC_COLOR_PRICES[charIdx];
   if(!prices || !prices[colorIdx]) return;
   sendUSDCPurchase(prices[colorIdx], function(){
-    if(charIdx===0){ unlockedColorsBleu.push(colorIdx); localStorage.setItem('bleuColsB',JSON.stringify(unlockedColorsBleu)); activeColorBleu=colorIdx; localStorage.setItem('bleuColorB',''+colorIdx); }
-    else if(charIdx===1){ unlockedColorsGengar.push(colorIdx); localStorage.setItem('bleuColsG',JSON.stringify(unlockedColorsGengar)); activeColorGengar=colorIdx; localStorage.setItem('bleuColorG',''+colorIdx); }
-    else { unlockedColorsWorm.push(colorIdx); localStorage.setItem('bleuColsW',JSON.stringify(unlockedColorsWorm)); activeColorWorm=colorIdx; localStorage.setItem('bleuColorW',''+colorIdx); }
-    activeChar=charIdx; localStorage.setItem('bleuChar',''+charIdx);
+    if(charIdx===0){ unlockedColorsBleu.push(colorIdx); _ls.set('bleuColsB',JSON.stringify(unlockedColorsBleu)); activeColorBleu=colorIdx; _ls.set('bleuColorB',''+colorIdx); }
+    else if(charIdx===1){ unlockedColorsGengar.push(colorIdx); _ls.set('bleuColsG',JSON.stringify(unlockedColorsGengar)); activeColorGengar=colorIdx; _ls.set('bleuColorG',''+colorIdx); }
+    else { unlockedColorsWorm.push(colorIdx); _ls.set('bleuColsW',JSON.stringify(unlockedColorsWorm)); activeColorWorm=colorIdx; _ls.set('bleuColorW',''+colorIdx); }
+    activeChar=charIdx; _ls.set('bleuChar',''+charIdx);
   });
 }
 
 function unlockCharWithUSDC(charIdx) {
   sendUSDCPurchase(USDC_CHAR_UNLOCK, function(){
     if(charIdx===1){
-      gengarUnlocked=true; localStorage.setItem('bleuGengar','1');
-      unlockedColorsGengar=[0]; localStorage.setItem('bleuColsG',JSON.stringify(unlockedColorsGengar));
-      activeColorGengar=0; localStorage.setItem('bleuColorG','0');
+      gengarUnlocked=true; _ls.set('bleuGengar','1');
+      unlockedColorsGengar=[0]; _ls.set('bleuColsG',JSON.stringify(unlockedColorsGengar));
+      activeColorGengar=0; _ls.set('bleuColorG','0');
     } else if(charIdx===2){
-      wormUnlocked=true; localStorage.setItem('bleuWorm','1');
-      unlockedColorsWorm=[0]; localStorage.setItem('bleuColsW',JSON.stringify(unlockedColorsWorm));
-      activeColorWorm=0; localStorage.setItem('bleuColorW','0');
+      wormUnlocked=true; _ls.set('bleuWorm','1');
+      unlockedColorsWorm=[0]; _ls.set('bleuColsW',JSON.stringify(unlockedColorsWorm));
+      activeColorWorm=0; _ls.set('bleuColorW','0');
     } else if(charIdx===3){
-      alienUnlocked=true; localStorage.setItem('bleuAlien','1');
-      unlockedColorsAlien=[0]; localStorage.setItem('bleuColsA',JSON.stringify(unlockedColorsAlien));
-      activeColorAlien=0; localStorage.setItem('bleuColorA','0');
+      alienUnlocked=true; _ls.set('bleuAlien','1');
+      unlockedColorsAlien=[0]; _ls.set('bleuColsA',JSON.stringify(unlockedColorsAlien));
+      activeColorAlien=0; _ls.set('bleuColorA','0');
     }
-    activeChar=charIdx; localStorage.setItem('bleuChar',''+charIdx);
+    activeChar=charIdx; _ls.set('bleuChar',''+charIdx);
     spawnParticles(W/2,H/2,'#FFD700',20);
   });
 }
@@ -1628,7 +1652,7 @@ function submitWalletScore(s) {
     return b.score - a.score;
   });
   if(walletScores.length>100) walletScores=walletScores.slice(0,100);
-  localStorage.setItem('bleuWalletScores', JSON.stringify(walletScores));
+  _ls.set('bleuWalletScores', JSON.stringify(walletScores));
 }
 
 function resetGame() {
@@ -1653,7 +1677,7 @@ function resetGame() {
   // slowMoStock e extraHeartStock NÃO são zerados — persistem para próxima run (limite já aplicado na compra)
   deadChest={active:false,opened:false,coins:0,anim:0,clicks:0};
   shield = 0; shieldPickedUp = 0;
-  shieldStock = 0; localStorage.setItem('bleuShieldStock', 0); // reseta ao morrer — compra denovo
+  shieldStock = 0; _ls.set('bleuShieldStock', 0); // reseta ao morrer — compra denovo
   phaseShopPending = false;
   shieldItems = []; shieldBreak = 0;
   runPhase = 0; shareFlash = 0; bleuAngle = 0; bleuFlapTimer = 0; phantomFartParticles = []; deadTapCount = 0;
@@ -4962,6 +4986,7 @@ function loop(ts) {
   requestAnimationFrame(loop);
   var dt = ts - _lastT;
   if(dt < 16) return; // cap 60fps — saves CPU/battery on 90/120Hz phones
+  if(dt > 33) dt = 33; // cap máximo: evita salto físico brutal após background tab / thermal throttle
   _lastT = ts;
   frame++;
   drawBg();
@@ -4969,7 +4994,7 @@ function loop(ts) {
   if(screenShake>0){ctx.translate((Math.random()-.5)*screenShake*2,(Math.random()-.5)*screenShake*.7);}
 
   // ── DAILY MODAL ──
-  if(dailyModal){ drawDailyModal(); return; }
+  if(dailyModal){ ctx.restore(); drawDailyModal(); return; } // restore antes do return — evita stack leak
 
   // ── IDLE ──
   if(gameState === 'idle'){
@@ -5004,12 +5029,12 @@ function loop(ts) {
       ctx.fillText('⬡  WEB3 GAME  ·  BASE NETWORK', 0, 0);
       ctx.shadowBlur=0; ctx.textBaseline='alphabetic'; ctx.restore();
 
-      // ── Prestige badge — só aparece se player já fez prestige ──
-      if(prestigeLevel > 0) {
+      // ── Prestige badge — usa bestPrestige (persiste entre runs, não zera no resetGame) ──
+      if(bestPrestige > 0) {
         var _prBadgeY = H/2-40;
         var _prGlow = 0.85+0.15*Math.sin(frame*0.09);
         ctx.save(); ctx.translate(W/2, _prBadgeY); ctx.scale(_prGlow, _prGlow);
-        var _prLabel = '★  NG+' + prestigeLevel + '  PRESTIGE  ' + prestigeLevel + '×';
+        var _prLabel = '★  NG+' + bestPrestige + '  PRESTIGE  ' + bestPrestige + '×';
         var _prW = ctx.measureText(_prLabel).width + 24;
         ctx.font = 'bold 9px Courier New';
         ctx.fillStyle = '#FFD70022'; ctx.strokeStyle = '#FFD700cc'; ctx.lineWidth = 1.5;
@@ -5280,14 +5305,14 @@ function loop(ts) {
           beep(160,80,0.3,'sawtooth',0.18);
           if(lives === 0){
             if(checkpointStock>0 && !checkpointUsed){
-              checkpointStock--; localStorage.setItem('bleuCheckpoint',checkpointStock);
+              checkpointStock--; _ls.set('bleuCheckpoint',checkpointStock);
               checkpointUsed=true; dizzyTimer=90; checkpointFlash=150;
               lives=3; invincible=240; bleu.y=H/2; bleu.vy=0;
               gameState='playing';
             } else {
-              totalScore+=score; localStorage.setItem('bleuTotal',totalScore);
-              if(score>highScore){highScore=score;newRecord=true;localStorage.setItem('bleuHS',highScore);}
-              lastScore=score; localStorage.setItem('bleuLastScore',lastScore);
+              totalScore+=score; _ls.set('bleuTotal',totalScore);
+              if(score>highScore){highScore=score;newRecord=true;_ls.set('bleuHS',highScore);}
+              lastScore=score; _ls.set('bleuLastScore',lastScore);
               saveTop5(score); submitWalletScore(score);
               stopMusic(); menuTapReady = false; resetGame();
             }
@@ -5402,23 +5427,23 @@ function loop(ts) {
         // ── Prestige trigger: score 150 = 15 pipes past phase 10 → NG+ ──
         if(score === 150 && getPhaseIdx() === 9 && prestigeLevel < 10) {
           // Finalise current run stats
-          totalScore += score; localStorage.setItem('bleuTotal', totalScore);
-          if(score > highScore){ highScore = score; newRecord = true; localStorage.setItem('bleuHS', highScore); }
-          lastScore = score; localStorage.setItem('bleuLastScore', lastScore);
+          totalScore += score; _ls.set('bleuTotal', totalScore);
+          if(score > highScore){ highScore = score; newRecord = true; _ls.set('bleuHS', highScore); }
+          lastScore = score; _ls.set('bleuLastScore', lastScore);
           saveTop5(score);
           submitWalletScore(score);
           // Award prestige — sobe só nesta run; salva máximo histórico para leaderboard
           prestigeLevel++;
           if(prestigeLevel > bestPrestige){
             bestPrestige = prestigeLevel;
-            localStorage.setItem('bleuBestPrestige', bestPrestige);
+            _ls.set('bleuBestPrestige', bestPrestige);
             // Recalcula unlocks — novos personagens podem ter sido desbloqueados
             gengarUnlocked = bestPrestige >= 1 || localStorage.getItem('bleuGengar') === '1';
             wormUnlocked   = bestPrestige >= 2 || localStorage.getItem('bleuWorm')   === '1';
             alienUnlocked  = bestPrestige >= 3 || localStorage.getItem('bleuAlien')  === '1';
           }
           prestigeCoinsReward = 100 + prestigeLevel * 50;
-          coinCount += prestigeCoinsReward; if(coinCount>100000)coinCount=100000; localStorage.setItem('bleuCoins', coinCount);
+          coinCount += prestigeCoinsReward; if(coinCount>100000)coinCount=100000; _ls.set('bleuCoins', coinCount);
           // Enter prestige screen
           prestigeAnim = 0;
           gameState = 'prestige';
@@ -5458,7 +5483,7 @@ function loop(ts) {
           // NFT unlock at phase 10 (score >= 100 in test mode)
           if(newPI >= 9 && unlockedChars < 2) { // phase 10 reached (score >= 36 in test mode)
             unlockedChars = 2;
-            localStorage.setItem('bleuChars', '2');
+            _ls.set('bleuChars', '2');
             nftFlash = 220;
             spawnParticles(W/2, H/2, '#FF6B20', 40);
             spawnParticles(W/2, H/2, '#FFD700', 40);
@@ -5471,7 +5496,7 @@ function loop(ts) {
             var _base=(chestType==='rare'?60:chestType==='gold'?35:15);
             var _pc=_base+Math.floor(Math.random()*10);
             awardCoins=_pc; awardCoinAnim=0;
-            coinCount+=_pc; if(coinCount>100000)coinCount=100000; localStorage.setItem('bleuCoins',coinCount);
+            coinCount+=_pc; if(coinCount>100000)coinCount=100000; _ls.set('bleuCoins',coinCount);
             spawnParticles(W/2,H/2,'#FFD700',14); spawnParticles(W/2,H/2,'#fff',6);
             if(navigator.vibrate) navigator.vibrate([40,20,80]);
             gameState='award'; bleu.vy=0; }
@@ -5508,7 +5533,7 @@ function loop(ts) {
         if(Math.sqrt(dx3*dx3 + dy3*dy3) < 23) {
           coin.collected = true;
           coinCount++; coinsThisRun++;
-          localStorage.setItem('bleuCoins',coinCount);
+          _ls.set('bleuCoins',coinCount);
           spawnParticles(coin.x, coin.y, '#88ccff', 8);
           spawnParticles(coin.x, coin.y, '#ffffff', 4);
           beep(880, 1320, 0.12, 'sine', 0.1);
@@ -5663,7 +5688,7 @@ function loop(ts) {
         // Sem vidas — verifica carta de checkpoint primeiro
         if(checkpointStock > 0 && !checkpointUsed) {
           // ── Auto-revive via carta ──
-          checkpointStock--; localStorage.setItem('bleuCheckpoint', checkpointStock);
+          checkpointStock--; _ls.set('bleuCheckpoint', checkpointStock);
           checkpointUsed = true; dizzyTimer = 90; checkpointFlash = 150; // mostra overlay 2.5s
           lives = 3; invincible = 240;
           bleu.y = H / 2; bleu.vy = 0;
@@ -5680,12 +5705,12 @@ function loop(ts) {
           spawnParticles(bleu.x, bleu.y, '#FF1744', 12);
           beep(350, 60, 0.5, 'sawtooth', 0.25);
           if(score > highScore){
-            highScore = score; localStorage.setItem('bleuHS', highScore);
+            highScore = score; _ls.set('bleuHS', highScore);
           }
-          lastScore=score; localStorage.setItem('bleuLastScore',lastScore);
-          totalScore+=score; localStorage.setItem('bleuTotal',totalScore);
+          lastScore=score; _ls.set('bleuLastScore',lastScore);
+          totalScore+=score; _ls.set('bleuTotal',totalScore);
           if(score>0) top5=saveTop5(score);
-          if(runPhase > bestPhaseEver){ bestPhaseEver=runPhase; localStorage.setItem('bleuBestPhase', bestPhaseEver); }
+          if(runPhase > bestPhaseEver){ bestPhaseEver=runPhase; _ls.set('bleuBestPhase', bestPhaseEver); }
           if(comboBest<combo) comboBest=combo;
           if(score>0) submitWalletScore(score);
           if(navigator.vibrate) navigator.vibrate([80,30,80]);
@@ -5936,21 +5961,16 @@ function loop(ts) {
       ctx.restore();
     }
 
-    // ── Botão JOGAR DE NOVO — exige 3 toques anti-acidente ──
+    // ── Botão PLAY AGAIN ──
     var pulse2 = 0.97 + 0.03*Math.sin(frame*0.12);
-    // cor e label mudam com progresso dos toques
-    var _tapBtnCol = deadTapCount === 0 ? '#0052FF' : deadTapCount === 1 ? '#005FCC' : '#007A44';
-    var _tapLabel  = deadTapCount === 0 ? '▶  PLAY AGAIN'
-                   : deadTapCount === 1 ? '▶  ●○○  tap again'
-                   :                      '▶  ●●○  one more!';
     ctx.save(); ctx.translate(W/2, H/2+178); ctx.scale(pulse2, pulse2);
-    ctx.fillStyle = _tapBtnCol;
-    ctx.shadowColor = _tapBtnCol; ctx.shadowBlur = deadTapCount > 0 ? 18 : 0;
+    ctx.fillStyle = '#0052FF';
+    ctx.shadowColor = '#0052FF'; ctx.shadowBlur = 0;
     ctx.beginPath(); ctx.roundRect(-78,-17,156,34,10); ctx.fill();
     ctx.shadowBlur = 0;
-    ctx.font = deadTapCount > 0 ? 'bold 11px Courier New' : 'bold 14px Courier New';
+    ctx.font = 'bold 14px Courier New';
     ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillStyle='#fff'; ctx.fillText(_tapLabel, 0, 0);
+    ctx.fillStyle='#fff'; ctx.fillText('▶  PLAY AGAIN', 0, 0);
     ctx.textBaseline='alphabetic'; ctx.restore();
 
     // ── Botão MENU ──
@@ -6043,8 +6063,8 @@ function flap() {
     }
     gameState='playing'; startMusic(getPhaseIdx()); combo=0; comboFlash=0; coinsThisRun=0; milestoneIdx=0; recFlash=0; phaseFlash=190; phasePaused=true; bleu.vy=0; bleu.vx=0; bleu.y=H/2;
     // Aplicar itens comprados ao iniciar a run
-    if(shieldStock>0){ shield=Math.min(3,shieldStock); shieldStock=0; shieldPickedUp=0; localStorage.setItem('bleuShieldStock',0); }
-    if(extraHeartStock>0){ lives=3+Math.min(extraHeartStock,2); extraHeartStock=0; localStorage.setItem('bleuExtraHeart',0); }
+    if(shieldStock>0){ shield=Math.min(3,shieldStock); shieldStock=0; shieldPickedUp=0; _ls.set('bleuShieldStock',0); }
+    if(extraHeartStock>0){ lives=3+Math.min(extraHeartStock,2); extraHeartStock=0; _ls.set('bleuExtraHeart',0); }
     else { lives=3; }
     // slowMoStock e checkpointStock ficam disponíveis para uso em jogo
   }
@@ -6101,7 +6121,7 @@ function handleClick(ex, ey) {
     var _smBdx=cx-34, _smBdy=cy-(H-162);
     var _smHit = (_smBdx*_smBdx+_smBdy*_smBdy<=22*22); // círculo em baixo
     if(_smHit){
-      slowMoStock--; localStorage.setItem('bleuSlowMo',slowMoStock); slowMoActive=2700;
+      slowMoStock--; _ls.set('bleuSlowMo',slowMoStock); slowMoActive=2700;
       beep(300,600,0.18,'sine',0.14);
       beep(440,880,0.12,'sine',0.1);
       spawnParticles(bleu.x,bleu.y,'#00D4FF',14);
@@ -6114,7 +6134,7 @@ function handleClick(ex, ey) {
   if(gameState==='playing' && shopOverlay){
     var _mgClose = function(){
       shopOverlay = false;
-      if(shieldStock>0){ shield=Math.min(3,shield+shieldStock); shieldStock=0; localStorage.setItem('bleuShieldStock',0); }
+      if(shieldStock>0){ shield=Math.min(3,shield+shieldStock); shieldStock=0; _ls.set('bleuShieldStock',0); }
       phasePaused = false; phaseFlash = 0;
       startMusic(getPhaseIdx());
     };
@@ -6153,7 +6173,7 @@ function handleClick(ex, ey) {
         if(!checkpointUsed) {
           if(checkpointStock > 0) {
             // Usa carta já comprada — não requer wallet
-            checkpointStock--; localStorage.setItem('bleuCheckpoint', checkpointStock);
+            checkpointStock--; _ls.set('bleuCheckpoint', checkpointStock);
             checkpointUsed=true; dizzyTimer=90;
             lives=3; invincible=240; bleu.y=H/2; bleu.vy=0;
             gameState='playing'; startMusic(getPhaseIdx());
@@ -6192,7 +6212,7 @@ function handleClick(ex, ey) {
     // Death chest tap (área no centro inferior)
     if(deadChest.active && !deadChest.opened && cy>=H/2+152&&cy<=H/2+224&&cx>=W/2-70&&cx<=W/2+70){
       deadChest.opened=true;
-      coinCount+=deadChest.coins; localStorage.setItem('bleuCoins',coinCount);
+      coinCount+=deadChest.coins; _ls.set('bleuCoins',coinCount);
       beep(523,1047,0.2,'sine',0.14);
       [659,784,1047].forEach(function(f,i){setTimeout(function(){beep(f,f*1.5,0.12,'sine',0.1);},i*70);});
       spawnParticles(W/2,H/2+196,'#FFD700',14);
@@ -6259,25 +6279,25 @@ function handleClick(ex, ey) {
           if(_ii===0){ // Shield — coins
             if(shieldStock>=3){ beep(220,150,0.1,'sawtooth',0.06); return; }
             if(coinCount>=80){
-              coinCount-=80; if(coinCount<0)coinCount=0; localStorage.setItem('bleuCoins',coinCount);
-              shieldStock++; localStorage.setItem('bleuShieldStock',shieldStock);
+              coinCount-=80; if(coinCount<0)coinCount=0; _ls.set('bleuCoins',coinCount);
+              shieldStock++; _ls.set('bleuShieldStock',shieldStock);
               beep(523,1047,0.22,'sine',0.13);
               [659,784].forEach(function(f,i){setTimeout(function(){beep(f,f,0.1,'sine',0.09);},i*60);});
               spawnParticles(W/2,H/2,'#00FF88',10);
             } else { beep(220,150,0.12,'sawtooth',0.08); hitFlash=3; }
           } else if(_ii===1&&walletAddress&&slowMoStock<5){ // Slow-Mo — USDC, máx 5 por run
             sendUSDCPurchase(USDC_SLOWMO, function(){
-              slowMoStock = Math.min(slowMoStock+1, 5); localStorage.setItem('bleuSlowMo',slowMoStock);
+              slowMoStock = Math.min(slowMoStock+1, 5); _ls.set('bleuSlowMo',slowMoStock);
               beep(440,880,0.2,'sine',0.14); spawnParticles(W/2,H/2,'#00D4FF',14);
             });
           } else if(_ii===2&&walletAddress&&extraHeartStock<2){ // Coração — USDC
             sendUSDCPurchase(USDC_HEART, function(){
-              extraHeartStock++; localStorage.setItem('bleuExtraHeart',extraHeartStock);
+              extraHeartStock++; _ls.set('bleuExtraHeart',extraHeartStock);
               beep(523,880,0.2,'sine',0.14); spawnParticles(W/2,H/2,'#FF6680',14);
             });
           } else if(_ii===3&&walletAddress&&checkpointStock<1){ // Checkpoint — USDC
             sendUSDCPurchase(USDC_CHECKPOINT, function(){
-              checkpointStock=1; localStorage.setItem('bleuCheckpoint',1);
+              checkpointStock=1; _ls.set('bleuCheckpoint',1);
               beep(660,1320,0.25,'sine',0.16);
               [880,1047].forEach(function(f,i){setTimeout(function(){beep(f,f,0.12,'sine',0.1);},i*80);});
               spawnParticles(W/2,H/2,'#FFD700',18);
@@ -6331,8 +6351,8 @@ function handleClick(ex, ey) {
 // Character select (legacy, play tab)
     if(idleTab==='play' && unlockedChars >= 2) {
       var bx1=W/2-55, bx2=W/2+15, bby=H/2+80, bbw=40, bbh=16;
-      if(cx>=bx1&&cx<=bx1+bbw&&cy>=bby&&cy<=bby+bbh){ activeChar=0; localStorage.setItem('bleuActiveChar','0'); beep(440,880,0.1,'sine',0.12); return; }
-      if(cx>=bx2&&cx<=bx2+bbw&&cy>=bby&&cy<=bby+bbh){ activeChar=1; localStorage.setItem('bleuActiveChar','1'); beep(660,1320,0.1,'sine',0.12); return; }
+      if(cx>=bx1&&cx<=bx1+bbw&&cy>=bby&&cy<=bby+bbh){ activeChar=0; _ls.set('bleuActiveChar','0'); beep(440,880,0.1,'sine',0.12); return; }
+      if(cx>=bx2&&cx<=bx2+bbw&&cy>=bby&&cy<=bby+bbh){ activeChar=1; _ls.set('bleuActiveChar','1'); beep(660,1320,0.1,'sine',0.12); return; }
     }
     return; // idle: qualquer clique sem alvo não deve iniciar o jogo
   }
@@ -6360,7 +6380,7 @@ document.addEventListener('keydown', function(e){
     e.preventDefault();
     if(gameState==='award'){ handleClick(canvas.getBoundingClientRect().left + W/2, canvas.getBoundingClientRect().top + H/2); return; }
     if(paused){ paused=false; return; }
-    if(shopOverlay){ shopOverlay=false; if(shieldStock>0){shield=Math.min(3,shield+shieldStock);shieldStock=0;localStorage.setItem('bleuShieldStock',0);} phasePaused=false; phaseFlash=0; startMusic(getPhaseIdx()); return; }
+    if(shopOverlay){ shopOverlay=false; if(shieldStock>0){shield=Math.min(3,shield+shieldStock);shieldStock=0;_ls.set('bleuShieldStock',0);} phasePaused=false; phaseFlash=0; startMusic(getPhaseIdx()); return; }
     flap();
   }
   if(e.code==='KeyP' && (gameState==='playing'||paused)){ paused=!paused; }
