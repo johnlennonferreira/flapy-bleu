@@ -733,86 +733,82 @@ function drawShopTab() {
     }
   }
 
-  // ── Gengar unlock overlay ──
+  // ── Função de overlay de personagem bloqueado ──
+  function _drawLockedCharOverlay(charIdx, drawFn, accentCol, borderCol, req1, req2) {
+    // Fundo escuro
+    ctx.fillStyle = 'rgba(0,4,14,0.92)';
+    ctx.beginPath(); ctx.roundRect(W/2-122, 93, 244, 430, 14); ctx.fill();
+    ctx.strokeStyle = borderCol + '44'; ctx.lineWidth = 1.5; ctx.stroke();
+
+    // Silhueta — personagem bem escuro (só a forma)
+    ctx.save();
+    ctx.translate(W/2, 228); ctx.scale(1.95, 1.95);
+    // Aplica filtro cinza/escuro via compositing
+    ctx.globalAlpha = 0.13;
+    drawFn(0, 0, 0, 0);
+    ctx.globalAlpha = 1;
+    ctx.restore();
+
+    // "?" gigante sobre a silhueta
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 72px Courier New';
+    ctx.fillStyle = '#ffffff'; ctx.globalAlpha = 0.08;
+    ctx.fillText('?', W/2, 265);
+    ctx.globalAlpha = 1;
+    ctx.font = 'bold 56px Courier New';
+    ctx.fillStyle = accentCol; ctx.globalAlpha = 0.55;
+    ctx.fillText('?', W/2, 262);
+    ctx.globalAlpha = 1;
+
+    // Nome + lock
+    ctx.font = 'bold 14px Courier New'; ctx.fillStyle = accentCol;
+    ctx.fillText('🔒 ' + ['BLEU','PHANTOM','WORM','ALIEN'][charIdx], W/2, 308);
+
+    // Requisito principal
+    ctx.font = 'bold 10px Courier New'; ctx.fillStyle = '#ffffff88';
+    ctx.fillText(req1, W/2, 332);
+    ctx.font = '9px Courier New'; ctx.fillStyle = '#ffffff44';
+    ctx.fillText(req2, W/2, 348);
+
+    // Progresso — mostra bestPrestige atual
+    var _need = charIdx === 1 ? 1 : charIdx === 2 ? 2 : 3;
+    ctx.font = '9px Courier New'; ctx.fillStyle = '#ffffff33';
+    ctx.fillText('seu melhor: NG+' + bestPrestige + ' / NG+' + _need + ' necessário', W/2, 366);
+
+    // Botão USDC (caminho alternativo — skip do requisito)
+    if(walletAddress){
+      ctx.fillStyle = '#0052FF18'; ctx.strokeStyle = '#0052FFaa'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.roundRect(W/2-90, 382, 180, 36, 10); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#66aaff'; ctx.font = 'bold 11px Courier New';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('⛓  DESBLOQUEAR · USDC $0.50', W/2, 400);
+      ctx.textBaseline = 'alphabetic';
+      ctx.font = '8px Courier New'; ctx.fillStyle = '#ffffff33';
+      ctx.fillText('desbloqueio permanente via Base Network', W/2, 424);
+    } else {
+      ctx.font = '8px Courier New'; ctx.fillStyle = '#ffffff22';
+      ctx.fillText('conecte carteira para desbloquear via USDC', W/2, 400);
+    }
+  }
+
+  // ── Overlays de personagens bloqueados ──
   if(shopChar===1&&!gengarUnlocked){
-    ctx.fillStyle='rgba(0,5,20,0.88)';
-    ctx.beginPath(); ctx.roundRect(W/2-122,93,244,430,14); ctx.fill();
-    ctx.strokeStyle='#9933ff55'; ctx.lineWidth=1.5; ctx.stroke();
-    ctx.save(); ctx.translate(W/2,240); ctx.scale(2,2); ctx.globalAlpha=0.6;
-    drawPhantom(0,0,frame*0.22,0); ctx.globalAlpha=1; ctx.restore();
-    ctx.font='bold 15px Courier New'; ctx.fillStyle='#aa44ff';
-    ctx.shadowColor='#aa44ff'; ctx.shadowBlur=14;
-    ctx.fillText('🔒 PHANTOM', W/2, 310); ctx.shadowBlur=0;
-    ctx.font='10px Courier New'; ctx.fillStyle='#ffffff55';
-    ctx.fillText('phantom of the Base Network', W/2, 328);
-    var _canUnlock=coinCount>=500;
-    ctx.fillStyle=_canUnlock?'#aa44ff22':'#ffffff08';
-    ctx.strokeStyle=_canUnlock?'#aa44ff':'#ffffff22'; ctx.lineWidth=1.5;
-    ctx.beginPath(); ctx.roundRect(W/2-82,344,164,36,10); ctx.fill(); ctx.stroke();
-    ctx.fillStyle=_canUnlock?'#cc88ff':'#ffffff44'; ctx.font='bold 12px Courier New';
-    ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText('UNLOCK  🐉 500', W/2, 362); ctx.textBaseline='alphabetic';
-    if(walletAddress){
-      ctx.fillStyle='#0052FF1a'; ctx.strokeStyle='#0052FF'; ctx.lineWidth=1.5;
-      ctx.beginPath(); ctx.roundRect(W/2-82,386,164,34,10); ctx.fill(); ctx.stroke();
-      ctx.fillStyle='#4499ff'; ctx.font='bold 12px Courier New';
-      ctx.textAlign='center'; ctx.textBaseline='middle';
-      ctx.fillText('⛓ UNLOCK  USDC $0.50', W/2, 403); ctx.textBaseline='alphabetic';
-    }
+    _drawLockedCharOverlay(1, function(x,y,f,a){ drawPhantom(x,y,f,a); },
+      '#aa44ff', '#9933ff',
+      'ZERE AS 10 FASES PELA 1ª VEZ',
+      'complete 1 loop completo para desbloquear');
   }
-  // ── Worm unlock overlay ──
   if(shopChar===2&&!wormUnlocked){
-    ctx.fillStyle='rgba(2,8,2,0.90)';
-    ctx.beginPath(); ctx.roundRect(W/2-122,93,244,430,14); ctx.fill();
-    ctx.strokeStyle='#44aa2255'; ctx.lineWidth=1.5; ctx.stroke();
-    ctx.save(); ctx.translate(W/2,240); ctx.scale(1.9,1.9); ctx.globalAlpha=0.7;
-    drawWorm(0,0,frame*0.22,0); ctx.globalAlpha=1; ctx.restore();
-    ctx.font='bold 15px Courier New'; ctx.fillStyle='#88dd44';
-    ctx.shadowColor='#88dd44'; ctx.shadowBlur=14;
-    ctx.fillText('🔒 WORM', W/2, 310); ctx.shadowBlur=0;
-    ctx.font='10px Courier New'; ctx.fillStyle='#ffffff44';
-    ctx.fillText('the wiggle champion', W/2, 328);
-    var _canUnlockW=coinCount>=500;
-    ctx.fillStyle=_canUnlockW?'#336611':'#ffffff08';
-    ctx.strokeStyle=_canUnlockW?'#88dd44':'#ffffff22'; ctx.lineWidth=1.5;
-    ctx.beginPath(); ctx.roundRect(W/2-82,344,164,36,10); ctx.fill(); ctx.stroke();
-    ctx.fillStyle=_canUnlockW?'#aaffaa':'#ffffff44'; ctx.font='bold 12px Courier New';
-    ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText('UNLOCK  🐉 500', W/2, 362); ctx.textBaseline='alphabetic';
-    if(walletAddress){
-      ctx.fillStyle='#0052FF1a'; ctx.strokeStyle='#0052FF'; ctx.lineWidth=1.5;
-      ctx.beginPath(); ctx.roundRect(W/2-82,386,164,34,10); ctx.fill(); ctx.stroke();
-      ctx.fillStyle='#4499ff'; ctx.font='bold 12px Courier New';
-      ctx.textAlign='center'; ctx.textBaseline='middle';
-      ctx.fillText('⛓ UNLOCK  USDC $0.50', W/2, 403); ctx.textBaseline='alphabetic';
-    }
+    _drawLockedCharOverlay(2, function(x,y,f,a){ drawWorm(x,y,f,a); },
+      '#88dd44', '#44aa22',
+      'ZERE O JOGO EM MODO NG+1',
+      'complete 2 loops para desbloquear');
   }
-  // ── Alien unlock overlay ──
   if(shopChar===3&&!alienUnlocked){
-    ctx.fillStyle='rgba(0,8,0,0.90)';
-    ctx.beginPath(); ctx.roundRect(W/2-122,93,244,430,14); ctx.fill();
-    ctx.strokeStyle='#00FF4455'; ctx.lineWidth=1.5; ctx.stroke();
-    ctx.save(); ctx.translate(W/2,240); ctx.scale(2,2); ctx.globalAlpha=0.7;
-    drawAlien(0,0,frame*0.22,0); ctx.globalAlpha=1; ctx.restore();
-    ctx.font='bold 15px Courier New'; ctx.fillStyle='#44FF88';
-    ctx.shadowColor='#00FF44'; ctx.shadowBlur=14;
-    ctx.fillText('🔒 ALIEN', W/2, 310); ctx.shadowBlur=0;
-    ctx.font='10px Courier New'; ctx.fillStyle='#ffffff44';
-    ctx.fillText('pilot from the outer zones', W/2, 328);
-    var _canUnlockA=coinCount>=500;
-    ctx.fillStyle=_canUnlockA?'#00441a':'#ffffff08';
-    ctx.strokeStyle=_canUnlockA?'#44FF88':'#ffffff22'; ctx.lineWidth=1.5;
-    ctx.beginPath(); ctx.roundRect(W/2-82,344,164,36,10); ctx.fill(); ctx.stroke();
-    ctx.fillStyle=_canUnlockA?'#aaffcc':'#ffffff44'; ctx.font='bold 12px Courier New';
-    ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText('UNLOCK  🐉 500', W/2, 362); ctx.textBaseline='alphabetic';
-    if(walletAddress){
-      ctx.fillStyle='#0052FF1a'; ctx.strokeStyle='#0052FF'; ctx.lineWidth=1.5;
-      ctx.beginPath(); ctx.roundRect(W/2-82,386,164,34,10); ctx.fill(); ctx.stroke();
-      ctx.fillStyle='#4499ff'; ctx.font='bold 12px Courier New';
-      ctx.textAlign='center'; ctx.textBaseline='middle';
-      ctx.fillText('⛓ UNLOCK  USDC $0.50', W/2, 403); ctx.textBaseline='alphabetic';
-    }
+    _drawLockedCharOverlay(3, function(x,y,f,a){ drawAlien(x,y,f,a); },
+      '#44FF88', '#00FF44',
+      'ZERE O JOGO EM MODO NG+2',
+      'complete 3 loops para desbloquear');
   }
   ctx.textAlign='center';
 
@@ -1153,9 +1149,14 @@ var activeColorWorm=parseInt(localStorage.getItem('bleuColorW')||'0');
 var unlockedColorsBleu=JSON.parse(localStorage.getItem('bleuColsB')||'[0]');
 var unlockedColorsGengar=JSON.parse(localStorage.getItem('bleuColsG')||'[]');
 var unlockedColorsWorm=JSON.parse(localStorage.getItem('bleuColsW')||'[]');
-var gengarUnlocked=localStorage.getItem('bleuGengar')==='1';
-var wormUnlocked=localStorage.getItem('bleuWorm')==='1';
-var alienUnlocked=localStorage.getItem('bleuAlien')==='1';
+// Desbloqueio por prestige (conquista) OU por USDC (pagamento permanente)
+// Phantom: zerar o jogo 1× (bestPrestige >= 1)
+// Worm:    zerar em modo NG+1 (bestPrestige >= 2)
+// Alien:   zerar em modo NG+2 (bestPrestige >= 3)
+// Viking (futuro): bestPrestige >= 5
+var gengarUnlocked = bestPrestige >= 1 || localStorage.getItem('bleuGengar') === '1';
+var wormUnlocked   = bestPrestige >= 2 || localStorage.getItem('bleuWorm')   === '1';
+var alienUnlocked  = bestPrestige >= 3 || localStorage.getItem('bleuAlien')  === '1';
 var activeColorAlien=parseInt(localStorage.getItem('bleuColorA')||'0');
 var unlockedColorsAlien=JSON.parse(localStorage.getItem('bleuColsA')||'[]');
 var shopChar=0, shopSelColor=0;
@@ -4791,7 +4792,14 @@ function loop(ts) {
           submitWalletScore(score);
           // Award prestige — sobe só nesta run; salva máximo histórico para leaderboard
           prestigeLevel++;
-          if(prestigeLevel > bestPrestige){ bestPrestige = prestigeLevel; localStorage.setItem('bleuBestPrestige', bestPrestige); }
+          if(prestigeLevel > bestPrestige){
+            bestPrestige = prestigeLevel;
+            localStorage.setItem('bleuBestPrestige', bestPrestige);
+            // Recalcula unlocks — novos personagens podem ter sido desbloqueados
+            gengarUnlocked = bestPrestige >= 1 || localStorage.getItem('bleuGengar') === '1';
+            wormUnlocked   = bestPrestige >= 2 || localStorage.getItem('bleuWorm')   === '1';
+            alienUnlocked  = bestPrestige >= 3 || localStorage.getItem('bleuAlien')  === '1';
+          }
           prestigeCoinsReward = 100 + prestigeLevel * 50;
           coinCount += prestigeCoinsReward; if(coinCount>100000)coinCount=100000; localStorage.setItem('bleuCoins', coinCount);
           // Enter prestige screen
@@ -5492,57 +5500,10 @@ function handleClick(ex, ey) {
         } else { beep(220,150,0.12,'sawtooth',0.08); hitFlash=3; }
         return;
       }
-      // Worm USDC unlock
-      if(shopChar===2&&!wormUnlocked&&walletAddress&&cx>=W/2-82&&cx<=W/2+82&&cy>=386&&cy<=420){ unlockCharWithUSDC(2); return; }
-      // Phantom USDC unlock
-      if(shopChar===1&&!gengarUnlocked&&walletAddress&&cx>=W/2-82&&cx<=W/2+82&&cy>=386&&cy<=420){ unlockCharWithUSDC(1); return; }
-      // Alien USDC unlock
-      if(shopChar===3&&!alienUnlocked&&walletAddress&&cx>=W/2-82&&cx<=W/2+82&&cy>=386&&cy<=420){ unlockCharWithUSDC(3); return; }
-      // Alien unlock button (coins)
-      if(shopChar===3&&!alienUnlocked&&cx>=W/2-82&&cx<=W/2+82&&cy>=344&&cy<=382){
-        if(coinCount>=500){
-          coinCount-=500; localStorage.setItem('bleuCoins',coinCount);
-          alienUnlocked=true; localStorage.setItem('bleuAlien','1');
-          unlockedColorsAlien=[0]; localStorage.setItem('bleuColsA',JSON.stringify(unlockedColorsAlien));
-          activeChar=3; activeColorAlien=0;
-          localStorage.setItem('bleuChar','3'); localStorage.setItem('bleuColorA','0');
-          beep(660,1320,0.35,'sine',0.18);
-          [880,1047,1320,1760].forEach(function(f,i){setTimeout(function(){beep(f,f*1.2,0.13,'sine',0.1);},i*80);});
-          spawnParticles(W/2,H/2,'#44FF88',20); spawnParticles(W/2,H/2,'#00D4FF',12);
-          if(navigator.vibrate) navigator.vibrate([20,10,50,10,100,10,80]);
-        } else { beep(220,150,0.12,'sawtooth',0.08); hitFlash=3; }
-        return;
-      }
-      // Worm unlock button (coins)
-      if(shopChar===2&&!wormUnlocked&&cx>=W/2-82&&cx<=W/2+82&&cy>=344&&cy<=382){
-        if(coinCount>=500){
-          coinCount-=500; localStorage.setItem('bleuCoins',coinCount);
-          wormUnlocked=true; localStorage.setItem('bleuWorm','1');
-          unlockedColorsWorm=[0]; localStorage.setItem('bleuColsW',JSON.stringify(unlockedColorsWorm));
-          activeChar=2; activeColorWorm=0;
-          localStorage.setItem('bleuChar','2'); localStorage.setItem('bleuColorW','0');
-          beep(523,880,0.3,'sine',0.16);
-          [440,660,880].forEach(function(f,i){setTimeout(function(){beep(f,f*1.2,0.12,'sine',0.1);},i*80);});
-          spawnParticles(W/2,H/2,'#88dd44',18); spawnParticles(W/2,H/2,'#ffffff',8);
-          if(navigator.vibrate) navigator.vibrate([30,15,60,15,100]);
-        } else { beep(220,150,0.12,'sawtooth',0.08); hitFlash=3; }
-        return;
-      }
-      // Gengar/Phantom unlock button (coins)
-      if(shopChar===1&&!gengarUnlocked&&cx>=W/2-82&&cx<=W/2+82&&cy>=344&&cy<=382){
-        if(coinCount>=500){
-          coinCount-=500; localStorage.setItem('bleuCoins',coinCount);
-          gengarUnlocked=true; localStorage.setItem('bleuGengar','1');
-          unlockedColorsGengar=[0]; localStorage.setItem('bleuColsG',JSON.stringify(unlockedColorsGengar));
-          activeChar=1; activeColorGengar=0;
-          localStorage.setItem('bleuChar','1'); localStorage.setItem('bleuColorG','0');
-          beep(523,1047,0.35,'sine',0.18);
-          [659,784,880,1047].forEach(function(f,i){setTimeout(function(){beep(f,f*1.5,0.15,'sine',0.12);},i*90);});
-          spawnParticles(W/2,H/2,'#aa44ff',20); spawnParticles(W/2,H/2,'#ffffff',8);
-          if(navigator.vibrate) navigator.vibrate([30,20,60,20,100]);
-        } else { beep(220,150,0.12,'sawtooth',0.08); hitFlash=3; }
-        return;
-      }
+      // ── USDC unlock — área do botão (y 382-418, x ±90 do centro) ──
+      if(!gengarUnlocked && shopChar===1 && walletAddress && cx>=W/2-90 && cx<=W/2+90 && cy>=382 && cy<=418){ unlockCharWithUSDC(1); return; }
+      if(!wormUnlocked   && shopChar===2 && walletAddress && cx>=W/2-90 && cx<=W/2+90 && cy>=382 && cy<=418){ unlockCharWithUSDC(2); return; }
+      if(!alienUnlocked  && shopChar===3 && walletAddress && cx>=W/2-90 && cx<=W/2+90 && cy>=382 && cy<=418){ unlockCharWithUSDC(3); return; }
     }
     // Leaderboard tab: botão wallet
     if(idleTab==='leaderboard'){
