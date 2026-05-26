@@ -25,18 +25,21 @@
 <!-- ── Farcaster Mini App SDK — dismiss splash + wallet bridge ── -->
 <script type="module">
   import { sdk } from 'https://esm.sh/@farcaster/miniapp-sdk@latest';
-  // Expõe SDK globalmente para o código do jogo
   window._fcSdk = sdk;
-  // Injeta provider como window.ethereum quando rodando dentro de cliente Farcaster/Base
-  // (MetaMask não existe dentro do Mini App — a wallet vem do SDK)
   try {
     var _prov = await sdk.wallet.getEthereumProvider();
-    if (_prov && !window.ethereum) {
-      window.ethereum = _prov;
-      console.log('[MiniApp] Wallet provider injetado via Farcaster SDK');
+    if (_prov) {
+      if (!window.ethereum) window.ethereum = _prov;
+      // Inside Farcaster/Base the wallet is already connected — grab accounts silently
+      try {
+        var _accs = await _prov.request({ method: 'eth_accounts' });
+        if (_accs && _accs[0]) {
+          // Signal game code that wallet is ready (game reads this on next frame)
+          window._fcWalletAddr = _accs[0];
+        }
+      } catch(e) {}
     }
-  } catch(e) { console.log('[MiniApp] Fora de cliente Farcaster — usando wallet nativa'); }
-  // Dispensa a splash screen do cliente — SEM isso a tela de loading fica congelada
+  } catch(e) {}
   try { await sdk.actions.ready(); } catch(e) {}
 </script>
 <style>
@@ -1561,40 +1564,60 @@ var walletScores     = _ls.getJSON('bleuWalletScores',[]);
 // Restore saved wallet — silently verify it's still authorized (no popup)
 (function() {
   var saved = localStorage.getItem('bleuWallet');
-  if(!saved) return;
   if(window.ethereum) {
-    // eth_accounts = silent check, NO popup — only returns already-approved accounts
     window.ethereum.request({method:'eth_accounts'}).then(function(accounts){
-      if(accounts && accounts.some(function(a){ return a.toLowerCase()===saved.toLowerCase(); })){
-        walletAddress = saved;
-        walletShort   = saved.slice(0,6)+'...'+saved.slice(-4);
-      } else {
-        // Wallet revoked permission — clear stored address
+      if(accounts && accounts.length > 0) {
+        // Use the live account (covers Farcaster SDK auto-connect)
+        walletAddress = accounts[0];
+        walletShort   = walletAddress.slice(0,6)+'...'+walletAddress.slice(-4);
+        _ls.set('bleuWallet', walletAddress);
+      } else if(saved) {
         localStorage.removeItem('bleuWallet');
       }
-    }).catch(function(){ localStorage.removeItem('bleuWallet'); });
-  } else {
-    // No ethereum provider (mobile/no extension) — keep address for display only
+    }).catch(function(){
+      if(saved){ walletAddress=saved; walletShort=saved.slice(0,6)+'...'+saved.slice(-4); }
+    });
+  } else if(saved) {
+    // No provider yet — keep saved address; SDK may inject ethereum asynchronously
     walletAddress = saved;
     walletShort   = saved.slice(0,6)+'...'+saved.slice(-4);
   }
+  // Poll for Farcaster SDK wallet that arrives async (injected after game init)
+  var _fcPoll = setInterval(function(){
+    if(window._fcWalletAddr && !walletAddress){
+      walletAddress = window._fcWalletAddr;
+      walletShort   = walletAddress.slice(0,6)+'...'+walletAddress.slice(-4);
+      _ls.set('bleuWallet', walletAddress);
+      clearInterval(_fcPoll);
+    } else if(walletAddress){
+      clearInterval(_fcPoll); // already connected, stop polling
+    }
+  }, 500);
+  setTimeout(function(){ clearInterval(_fcPoll); }, 8000); // stop after 8s max
 })();
 
 function connectWallet() {
   if(walletConnecting) return;
+
+  // Se já conectado via Farcaster SDK (window._fcWalletAddr), usar direto
+  if(window._fcWalletAddr && !walletAddress){
+    walletAddress = window._fcWalletAddr;
+    walletShort   = walletAddress.slice(0,6)+'...'+walletAddress.slice(-4);
+    _ls.set('bleuWallet', walletAddress);
+    beep(523,1047,0.22,'sine',0.15);
+    return;
+  }
+
+  // Sem provider — redirecionar para Coinbase Wallet
   if(!window.ethereum) {
     var url = encodeURIComponent('https://flapy-bleu.vercel.app');
     window.open('https://go.cb-w.com/dapp?cb_url='+url, '_blank');
     return;
   }
+
   walletConnecting = true;
-  // wallet_requestPermissions forces the popup every time, even if already connected
-  window.ethereum.request({
-    method: 'wallet_requestPermissions',
-    params: [{ eth_accounts: {} }]
-  }).then(function(){
-    return window.ethereum.request({method:'eth_requestAccounts'});
-  }).then(function(accounts){
+
+  function _onAccounts(accounts){
     walletConnecting = false;
     if(accounts && accounts.length>0){
       walletAddress = accounts[0];
@@ -1604,19 +1627,20 @@ function connectWallet() {
       [659,784,1047].forEach(function(f,i){setTimeout(function(){beep(f,f*1.5,0.12,'sine',0.12);},i*80);});
       if(navigator.vibrate) navigator.vibrate([30,20,60]);
     }
-  }).catch(function(err){
-    walletConnecting = false;
-    // Fallback: wallet_requestPermissions not supported — try direct
-    if(err && err.code === 4200){
-      window.ethereum.request({method:'eth_requestAccounts'}).then(function(accounts){
-        if(accounts && accounts.length>0){
-          walletAddress = accounts[0];
-          walletShort   = walletAddress.slice(0,6)+'...'+walletAddress.slice(-4);
-          _ls.set('bleuWallet', walletAddress);
-          beep(523,1047,0.22,'sine',0.15);
-        }
-      }).catch(function(){});
-    }
+  }
+
+  // Primeiro tentar eth_accounts (silencioso — funciona dentro do Farcaster/Base)
+  window.ethereum.request({method:'eth_accounts'}).then(function(accs){
+    if(accs && accs.length > 0){ _onAccounts(accs); return; }
+    // Conta não disponível silenciosamente — pedir permissão com popup
+    window.ethereum.request({method:'eth_requestAccounts'})
+      .then(_onAccounts)
+      .catch(function(){ walletConnecting = false; });
+  }).catch(function(){
+    // Fallback direto
+    window.ethereum.request({method:'eth_requestAccounts'})
+      .then(_onAccounts)
+      .catch(function(){ walletConnecting = false; });
   });
 }
 
@@ -4763,20 +4787,28 @@ function drawBg() {
   ctx.fillStyle=_bgGrad; ctx.fillRect(0,0,W,H);
 
   // ── Phase-specific background elements ──
-  // Mobile: pula animações pesadas (grids, ondas, chuva) — só gradiente
-  if(!_isMobile){
-    if(pi === 0) {
-      // PHASE 1 — PERPDEX TERMINAL: matrix grid + chart
+  // Mobile: mantém cenários mas pula as partes mais pesadas
+  //   • Fase 1: pula grid (28 strokes) + chars matrix — mantém onda seno
+  //   • Fase 4: pula drizzle — mantém árvores
+  //   • Fase 8: pula poison drops — mantém deserto
+  //   • Todas as outras: renderizam normalmente
+  if(pi === 0) {
+    // PHASE 1 — PERPDEX TERMINAL
+    if(!_isMobile){
       ctx.strokeStyle = '#00ff4109'; ctx.lineWidth = 0.5;
       for(var gxi=0; gxi<W; gxi+=36){ ctx.beginPath(); ctx.moveTo(gxi,22); ctx.lineTo(gxi,H); ctx.stroke(); }
       for(var gyi=22; gyi<H; gyi+=36){ ctx.beginPath(); ctx.moveTo(0,gyi); ctx.lineTo(W,gyi); ctx.stroke(); }
-      ctx.strokeStyle = '#00ff4120'; ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      for(var cx2=0; cx2<=W; cx2+=4) {
-        var cy2 = H*0.42 + Math.sin((cx2+frame*0.4)*0.04)*55 + Math.cos((cx2+frame*0.22)*0.025)*30;
-        cx2===0 ? ctx.moveTo(cx2,cy2) : ctx.lineTo(cx2,cy2);
-      }
-      ctx.stroke();
+    }
+    // Onda seno — só 1 path, leve o suficiente para mobile
+    ctx.strokeStyle = '#00ff4120'; ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    var _step1 = _isMobile ? 8 : 4;
+    for(var cx2=0; cx2<=W; cx2+=_step1) {
+      var cy2 = H*0.42 + Math.sin((cx2+frame*0.4)*0.04)*55 + Math.cos((cx2+frame*0.22)*0.025)*30;
+      cx2===0 ? ctx.moveTo(cx2,cy2) : ctx.lineTo(cx2,cy2);
+    }
+    ctx.stroke();
+    if(!_isMobile){
       ctx.font = '9px Courier New';
       var chars = ['0','1','$','%','+','8','3','-'];
       for(var mi=0; mi<14; mi++) {
@@ -4787,60 +4819,60 @@ function drawBg() {
         ctx.fillText(chars[(mi+Math.floor(frame/18+mi))%chars.length], mx3, my3);
       }
       ctx.globalAlpha = 1;
-
-    } else if(pi === 1) {
-      // PHASE 2 — BASE NETWORK: sunny sky + clouds
-      drawSunnyBlueSkyBg();
-
-    } else if(pi === 2) {
-      // PHASE 3 — TO THE MOON: mountains + snow
-      drawMountainBackground();
-      drawClouds(0.18);
-
-    } else if(pi === 3) {
-      // PHASE 4 — CRYPTO FOREST: pine trees + drizzle
-      drawForestTrees();
-      var lakeY = H - 180;
-      var lake = ctx.createLinearGradient(0, lakeY, 0, lakeY+40);
-      lake.addColorStop(0, '#1a3a4a66'); lake.addColorStop(1, '#0a1e2a44');
-      ctx.fillStyle = lake; ctx.fillRect(0, lakeY, W, 40);
-      ctx.strokeStyle = '#4a8aaa55'; ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(0,lakeY); ctx.lineTo(W,lakeY); ctx.stroke();
-      var fog = ctx.createLinearGradient(0, H-200, 0, H-80);
-      fog.addColorStop(0,'transparent'); fog.addColorStop(1,'#b0d8f018');
-      ctx.fillStyle = fog; ctx.fillRect(0, H-200, W, 120);
-      drawDrizzle();
-
-    } else if(pi === 4) {
-      // PHASE 5 — HEAVEN'S GATE: titan face + pillars + faint rays
-      drawHeavenPillars();
-      drawHeavenRays();
-      drawTitanFaceBg();
-      if(!_heavenMist){_heavenMist=ctx.createLinearGradient(0,H-200,0,H-80);_heavenMist.addColorStop(0,'transparent');_heavenMist.addColorStop(1,'#FFD70028');}
-      ctx.fillStyle=_heavenMist; ctx.fillRect(0,H-200,W,120);
-
-    } else if(pi === 5) {
-      // PHASE 6 — DUNGEON CASTLE: ghosts + chains + stone atmosphere
-      drawGhostDungeonBg();
-
-    } else if(pi === 6) {
-      // PHASE 7 — OUTER SPACE: planets + asteroids
-      drawSpacePlanetsBg();
-      drawAsteroids();
-
-    } else if(pi === 7) {
-      // PHASE 8 — CELESTIAL DESERT: colossal ruins + moon + desert + poison rain
-      drawCelestialDesertBg();
-      drawPoisonDrops();
-
-    } else if(pi === 8) {
-      // PHASE 9 — VOLCANO: lava + eruption
-      drawVolcanoBg();
-
-    } else if(pi === 9) {
-      // PHASE 10 — COINBASE PLANET: sunny + money + fireworks
-      drawCoinbasePlanetBg();
     }
+
+  } else if(pi === 1) {
+    // PHASE 2 — BASE NETWORK: sunny sky + clouds
+    drawSunnyBlueSkyBg();
+
+  } else if(pi === 2) {
+    // PHASE 3 — TO THE MOON: mountains + snow
+    drawMountainBackground();
+    drawClouds(0.18);
+
+  } else if(pi === 3) {
+    // PHASE 4 — CRYPTO FOREST: pine trees (drizzle pula no mobile)
+    drawForestTrees();
+    var lakeY = H - 180;
+    var lake = ctx.createLinearGradient(0, lakeY, 0, lakeY+40);
+    lake.addColorStop(0, '#1a3a4a66'); lake.addColorStop(1, '#0a1e2a44');
+    ctx.fillStyle = lake; ctx.fillRect(0, lakeY, W, 40);
+    ctx.strokeStyle = '#4a8aaa55'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(0,lakeY); ctx.lineTo(W,lakeY); ctx.stroke();
+    var fog = ctx.createLinearGradient(0, H-200, 0, H-80);
+    fog.addColorStop(0,'transparent'); fog.addColorStop(1,'#b0d8f018');
+    ctx.fillStyle = fog; ctx.fillRect(0, H-200, W, 120);
+    if(!_isMobile) drawDrizzle();
+
+  } else if(pi === 4) {
+    // PHASE 5 — HEAVEN'S GATE
+    drawHeavenPillars();
+    drawHeavenRays();
+    drawTitanFaceBg();
+    if(!_heavenMist){_heavenMist=ctx.createLinearGradient(0,H-200,0,H-80);_heavenMist.addColorStop(0,'transparent');_heavenMist.addColorStop(1,'#FFD70028');}
+    ctx.fillStyle=_heavenMist; ctx.fillRect(0,H-200,W,120);
+
+  } else if(pi === 5) {
+    // PHASE 6 — DUNGEON CASTLE
+    drawGhostDungeonBg();
+
+  } else if(pi === 6) {
+    // PHASE 7 — OUTER SPACE
+    drawSpacePlanetsBg();
+    drawAsteroids();
+
+  } else if(pi === 7) {
+    // PHASE 8 — CELESTIAL DESERT (poison drops pula no mobile)
+    drawCelestialDesertBg();
+    if(!_isMobile) drawPoisonDrops();
+
+  } else if(pi === 8) {
+    // PHASE 9 — VOLCANO
+    drawVolcanoBg();
+
+  } else if(pi === 9) {
+    // PHASE 10 — COINBASE PLANET
+    drawCoinbasePlanetBg();
   }
 
   // Ticker top bar
