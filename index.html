@@ -24,7 +24,7 @@
 </style>
 </head>
 <body>
-<div id="ui">💎 FLAPY BLEU — tap to flap</div>
+<div id="ui">🐦 FLAPY BLEU — tap to flap</div>
 <canvas id="c" width="400" height="600"></canvas>
 <button id="mute">🔊 SFX</button>
 <script>
@@ -1067,7 +1067,7 @@ function drawMarketTab() {
   ctx.fillText('Velocidade -28% por 45s (1 fase).', 58, _cy+27);
   ctx.fillText('Acumula no inventário.', 58, _cy+38);
   var _b0=_drawUSDCBtn(_cy, _hBtn, '#00D4FF', 'COMPRAR', '$0.25', false);
-  if(_b0) _marketBtns.push({rect:_b0, action:function(){ sendUSDCPurchase(USDC_SLOWMO,function(){ slowMoStock++; beep(440,880,0.2,'sine',0.14); spawnParticles(W/2,H/2,'#00D4FF',14); }); }});
+  if(_b0) _marketBtns.push({rect:_b0, action:function(){ sendUSDCPurchase(USDC_SLOWMO,function(){ slowMoStock++; localStorage.setItem('bleuSlowMo',slowMoStock); beep(440,880,0.2,'sine',0.14); spawnParticles(W/2,H/2,'#00D4FF',14); }); }});
   _cy+=_hBtn+_gap;
 
   // +CORAÇÃO
@@ -1080,7 +1080,7 @@ function drawMarketTab() {
   ctx.fillText('+1 vida na próxima partida. Máx +2.', 58, _cy+27);
   ctx.fillText('Possuído: '+extraHeartStock+'/2', 58, _cy+38);
   var _b1=_drawUSDCBtn(_cy, _hBtn, '#FF6680', 'COMPRAR', '$0.25', _heartDis);
-  if(_b1) _marketBtns.push({rect:_b1, action:function(){ if(extraHeartStock<2) sendUSDCPurchase(USDC_HEART,function(){ extraHeartStock++; beep(523,880,0.2,'sine',0.14); spawnParticles(W/2,H/2,'#FF6680',14); }); }});
+  if(_b1) _marketBtns.push({rect:_b1, action:function(){ if(extraHeartStock<2) sendUSDCPurchase(USDC_HEART,function(){ extraHeartStock++; localStorage.setItem('bleuExtraHeart',extraHeartStock); beep(523,880,0.2,'sine',0.14); spawnParticles(W/2,H/2,'#FF6680',14); }); }});
   _cy+=_hBtn+_gap;
 
   // CHECKPOINT
@@ -1093,7 +1093,7 @@ function drawMarketTab() {
   ctx.fillText('Revive no ponto da morte.', 58, _cy+27);
   ctx.fillText('1 uso por partida.', 58, _cy+38);
   var _b2=_drawUSDCBtn(_cy, _hBtn, '#FFD700', 'COMPRAR', '$0.50', _cpDis);
-  if(_b2) _marketBtns.push({rect:_b2, action:function(){ if(checkpointStock<1) sendUSDCPurchase(USDC_CHECKPOINT,function(){ checkpointStock=1; beep(660,1320,0.25,'sine',0.16); spawnParticles(W/2,H/2,'#FFD700',18); }); }});
+  if(_b2) _marketBtns.push({rect:_b2, action:function(){ if(checkpointStock<1) sendUSDCPurchase(USDC_CHECKPOINT,function(){ checkpointStock=1; localStorage.setItem('bleuCheckpoint',1); beep(660,1320,0.25,'sine',0.16); spawnParticles(W/2,H/2,'#FFD700',18); }); }});
   _cy+=_hBtn+_gap;
 
   // ══ SEÇÃO: PERSONAGENS ══
@@ -1382,10 +1382,10 @@ var _heavenMist=null, _dungeonMist=null;
 var lives=3, invincible=0, starPower=0, stars=[];
 // ── Itens de loja ──────────────────────────────────────────────
 var slowMoActive=0;       // frames restantes de slow-mo (2700=45s)
-var slowMoStock=0;        // elixirs no inventário
-var checkpointStock=0;    // cartas de checkpoint no inventário (max 1)
+var slowMoStock=parseInt(localStorage.getItem('bleuSlowMo')||'0');        // elixirs no inventário — persistido
+var checkpointStock=parseInt(localStorage.getItem('bleuCheckpoint')||'0'); // cartas de checkpoint — persistido
 var checkpointUsed=false; // carta já usada nesta run
-var extraHeartStock=0;    // corações extras comprados, adicionados no próximo start
+var extraHeartStock=parseInt(localStorage.getItem('bleuExtraHeart')||'0'); // corações extras — persistido
 var deathOfferTimer=0;    // countdown de oferta na tela de morte (frames)
 var shield=0, shieldItems=[], shieldBreak=0; // escudo power-up
 var shieldPickedUp=0; // escudos pegos em jogo nesta fase (só valem até fim da fase)
@@ -1626,7 +1626,7 @@ function resetGame() {
   idleTab = 'play'; scorePopups = []; scoreGlow = 0; chestType = 'normal'; shopOverlay = false; paused = false;
   combo = 0; comboFlash = 0; coinsThisRun = 0; milestoneIdx = 0; recFlash = 0;
   lives = 3 + Math.min(extraHeartStock, 2); // corações extras acumulados
-  extraHeartStock = 0; // consumidos ao iniciar a run
+  extraHeartStock = 0; localStorage.setItem('bleuExtraHeart', 0); // consumidos ao iniciar
   invincible = 0; starPower = 0; stars = [];
   slowMoActive = 0; checkpointUsed = false; deathOfferTimer = 0;
   deadChest={active:false,opened:false,coins:0,anim:0,clicks:0};
@@ -1802,11 +1802,71 @@ function drawBleu(x, y, flapAnim, angle) {
   ctx.beginPath(); ctx.ellipse(0.5,0.5,3.5,4,0,0,Math.PI*2); ctx.fillStyle='#111'; ctx.fill();
   ctx.beginPath(); ctx.arc(-1,-2,1.5,0,Math.PI*2); ctx.fillStyle='#fff'; ctx.fill(); ctx.restore();
 
-  // blush + smile
+  // ── Emoção baseada na velocidade vertical e contexto ──
+  var _vy2 = (typeof bleu !== 'undefined') ? (bleu.vy||0) : 0;
+  var _combo2 = (typeof combo !== 'undefined') ? combo : 0;
+  var _gState = (typeof gameState !== 'undefined') ? gameState : 'idle';
+  var _emotion = 'neutral';
+  if(_gState==='dead') _emotion = 'dead';
+  else if(_vy2 < -3.5) _emotion = 'happy';      // subindo rápido = feliz
+  else if(_vy2 > 5) _emotion = 'scared';         // caindo rápido = assustado
+  else if(_combo2 >= 3) _emotion = 'excited';    // combo streak = empolgado
+  else if(_gState==='idle') _emotion = 'idle';
+
+  // blush (intensidade varia por emoção)
+  var _blushA = _emotion==='happy'||_emotion==='excited' ? 0.75 : _emotion==='scared' ? 0.1 : 0.45;
+  ctx.globalAlpha = _blushA;
   ctx.beginPath(); ctx.ellipse(-10,-14,5,3,0,0,Math.PI*2); ctx.fillStyle=cBlush; ctx.fill();
   ctx.beginPath(); ctx.ellipse(16,-14,4.5,3,0,0,Math.PI*2); ctx.fillStyle=cBlush; ctx.fill();
-  ctx.beginPath(); ctx.arc(4,-12,7,0.15,Math.PI-0.15);
-  ctx.lineWidth=1.8; ctx.strokeStyle=cOutline; ctx.stroke();
+  ctx.globalAlpha = 1;
+
+  // expressão da boca
+  if(_emotion==='scared'||_emotion==='dead') {
+    // boca O de susto
+    ctx.beginPath(); ctx.ellipse(5,-11,4,5,0,0,Math.PI*2);
+    ctx.fillStyle='#222'; ctx.fill();
+    ctx.lineWidth=1.4; ctx.strokeStyle=cOutline; ctx.stroke();
+    // sobrancelhas levantadas
+    ctx.beginPath(); ctx.moveTo(-5,-27); ctx.quadraticCurveTo(-2,-31,2,-27);
+    ctx.lineWidth=1.8; ctx.strokeStyle=cOutline; ctx.globalAlpha=0.8; ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(8,-27); ctx.quadraticCurveTo(11,-31,15,-27);
+    ctx.stroke(); ctx.globalAlpha=1;
+    // gota de suor se caindo muito rápido
+    if(_vy2 > 6 || _emotion==='dead') {
+      ctx.save(); ctx.translate(22,-10);
+      ctx.fillStyle='#88ccff'; ctx.globalAlpha=0.85;
+      ctx.beginPath(); ctx.moveTo(0,-6); ctx.bezierCurveTo(4,-2,4,4,0,6); ctx.bezierCurveTo(-4,4,-4,-2,0,-6); ctx.closePath();
+      ctx.fill(); ctx.globalAlpha=1; ctx.restore();
+    }
+  } else if(_emotion==='happy'||_emotion==='excited') {
+    // sorriso grande com dentes
+    ctx.beginPath(); ctx.arc(4,-10,8,0.1,Math.PI-0.1);
+    ctx.lineWidth=2; ctx.strokeStyle=cOutline; ctx.stroke();
+    ctx.beginPath(); ctx.arc(4,-10,8,0.1,Math.PI-0.1);
+    ctx.lineTo(4-8*Math.cos(0.1), -10+8*Math.sin(0.1));
+    ctx.closePath(); ctx.fillStyle='#fff'; ctx.globalAlpha=0.8; ctx.fill(); ctx.globalAlpha=1;
+    // olhos em meia-lua feliz
+    ctx.save(); ctx.translate(-3,-20);
+    ctx.beginPath(); ctx.arc(0,2,5.5,-Math.PI,0); ctx.fillStyle='#111'; ctx.fill();
+    ctx.restore(); ctx.save(); ctx.translate(10,-20);
+    ctx.beginPath(); ctx.arc(0,2,4.5,-Math.PI,0); ctx.fillStyle='#111'; ctx.fill();
+    ctx.restore();
+    // estrelinhas ao redor se combo alto
+    if(_combo2>=5) {
+      var _st2=['⭐','✦','★']; ctx.font='9px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      for(var _si2=0;_si2<3;_si2++){
+        var _sa2=(_si2*Math.PI*2/3)+frame*0.08;
+        var _sr2=24+Math.sin(frame*0.1+_si2)*3;
+        ctx.globalAlpha=0.7; ctx.fillStyle='#FFD700';
+        ctx.fillText(_st2[_si2],Math.cos(_sa2)*_sr2,-10+Math.sin(_sa2)*_sr2);
+      }
+      ctx.globalAlpha=1;
+    }
+  } else {
+    // sorriso neutro padrão
+    ctx.beginPath(); ctx.arc(4,-12,7,0.15,Math.PI-0.15);
+    ctx.lineWidth=1.8; ctx.strokeStyle=cOutline; ctx.stroke();
+  }
 
 
   // GLOW (no shadowBlur — use alpha only for performance)
@@ -5684,8 +5744,11 @@ function loop(ts) {
 // ─── INPUT ───────────────────────────────────
 function flap() {
   if(gameState==='idle')         { gameState='playing'; startMusic(getPhaseIdx()); combo=0; comboFlash=0; coinsThisRun=0; milestoneIdx=0; recFlash=0; phaseFlash=190; phasePaused=true; bleu.vy=0; bleu.y=H/2;
-    // Ativar shields comprados na loja idle ao iniciar run
+    // Aplicar itens comprados ao iniciar a run
     if(shieldStock>0){ shield=Math.min(3,shieldStock); shieldStock=0; shieldPickedUp=0; localStorage.setItem('bleuShieldStock',0); }
+    if(extraHeartStock>0){ lives=3+Math.min(extraHeartStock,2); extraHeartStock=0; localStorage.setItem('bleuExtraHeart',0); }
+    else { lives=3; }
+    // slowMoStock e checkpointStock ficam disponíveis para uso em jogo
   }
   else if(gameState==='playing') {
     if(phasePaused){ if(shopOverlay) return; phasePaused=false; phaseFlash=0; bleu.vy=-4; bleuSquish=6; return; } // pula animação
@@ -5779,34 +5842,7 @@ function handleClick(ex, ey) {
 
   // ── DEAD screen buttons
   if(gameState === 'dead') {
-    // Death chest tap
-    if(deadChest.active && !deadChest.opened && cy>=H/2+152&&cy<=H/2+224&&cx>=W/2-70&&cx<=W/2+70){
-      deadChest.opened=true;
-      coinCount+=deadChest.coins; localStorage.setItem('bleuCoins',coinCount);
-      beep(523,1047,0.2,'sine',0.14);
-      [659,784,1047].forEach(function(f,i){setTimeout(function(){beep(f,f*1.5,0.12,'sine',0.1);},i*70);});
-      spawnParticles(W/2,H/2+196,'#FFD700',14);
-      if(navigator.vibrate) navigator.vibrate([30,20,60]);
-      return;
-    }
-    // Botão COMPARTILHAR: H/2+122 a H/2+152
-    if(cx>=W/2-74&&cx<=W/2+74&&cy>=H/2+122&&cy<=H/2+152){
-      var pv2 = PHASE_VISUALS[runPhase]||PHASE_VISUALS[0];
-      var shareText = '🎮 Flapy Bleu\nScore: '+score+' | '+pv2.name+'\n🔵 https://flapy-bleu.vercel.app';
-      if(navigator.share){ navigator.share({title:'Flapy Bleu', text:shareText, url:'https://flapy-bleu.vercel.app'}); }
-      else { try{ navigator.clipboard.writeText(shareText); }catch(e){} }
-      shareFlash=90; return;
-    }
-    // Botão MENU: H/2+197 a H/2+225
-    if(cx>=W/2-74&&cx<=W/2+74&&cy>=H/2+197&&cy<=H/2+225){
-      resetGame(); idleTab='play'; return;
-    }
-    // Wallet line: H/2+248 a H/2+264 — conectar se não tiver wallet
-    if(cx>=W/2-160&&cx<=W/2+160&&cy>=H/2+248&&cy<=H/2+264){
-      if(!walletAddress) connectWallet();
-      return;
-    }
-    // ── Ofertas USDC na tela de morte (visíveis por 12s) ──
+    // ── Ofertas USDC PRIMEIRO (têm prioridade sobre share/menu na área sobreposta) ──
     if(deathOfferTimer > 0 && walletAddress) {
       var _doY2 = H/2 + 148;
       // Botão CHECKPOINT (y: _doY2+22 a _doY2+52)
@@ -5847,15 +5883,32 @@ function handleClick(ex, ey) {
       }
     }
 
-    // Retry — botão JOGAR DE NOVO ou toque fora dos botões
-    // Exige 3 toques para evitar reiniciar por acidente
-    deadTapCount++;
-    if(deadTapCount >= 3) {
-      flap(); // 3º toque: reinicia
-    } else {
-      beep(440 + deadTapCount*110, 660 + deadTapCount*110, 0.06, 'sine', 0.08);
-      if(navigator.vibrate) navigator.vibrate(15);
+    // Death chest tap (área no centro inferior)
+    if(deadChest.active && !deadChest.opened && cy>=H/2+152&&cy<=H/2+224&&cx>=W/2-70&&cx<=W/2+70){
+      deadChest.opened=true;
+      coinCount+=deadChest.coins; localStorage.setItem('bleuCoins',coinCount);
+      beep(523,1047,0.2,'sine',0.14);
+      [659,784,1047].forEach(function(f,i){setTimeout(function(){beep(f,f*1.5,0.12,'sine',0.1);},i*70);});
+      spawnParticles(W/2,H/2+196,'#FFD700',14);
+      if(navigator.vibrate) navigator.vibrate([30,20,60]);
+      return;
     }
+    // Botão COMPARTILHAR: H/2+122 a H/2+152
+    if(cx>=W/2-74&&cx<=W/2+74&&cy>=H/2+122&&cy<=H/2+152){
+      var pv2 = PHASE_VISUALS[runPhase]||PHASE_VISUALS[0];
+      var shareText = '🎮 Flapy Bleu\nScore: '+score+' | '+pv2.name+'\n🔵 https://flapy-bleu.vercel.app';
+      if(navigator.share){ navigator.share({title:'Flapy Bleu', text:shareText, url:'https://flapy-bleu.vercel.app'}); }
+      else { try{ navigator.clipboard.writeText(shareText); }catch(e){} }
+      shareFlash=90; return;
+    }
+    // Wallet line: H/2+248 a H/2+264
+    if(cx>=W/2-160&&cx<=W/2+160&&cy>=H/2+248&&cy<=H/2+264){
+      if(!walletAddress) connectWallet();
+      return;
+    }
+    // Qualquer outro toque na tela de morte → volta ao menu principal
+    resetGame(); stopMusic();
+    beep(440,660,0.08,'sine',0.1);
     return;
   }
 
@@ -5906,17 +5959,17 @@ function handleClick(ex, ey) {
             } else { beep(220,150,0.12,'sawtooth',0.08); hitFlash=3; }
           } else if(_ii===1&&walletAddress){ // Slow-Mo — USDC
             sendUSDCPurchase(USDC_SLOWMO, function(){
-              slowMoStock++;
+              slowMoStock++; localStorage.setItem('bleuSlowMo',slowMoStock);
               beep(440,880,0.2,'sine',0.14); spawnParticles(W/2,H/2,'#00D4FF',14);
             });
           } else if(_ii===2&&walletAddress&&extraHeartStock<2){ // Coração — USDC
             sendUSDCPurchase(USDC_HEART, function(){
-              extraHeartStock++;
+              extraHeartStock++; localStorage.setItem('bleuExtraHeart',extraHeartStock);
               beep(523,880,0.2,'sine',0.14); spawnParticles(W/2,H/2,'#FF6680',14);
             });
           } else if(_ii===3&&walletAddress&&checkpointStock<1){ // Checkpoint — USDC
             sendUSDCPurchase(USDC_CHECKPOINT, function(){
-              checkpointStock=1;
+              checkpointStock=1; localStorage.setItem('bleuCheckpoint',1);
               beep(660,1320,0.25,'sine',0.16);
               [880,1047].forEach(function(f,i){setTimeout(function(){beep(f,f,0.12,'sine',0.1);},i*80);});
               spawnParticles(W/2,H/2,'#FFD700',18);
