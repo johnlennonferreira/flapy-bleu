@@ -1418,6 +1418,7 @@ var runPhase=0; // fase mais longe desta run
 var bestPhaseEver=parseInt(localStorage.getItem('bleuBestPhase')||'0');
 var shareFlash=0; // feedback do botão compartilhar
 var deadTapCount=0; // exige 3 toques para reiniciar (anti-acidente)
+var menuTapReady=true; // false após morte definitiva — exige 2 toques para iniciar (anti-acidente)
 var prestigeLevel=0; // NG+ prestige — sempre 0 ao iniciar; só sobe dentro da run ao completar prestige
 var bestPrestige=parseInt(localStorage.getItem('bleuBestPrestige')||'0'); // máximo histórico (leaderboard)
 var prestigeAnim=0;    // frame counter para tela prestige
@@ -5040,18 +5041,31 @@ function loop(ts) {
       }
 
       // ── TAP TO START pulsing button ──
-      var _sp = 0.96 + 0.04*Math.sin(frame*0.12);
+      // Quando menuTapReady=false (pós-morte): pisca em laranja e mostra "TAP TO CONFIRM"
+      var _tapLocked = !menuTapReady;
+      var _sp = _tapLocked
+        ? 0.95 + 0.05*Math.abs(Math.sin(frame*0.22))   // pisca mais rápido quando bloqueado
+        : 0.96 + 0.04*Math.sin(frame*0.12);
       ctx.save(); ctx.translate(W/2, H/2+50); ctx.scale(_sp, _sp);
-      var _sg = ctx.createLinearGradient(-88,0,88,0);
-      _sg.addColorStop(0,'#0044DD'); _sg.addColorStop(0.5,'#0066FF'); _sg.addColorStop(1,'#0044DD');
-      ctx.fillStyle = _sg;
-      ctx.shadowColor='#0052FF'; ctx.shadowBlur=22;
+      if(_tapLocked){
+        // Estado bloqueado: gradiente laranja/âmbar — "confirme que quer jogar de novo"
+        var _sg = ctx.createLinearGradient(-88,0,88,0);
+        _sg.addColorStop(0,'#CC5500'); _sg.addColorStop(0.5,'#FF7700'); _sg.addColorStop(1,'#CC5500');
+        ctx.fillStyle = _sg;
+        ctx.shadowColor='#FF7700'; ctx.shadowBlur=24+10*Math.abs(Math.sin(frame*0.22));
+      } else {
+        var _sg = ctx.createLinearGradient(-88,0,88,0);
+        _sg.addColorStop(0,'#0044DD'); _sg.addColorStop(0.5,'#0066FF'); _sg.addColorStop(1,'#0044DD');
+        ctx.fillStyle = _sg;
+        ctx.shadowColor='#0052FF'; ctx.shadowBlur=22;
+      }
       ctx.beginPath(); ctx.roundRect(-88,-18,176,36,12); ctx.fill();
-      ctx.strokeStyle='#00D4FFaa'; ctx.lineWidth=1.5; ctx.stroke();
+      ctx.strokeStyle = _tapLocked ? '#FFaa44aa' : '#00D4FFaa'; ctx.lineWidth=1.5; ctx.stroke();
       ctx.shadowBlur=0;
-      ctx.fillStyle='#ffffff'; ctx.font='bold 14px Courier New';
+      ctx.fillStyle='#ffffff';
+      ctx.font = _tapLocked ? 'bold 12px Courier New' : 'bold 14px Courier New';
       ctx.textAlign='center'; ctx.textBaseline='middle';
-      ctx.fillText('▶  TAP TO START', 0, 0);
+      ctx.fillText(_tapLocked ? '●○  TAP TO CONFIRM' : '▶  TAP TO START', 0, 0);
       ctx.textBaseline='alphabetic'; ctx.restore();
 
       drawCharSelect();
@@ -5284,7 +5298,7 @@ function loop(ts) {
               if(score>highScore){highScore=score;newRecord=true;localStorage.setItem('bleuHS',highScore);}
               lastScore=score; localStorage.setItem('bleuLastScore',lastScore);
               saveTop5(score); submitWalletScore(score);
-              stopMusic(); resetGame();
+              stopMusic(); menuTapReady = false; resetGame();
             }
           }
         }
@@ -5685,6 +5699,7 @@ function loop(ts) {
           if(score>0) submitWalletScore(score);
           if(navigator.vibrate) navigator.vibrate([80,30,80]);
           stopMusic();
+          menuTapReady = false; // exige 2 toques no menu para reiniciar
           resetGame(); // volta ao menu principal
         }
       }
@@ -6027,7 +6042,15 @@ function loop(ts) {
 
 // ─── INPUT ───────────────────────────────────
 function flap() {
-  if(gameState==='idle')         { gameState='playing'; startMusic(getPhaseIdx()); combo=0; comboFlash=0; coinsThisRun=0; milestoneIdx=0; recFlash=0; phaseFlash=190; phasePaused=true; bleu.vy=0; bleu.vx=0; bleu.y=H/2;
+  if(gameState==='idle') {
+    // Anti-acidente após morte: exige 2 toques para iniciar
+    // 1º toque → desbloqueia (feedback visual no botão), 2º toque → inicia
+    if(!menuTapReady){
+      menuTapReady = true;
+      beep(520, 660, 0.09, 'sine', 0.12); // feedback sonoro de confirmação
+      return; // não inicia — aguarda 2º toque
+    }
+    gameState='playing'; startMusic(getPhaseIdx()); combo=0; comboFlash=0; coinsThisRun=0; milestoneIdx=0; recFlash=0; phaseFlash=190; phasePaused=true; bleu.vy=0; bleu.vx=0; bleu.y=H/2;
     // Aplicar itens comprados ao iniciar a run
     if(shieldStock>0){ shield=Math.min(3,shieldStock); shieldStock=0; shieldPickedUp=0; localStorage.setItem('bleuShieldStock',0); }
     if(extraHeartStock>0){ lives=3+Math.min(extraHeartStock,2); extraHeartStock=0; localStorage.setItem('bleuExtraHeart',0); }
@@ -6199,7 +6222,7 @@ function handleClick(ex, ey) {
       return;
     }
     // Qualquer outro toque na tela de morte → volta ao menu principal
-    resetGame(); stopMusic();
+    menuTapReady = false; resetGame(); stopMusic();
     beep(440,660,0.08,'sine',0.1);
     return;
   }
