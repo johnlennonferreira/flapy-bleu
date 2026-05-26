@@ -2056,15 +2056,29 @@ function drawPhantom(x, y, flapAnim, angle) {
   ctx.rotate(angle || 0);
 
   // Animation drivers
-  var _hb  = Math.sin(frame * 0.055) * 6;   // left hand bob
-  var _hb2 = Math.cos(frame * 0.048) * 6;   // right hand bob (offset phase)
   var _shimmer = Math.sin(frame * 0.038);    // -1→1 body shimmer cycle
   var _pulse   = 0.5 + 0.5*Math.sin(frame * 0.06); // 0→1 aura pulse
   var _flapping = flapAnim > 1.5;            // true when actively flapping
 
+  // Personality — angle-driven expressions
+  var _ang = angle || 0;
+  var _falling  = _ang > 0.25;              // falling down
+  var _fastFall = _ang > 0.55;              // falling fast — fear!
+  var _rising   = _ang < -0.2;             // flapping up
+
+  // Eye scale: widen vertically when falling fast (terror), squint when rising
+  var _eyeScaleY = _fastFall ? 1.35 + Math.sin(frame*0.18)*0.1
+                 : _rising   ? 0.72
+                 : 1.0;
+  // Body stretch: taller on fast fall, squish on flap
+  var _bodyScaleY = _fastFall ? 1.18 : _flapping ? 0.82 : 1.0;
+  // Wobble on hurt
+  var _wobble = (typeof dizzyTimer !== 'undefined' && dizzyTimer > 0)
+                ? Math.sin(frame * 0.55) * 3.5 : 0;
+
   // Pupil drift — follow tilt angle slightly so eyes feel alive
-  var _pDx = Math.sin(angle || 0) * 2.2;
-  var _pDy = (angle || 0) * 1.8;
+  var _pDx = Math.sin(_ang) * 2.2 + (_fastFall ? Math.sin(frame*0.4)*1.2 : 0);
+  var _pDy = _ang * 1.8;
 
   var gc = PHANTOM_COLORS[activeColorGengar] || PHANTOM_COLORS[0];
   var cB = gc.body, cBL = gc.bodyLt, cD = gc.shadow, cO = gc.outline;
@@ -2095,51 +2109,12 @@ function drawPhantom(x, y, flapAnim, angle) {
     ctx.globalAlpha = 1;
   }
 
-  // ── FLOATING LEFT HAND — 3 garras apontadas para baixo ──
-  ctx.save();
-  ctx.translate(-36, _hb - 2);
-  // palm glow
-  var _lhGl = ctx.createRadialGradient(0, 0, 2, 0, 0, 12);
-  _lhGl.addColorStop(0, cGl + '66'); _lhGl.addColorStop(1, cGl + '00');
-  ctx.beginPath(); ctx.arc(0, 0, 12, 0, Math.PI*2);
-  ctx.fillStyle = _lhGl; ctx.globalAlpha = 0.55; ctx.fill(); ctx.globalAlpha = 1;
-  // garra pontiaguda curva
-  function _claw(ang, len) {
-    var tipX=Math.cos(ang)*len, tipY=Math.sin(ang)*len;
-    var lx=Math.cos(ang+0.16)*8, ly=Math.sin(ang+0.16)*8;
-    var rx=Math.cos(ang-0.16)*8, ry=Math.sin(ang-0.16)*8;
-    ctx.beginPath();
-    ctx.moveTo(lx, ly);
-    ctx.quadraticCurveTo(Math.cos(ang+0.07)*len*0.62, Math.sin(ang+0.07)*len*0.62, tipX, tipY);
-    ctx.quadraticCurveTo(Math.cos(ang-0.07)*len*0.62, Math.sin(ang-0.07)*len*0.62, rx, ry);
-    ctx.closePath();
-  }
-  var _lClaws = [[1.05, 23], [Math.PI/2, 26], [2.09, 23]]; // apontadas para baixo
-  // sombra
-  _lClaws.forEach(function(c){ _claw(c[0], c[1]); ctx.fillStyle=cD; ctx.globalAlpha=0.55; ctx.fill(); });
-  // corpo da garra
-  _lClaws.forEach(function(c, i){
-    _claw(c[0], c[1]);
-    ctx.fillStyle=[cD,cB,cBL][i]; ctx.globalAlpha=[0.9,0.92,0.82][i]; ctx.fill();
-    ctx.lineWidth=1.4; ctx.strokeStyle=cO; ctx.globalAlpha=1; ctx.stroke();
-  });
-  ctx.globalAlpha=1;
-  // palma
-  var lhg = ctx.createRadialGradient(-2,-2,1,0,0,9);
-  lhg.addColorStop(0,cBL); lhg.addColorStop(1,cD);
-  ctx.beginPath(); ctx.arc(0,0,9,0,Math.PI*2);
-  ctx.fillStyle=lhg; ctx.globalAlpha=0.92; ctx.fill(); ctx.lineWidth=1.5; ctx.strokeStyle=cO; ctx.stroke();
-  // ponta brilhante das garras
-  _lClaws.forEach(function(c){
-    var tx=Math.cos(c[0])*c[1], ty=Math.sin(c[0])*c[1];
-    ctx.beginPath(); ctx.arc(tx, ty, 2.2, 0, Math.PI*2);
-    ctx.fillStyle=cBL; ctx.globalAlpha=0.9; ctx.fill();
-    ctx.beginPath(); ctx.arc(tx-0.6, ty-0.6, 0.8, 0, Math.PI*2);
-    ctx.fillStyle='#fff'; ctx.globalAlpha=0.55; ctx.fill();
-  });
-  ctx.globalAlpha=1; ctx.restore();
+  // HANDS REMOVED — ghost is head/face only (cleaner, faster on mobile)
 
   // ── HAUNTER BODY — classic spherical ghost with ALL-AROUND jagged spikes ──
+  ctx.save();
+  ctx.translate(_wobble, 0);
+  ctx.scale(1, _bodyScaleY); // stretch on fall, squish on flap
   ctx.beginPath();
   var _bR = 22;
   var _spikes = 10;
@@ -2182,6 +2157,19 @@ function drawPhantom(x, y, flapAnim, angle) {
   }
   ctx.globalAlpha = 1;
 
+  ctx.restore(); // end body scale
+
+  // Sweat drop when falling fast
+  if(_fastFall) {
+    ctx.save();
+    ctx.globalAlpha = 0.75 + Math.sin(frame*0.3)*0.2;
+    ctx.fillStyle = '#aaddff';
+    ctx.beginPath(); ctx.arc(18, -18, 3.5, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(18, -13); ctx.lineTo(15.5, -8); ctx.lineTo(20.5, -8); ctx.closePath();
+    ctx.fill();
+    ctx.globalAlpha = 1; ctx.restore();
+  }
+
   // ── EYES — Haunter's huge, iconic eyes ──
   // Coloured glow rings behind each eye (pulsing)
   var _eyeGl = 0.28 + 0.16*_pulse;
@@ -2195,17 +2183,19 @@ function drawPhantom(x, y, flapAnim, angle) {
   ctx.fillStyle=_egR; ctx.globalAlpha=_eyeGl; ctx.fill();
   ctx.globalAlpha=1;
 
-  // White sclera
-  ctx.beginPath(); ctx.ellipse(-8, -5, 9, 8, 0, 0, Math.PI*2);
+  // White sclera — scale Y for terror/squint expression
+  var _eRy = 8 * _eyeScaleY;
+  ctx.beginPath(); ctx.ellipse(-8, -5, 9, _eRy, 0, 0, Math.PI*2);
   ctx.fillStyle = '#f0f0ff'; ctx.fill();
   ctx.lineWidth = 1.6; ctx.strokeStyle = cO; ctx.stroke();
-  ctx.beginPath(); ctx.ellipse(8, -5, 9, 8, 0, 0, Math.PI*2);
+  ctx.beginPath(); ctx.ellipse(8, -5, 9, _eRy, 0, 0, Math.PI*2);
   ctx.fillStyle = '#f0f0ff'; ctx.fill(); ctx.stroke();
 
   // Coloured iris
-  ctx.beginPath(); ctx.ellipse(-8, -5, 6.2, 7.2, 0, 0, Math.PI*2);
+  var _iRy = 7.2 * _eyeScaleY;
+  ctx.beginPath(); ctx.ellipse(-8, -5, 6.2, _iRy, 0, 0, Math.PI*2);
   ctx.fillStyle = cEy; ctx.fill();
-  ctx.beginPath(); ctx.ellipse(8, -5, 6.2, 7.2, 0, 0, Math.PI*2);
+  ctx.beginPath(); ctx.ellipse(8, -5, 6.2, _iRy, 0, 0, Math.PI*2);
   ctx.fillStyle = cEy; ctx.fill();
 
   // Black pupil — shifts with tilt angle (eyes feel alive)
@@ -2251,48 +2241,7 @@ function drawPhantom(x, y, flapAnim, angle) {
   ctx.beginPath(); ctx.ellipse(-1.5, 12.5 + _mOpen*0.4, 2.8, 2.2, -0.2, 0, Math.PI*2);
   ctx.fillStyle='#ff6688'; ctx.globalAlpha=0.65; ctx.fill(); ctx.globalAlpha=1;
 
-  // ── FLOATING RIGHT HAND — 3 garras apontadas para baixo ──
-  ctx.save();
-  ctx.translate(36, _hb2 + 2);
-  // palm glow
-  var _rhGl = ctx.createRadialGradient(0, 0, 2, 0, 0, 12);
-  _rhGl.addColorStop(0, cGl + '66'); _rhGl.addColorStop(1, cGl + '00');
-  ctx.beginPath(); ctx.arc(0, 0, 12, 0, Math.PI*2);
-  ctx.fillStyle = _rhGl; ctx.globalAlpha = 0.55; ctx.fill(); ctx.globalAlpha = 1;
-  function _rClaw(ang, len) {
-    var tipX=Math.cos(ang)*len, tipY=Math.sin(ang)*len;
-    var lx=Math.cos(ang+0.16)*8, ly=Math.sin(ang+0.16)*8;
-    var rx=Math.cos(ang-0.16)*8, ry=Math.sin(ang-0.16)*8;
-    ctx.beginPath();
-    ctx.moveTo(lx, ly);
-    ctx.quadraticCurveTo(Math.cos(ang+0.07)*len*0.62, Math.sin(ang+0.07)*len*0.62, tipX, tipY);
-    ctx.quadraticCurveTo(Math.cos(ang-0.07)*len*0.62, Math.sin(ang-0.07)*len*0.62, rx, ry);
-    ctx.closePath();
-  }
-  var _rClaws = [[1.05, 23], [Math.PI/2, 26], [2.09, 23]]; // apontadas para baixo
-  // sombra
-  _rClaws.forEach(function(c){ _rClaw(c[0], c[1]); ctx.fillStyle=cD; ctx.globalAlpha=0.55; ctx.fill(); });
-  // corpo da garra
-  _rClaws.forEach(function(c, i){
-    _rClaw(c[0], c[1]);
-    ctx.fillStyle=[cD,cB,cBL][i]; ctx.globalAlpha=[0.9,0.92,0.82][i]; ctx.fill();
-    ctx.lineWidth=1.4; ctx.strokeStyle=cO; ctx.globalAlpha=1; ctx.stroke();
-  });
-  ctx.globalAlpha=1;
-  // palma
-  var rhg = ctx.createRadialGradient(-2,-2,1,0,0,9);
-  rhg.addColorStop(0,cBL); rhg.addColorStop(1,cB);
-  ctx.beginPath(); ctx.arc(0,0,9,0,Math.PI*2);
-  ctx.fillStyle=rhg; ctx.globalAlpha=0.92; ctx.fill(); ctx.lineWidth=1.5; ctx.strokeStyle=cO; ctx.stroke();
-  // ponta brilhante das garras
-  _rClaws.forEach(function(c){
-    var tx=Math.cos(c[0])*c[1], ty=Math.sin(c[0])*c[1];
-    ctx.beginPath(); ctx.arc(tx, ty, 2.2, 0, Math.PI*2);
-    ctx.fillStyle=cBL; ctx.globalAlpha=0.9; ctx.fill();
-    ctx.beginPath(); ctx.arc(tx-0.6, ty-0.6, 0.8, 0, Math.PI*2);
-    ctx.fillStyle='#fff'; ctx.globalAlpha=0.55; ctx.fill();
-  });
-  ctx.globalAlpha=1; ctx.restore();
+  // RIGHT HAND REMOVED
 
   // Score flash glow
   if(scoreGlow > 0) {
@@ -2356,6 +2305,20 @@ function drawWorm(x, y, flapAnim, angle) {
   var _ftp = (_ft > 0) ? (1 - _ft / 18) : 0;   // 0→1 flap progress
   var _flap = _ft > 0;
 
+  // Worm personality — angle-driven expressions
+  var _wAng      = typeof angle === 'number' ? angle : 0;
+  var _wFalling  = _wAng > 0.25;
+  var _wFastFall = _wAng > 0.55;   // fear + sweat
+  var _wRising   = _wAng < -0.2;   // flap joy
+  // Eye scale: terror on fast fall, squint joy on rise
+  var _wEyeScaleY = _wFastFall ? 1.32 + Math.sin(frame*0.2)*0.08
+                  : _wRising   ? 0.68 : 1.0;
+  // Body compress/stretch: squish segments on flap
+  var _wBodySquish = _flap ? 0.88 : 1.0;
+  // Wobble on hurt
+  var _wWobble = (typeof dizzyTimer !== 'undefined' && dizzyTimer > 0)
+                 ? Math.sin(frame * 0.5) * 3 : 0;
+
   var wc = WORM_COLORS[activeColorWorm] || WORM_COLORS[0];
   var cB = wc.body, cBL = wc.bodyLt, cBelly = wc.belly, cD = wc.shadow, cO = wc.outline, cEy = wc.eyeColor;
   ctx.lineJoin = 'round'; ctx.lineCap = 'round';
@@ -2397,13 +2360,16 @@ function drawWorm(x, y, flapAnim, angle) {
     ctx.beginPath(); ctx.arc(sx + 1.2, sy + 2.5, sr * 0.88, 0, Math.PI*2);
     ctx.fillStyle = cD; ctx.globalAlpha = 0.20; ctx.fill(); ctx.globalAlpha = 1;
 
-    // Main segment body
+    // Main segment body — flat on mobile (saves 5 radialGradient/frame)
     ctx.beginPath(); ctx.arc(sx, sy, sr, 0, Math.PI*2);
-    var _segGr = ctx.createRadialGradient(sx - sr*0.3, sy - sr*0.3, sr*0.05, sx, sy, sr);
-    _segGr.addColorStop(0, isHead ? cBL : cBL);
-    _segGr.addColorStop(0.5, isHead ? cBL : cB);
-    _segGr.addColorStop(1, cD);
-    ctx.fillStyle = _segGr; ctx.fill();
+    if(_isMobile) {
+      ctx.fillStyle = isHead ? cBL : cB;
+    } else {
+      var _segGr = ctx.createRadialGradient(sx - sr*0.3, sy - sr*0.3, sr*0.05, sx, sy, sr);
+      _segGr.addColorStop(0, cBL); _segGr.addColorStop(0.5, isHead ? cBL : cB); _segGr.addColorStop(1, cD);
+      ctx.fillStyle = _segGr;
+    }
+    ctx.fill();
     ctx.lineWidth = 1.5; ctx.strokeStyle = cO; ctx.stroke();
 
     // Belly patch — pale oval on lower-front (só nos segmentos do corpo, não na cabeça)
@@ -2503,14 +2469,24 @@ function drawWorm(x, y, flapAnim, angle) {
     }
   }
 
-  // Eyes — positioned on the face side of the head (right/front area)
-  // head center: (hx, hy) = (21, ~0), r=16
-  _drawEye(hx+2,  hy-7, 5.0, 3.5, 2.0, false);  // far eye  (smaller, no lashes)
-  _drawEye(hx+10, hy-6, 6.5, 4.5, 2.5, true);   // near eye (bigger, with lashes)
+  // Eyes — scale Y for terror/joy expression
+  ctx.save(); ctx.translate(hx, hy); ctx.scale(1, _wEyeScaleY); ctx.translate(-hx, -hy);
+  _drawEye(hx+2,  hy-7, 5.0, 3.5, 2.0, false);  // far eye
+  _drawEye(hx+10, hy-6, 6.5, 4.5, 2.5, true);   // near eye
+  ctx.restore();
 
-  // ── BOCA — sorriso emoji :) limpo, kawaii, sem vergonha ──
+  // Sweat drop when fast-falling — drips from head top
+  if(_wFastFall) {
+    ctx.save(); ctx.globalAlpha = 0.8 + Math.sin(frame*0.35)*0.18;
+    ctx.fillStyle = '#88ccff';
+    ctx.beginPath(); ctx.arc(hx+14, hy-hr-2, 3, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(hx+14, hy-hr+2); ctx.lineTo(hx+11, hy-hr+9); ctx.lineTo(hx+17, hy-hr+9); ctx.closePath(); ctx.fill();
+    ctx.globalAlpha = 1; ctx.restore();
+  }
+
+  // ── BOCA — sorriso ou O de susto ──
   var _mx = hx + 9, _my = hy + 7;
-  var _mR = 5.2; // raio do sorriso
+  var _mR = _wFastFall ? 4.5 : 5.2; // "O" menor de susto vs sorriso normal
 
   // Bochechas rosadas — clipped ao círculo da cabeça para não vazar
   ctx.save();
@@ -2535,10 +2511,20 @@ function drawWorm(x, y, flapAnim, angle) {
   ctx.beginPath(); ctx.arc(_nx-1.0, _ny-1.0, 1.1, 0, Math.PI*2);
   ctx.fillStyle = '#ffffff'; ctx.globalAlpha = 0.75; ctx.fill(); ctx.globalAlpha = 1;
 
-  // Sorriso fechado — traço curvo kawaii :)
-  ctx.beginPath();
-  ctx.arc(_mx, _my - 1, _mR, 0.15 * Math.PI, 0.85 * Math.PI, false);
-  ctx.lineWidth = 2.2; ctx.strokeStyle = '#1e0810'; ctx.lineCap = 'round'; ctx.stroke();
+  // Boca — sorriso kawaii normal; "D:" de susto na queda rápida
+  if(_wFastFall) {
+    // Boca aberta de susto — "O"
+    ctx.beginPath(); ctx.ellipse(_mx, _my, _mR*0.7, _mR*0.9, 0, 0, Math.PI*2);
+    ctx.fillStyle = '#1e0810'; ctx.fill();
+    ctx.lineWidth = 1.6; ctx.strokeStyle = '#1e0810'; ctx.stroke();
+    // mini língua de fora
+    ctx.beginPath(); ctx.ellipse(_mx, _my+_mR*0.55, _mR*0.38, _mR*0.3, 0, 0, Math.PI*2);
+    ctx.fillStyle = '#ee4466'; ctx.fill();
+  } else {
+    ctx.beginPath();
+    ctx.arc(_mx, _my - 1, _mR, 0.15 * Math.PI, 0.85 * Math.PI, false);
+    ctx.lineWidth = 2.2; ctx.strokeStyle = '#1e0810'; ctx.lineCap = 'round'; ctx.stroke();
+  }
 
   // ── Score flash glow ──
   if (typeof scoreGlow !== 'undefined' && scoreGlow > 0) {
