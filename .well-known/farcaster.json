@@ -1,8 +1,8 @@
 {
   "accountAssociation": {
-    "header":    "COLE_AQUI_O_HEADER_GERADO_EM_WARPCAST",
-    "payload":   "COLE_AQUI_O_PAYLOAD_GERADO_EM_WARPCAST",
-    "signature": "COLE_AQUI_A_SIGNATURE_GERADA_EM_WARPCAST"
+    "header":    "eyJmaWQiOjE0MjUyMDMsInR5cGUiOiJhdXRoIiwia2V5IjoiMHgyMURkNjg3Njc3QkU3Nzg0MTcwREI5NDE1MzkyN2Y4NjQyZjdFNkEwIn0",
+    "payload":   "eyJkb21haW4iOiJmbGFweS1ibGV1LnZlcmNlbC5hcHAifQ",
+    "signature": "AYUYxVeuySyQOf0Ss3t0LufqmtFTJzlXT9GQ/8s6Y4ZnVp2UEcDwYsE5FJCrWYD5EfOsE5TWUWmZPygOGtD6ghs="
   },
   "miniapp": {
     "version":              "1",
