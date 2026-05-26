@@ -582,6 +582,8 @@ function isColorEquipped(charIdx, colorIdx) {
   return false;
 }
 function shopBuyOrEquip() {
+  // Personagem bloqueado — não permite equipar nem comprar skin
+  if((shopChar===1&&!gengarUnlocked)||(shopChar===2&&!wormUnlocked)||(shopChar===3&&!alienUnlocked)) return;
   var colors = shopChar===0 ? BLEU_COLORS : shopChar===1 ? PHANTOM_COLORS : shopChar===2 ? WORM_COLORS : ALIEN_COLORS;
   var color  = colors[shopSelColor];
   if(!color) return;
@@ -706,10 +708,11 @@ function drawShopTab() {
     ctx.fillText(_selOwned?'owned — tap EQUIP':'free — tap EQUIP', W/2, _prevY+130);
   }
 
-  // ── Action button ──
+  // ── Action button — só mostra para personagens desbloqueados ──
   var _btnY=_prevY+146;
   var _canAfford=coinCount>=(_selC.price||0);
-  if(!_selEq){
+  var _isCharLocked=(shopChar===1&&!gengarUnlocked)||(shopChar===2&&!wormUnlocked)||(shopChar===3&&!alienUnlocked);
+  if(!_selEq && !_isCharLocked){
     var _bLabel, _bCol, _bStroke;
     if(_selOwned||shopSelColor===0){ _bLabel='EQUIP'; _bCol='#00FF8822'; _bStroke='#00FF88'; }
     else if(_canAfford){             _bLabel='BUY  🐉 '+_selC.price; _bCol='#FFD70022'; _bStroke='#FFD700'; }
@@ -812,8 +815,9 @@ function drawShopTab() {
   }
   ctx.textAlign='center';
 
-  // ── ITEMS ROW — disponível para todos, 4 cards lado a lado ──
-  {
+  // ── ITEMS ROW — só mostra quando personagem está desbloqueado ──
+  var _charLocked = (shopChar===1&&!gengarUnlocked)||(shopChar===2&&!wormUnlocked)||(shopChar===3&&!alienUnlocked);
+  if(!_charLocked) {
     var _ir = { y:350, w:94, h:125, gap:5 };
     var _cards = [
       // Shield (coins)
@@ -871,7 +875,7 @@ function drawShopTab() {
         }
       }
     }
-  }
+  } // end if(!_charLocked)
 
   // ── SHIELD CARD (legacy, hidden — substituído pelo row acima) ──
   if(false && (shopChar===0)||((shopChar===1)&&gengarUnlocked)||((shopChar===2)&&wormUnlocked)||((shopChar===3)&&alienUnlocked)){
@@ -5697,10 +5701,11 @@ function handleClick(ex, ey) {
           if(!_ownedC&&shopSelColor>0){ buyColorWithUSDC(shopChar,shopSelColor); return; }
         }
       }
-      // ── ITEMS ROW — 4 cards (shield/slowmo/heart/checkpoint) ──
+      // ── ITEMS ROW — 4 cards (shield/slowmo/heart/checkpoint) — só se char desbloqueado ──
+      var _charLockedClick=(shopChar===1&&!gengarUnlocked)||(shopChar===2&&!wormUnlocked)||(shopChar===3&&!alienUnlocked);
       var _ir2={y:350,w:94,h:125,gap:5};
       var _ix02=Math.round((W-(4*_ir2.w+3*_ir2.gap))/2);
-      for(var _ii=0;_ii<4;_ii++){
+      if(!_charLockedClick) for(var _ii=0;_ii<4;_ii++){
         var _icx=_ix02+_ii*(_ir2.w+_ir2.gap);
         if(cx>=_icx&&cx<=_icx+_ir2.w&&cy>=_ir2.y+80&&cy<=_ir2.y+_ir2.h){
           if(_ii===0){ // Shield — coins
