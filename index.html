@@ -107,16 +107,16 @@ function beep(f1, f2, dur, type, vol) {
 // Dificuldade progressiva e justa — retorno de dopamina garantido
 // Fase 9 é respiro intencional (loop dopamínico: tensão → alívio → tensão)
 const PHASES = [
-  { speed: 1.85, gapMin:162, gapMax:178, label:'PHASE 1'  }, // aprende — confortável, gap largo
-  { speed: 1.95, gapMin:152, gapMax:168, label:'PHASE 2'  }, // fecha suavemente
-  { speed: 2.1,  gapMin:142, gapMax:158, label:'PHASE 3'  }, // desafio real começa
-  { speed: 2.25, gapMin:132, gapMax:150, label:'PHASE 4'  }, // close calls frequentes
-  { speed: 2.35, gapMin:124, gapMax:142, label:'PHASE 5'  }, // tensão sobe
-  { speed: 2.45, gapMin:117, gapMax:135, label:'PHASE 6'  }, // território Flappy Bird
-  { speed: 2.55, gapMin:111, gapMax:128, label:'PHASE 7'  }, // difícil de verdade
-  { speed: 2.6,  gapMin:107, gapMax:122, label:'PHASE 8'  }, // muito difícil
-  { speed: 2.2,  gapMin:140, gapMax:162, label:'PHASE 9'  }, // respiro — alivia tensão (loop dopamina)
-  { speed: 2.75, gapMin:104, gapMax:118, label:'PHASE 10' }, // hardcore — poucos chegam
+  { speed: 1.85, gapMin:138, gapMax:150, label:'PHASE 1'  }, // intro — já exige atenção
+  { speed: 1.95, gapMin:128, gapMax:140, label:'PHASE 2'  }, // aperta
+  { speed: 2.1,  gapMin:120, gapMax:133, label:'PHASE 3'  }, // desafio real
+  { speed: 2.25, gapMin:112, gapMax:126, label:'PHASE 4'  }, // close calls frequentes
+  { speed: 2.35, gapMin:106, gapMax:120, label:'PHASE 5'  }, // tensão sobe
+  { speed: 2.45, gapMin:100, gapMax:114, label:'PHASE 6'  }, // território Flappy Bird
+  { speed: 2.55, gapMin: 95, gapMax:108, label:'PHASE 7'  }, // difícil de verdade
+  { speed: 2.6,  gapMin: 91, gapMax:104, label:'PHASE 8'  }, // muito difícil
+  { speed: 2.2,  gapMin:116, gapMax:132, label:'PHASE 9'  }, // respiro — alivia tensão (loop dopamina)
+  { speed: 2.75, gapMin: 87, gapMax: 99, label:'PHASE 10' }, // hardcore — poucos chegam
 ];
 function getPhaseIdx() { return Math.min(9, Math.floor(score / 15)); }
 function getPhase() {
@@ -2524,12 +2524,14 @@ function makePipe(x) {
   // Gap size: varia dentro da faixa da fase, com pequena variância extra
   const gap = p.gapMin + Math.random() * (p.gapMax - p.gapMin);
 
-  // ── Movimento vertical suave e justo ──
-  // maxShift: quanto o centro do gap pode mover entre um cano e o próximo
-  const maxShift = 62 - pi * 2.5;
-  // Pull gravitacional suave em direção ao centro
-  const pull = 0.08 * (H / 2 - lastGapCenter);
-  // Movimento delta: aleatório ± maxShift + pull central
+  // ── Movimento vertical dinâmico ──
+  // maxShift maior = saltos maiores entre obstáculos (topo → fundo → meio)
+  const maxShift = 105 - pi * 3.5; // P1=105  P10=70 — mais variação que antes
+  // Anti-cluster: empurra o próximo gap NA DIREÇÃO OPOSTA ao extremo atual.
+  // Se o último gap estava embaixo → próximo tende a ir para cima, e vice-versa.
+  // Isso força a alternância natural topo/baixo/meio sem ser previsível.
+  const pull = -0.14 * (lastGapCenter - H / 2);
+  // Movimento delta: aleatório ± maxShift + bias anti-cluster
   const delta = (Math.random() - 0.5) * 2 * maxShift + pull;
   let center  = lastGapCenter + delta;
 
