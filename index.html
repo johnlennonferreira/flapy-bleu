@@ -1477,6 +1477,7 @@ var shopOverlay=false, paused=false, phaseShopPending=false;
 var _bgGrad=null, _bgGradPhase=-1;
 var _gndGrad=null, _gndGradPhase=-1;
 var _heavenMist=null, _dungeonMist=null;
+var _sunHalo=null, _moonGrad=null, _astGrads=null;
 // ── LIVES + POWER-UPS ──
 var lives=3, invincible=0, starPower=0, stars=[];
 // ── Itens de loja ──────────────────────────────────────────────
@@ -3998,13 +3999,19 @@ function drawTicker(pv) {
 }
 
 function drawStarField(count, alpha) {
+  // Batch by alpha bucket — 4 fill() calls instead of `count` individual ones
+  var _cnt = _isMobile ? Math.min(count, 35) : count;
   ctx.fillStyle = '#ffffff';
-  for(var i = 0; i < count; i++) {
-    var sx = (i * 127 + frame * 0.2) % W;
-    var sy = (i * 83) % (H-80);
-    var ss = 0.5 + (i % 3) * 0.5;
-    ctx.globalAlpha = alpha * (0.5 + (i%4)*0.12);
-    ctx.beginPath(); ctx.arc(sx, sy, ss, 0, Math.PI*2); ctx.fill();
+  for(var bucket = 0; bucket < 4; bucket++) {
+    ctx.globalAlpha = alpha * (0.5 + bucket * 0.12);
+    ctx.beginPath();
+    for(var i = bucket; i < _cnt; i += 4) {
+      var sx = (i * 127 + frame * 0.2) % W;
+      var sy = (i * 83) % (H-80);
+      var ss = 0.5 + (i % 3) * 0.5;
+      ctx.moveTo(sx + ss, sy); ctx.arc(sx, sy, ss, 0, Math.PI*2);
+    }
+    ctx.fill();
   }
   ctx.globalAlpha = 1;
 }
@@ -4063,23 +4070,19 @@ function drawForestTrees() {
     // trunk
     ctx.fillStyle = '#6D4C41';
     ctx.fillRect(tcx - 6, H-80-th*0.3, 12, th*0.3);
-    ctx.strokeStyle = '#3e2723'; ctx.lineWidth = 1.5;
-    ctx.strokeRect(tcx - 6, H-80-th*0.3, 12, th*0.3);
+    if(!_isMobile){ ctx.strokeStyle = '#3e2723'; ctx.lineWidth = 1.5; ctx.strokeRect(tcx - 6, H-80-th*0.3, 12, th*0.3); }
     // foliage layer 1 — bottom widest, bright green + outline
     ctx.fillStyle = '#43A047';
     ctx.beginPath(); ctx.moveTo(tx-2,H-80-th*0.28); ctx.lineTo(tcx,H-80-th*0.68); ctx.lineTo(tx+tw+2,H-80-th*0.28); ctx.closePath(); ctx.fill();
-    ctx.strokeStyle = '#76D275'; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(tx-2,H-80-th*0.28); ctx.lineTo(tcx,H-80-th*0.68); ctx.lineTo(tx+tw+2,H-80-th*0.28); ctx.closePath(); ctx.stroke();
+    if(!_isMobile){ ctx.strokeStyle = '#76D275'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(tx-2,H-80-th*0.28); ctx.lineTo(tcx,H-80-th*0.68); ctx.lineTo(tx+tw+2,H-80-th*0.28); ctx.closePath(); ctx.stroke(); }
     // foliage layer 2 — mid
     ctx.fillStyle = '#4CAF50';
     ctx.beginPath(); ctx.moveTo(tx+4,H-80-th*0.54); ctx.lineTo(tcx,H-80-th*0.88); ctx.lineTo(tx+tw-4,H-80-th*0.54); ctx.closePath(); ctx.fill();
-    ctx.strokeStyle = '#81C784'; ctx.lineWidth = 1.8;
-    ctx.beginPath(); ctx.moveTo(tx+4,H-80-th*0.54); ctx.lineTo(tcx,H-80-th*0.88); ctx.lineTo(tx+tw-4,H-80-th*0.54); ctx.closePath(); ctx.stroke();
+    if(!_isMobile){ ctx.strokeStyle = '#81C784'; ctx.lineWidth = 1.8; ctx.beginPath(); ctx.moveTo(tx+4,H-80-th*0.54); ctx.lineTo(tcx,H-80-th*0.88); ctx.lineTo(tx+tw-4,H-80-th*0.54); ctx.closePath(); ctx.stroke(); }
     // foliage layer 3 — top brightest
     ctx.fillStyle = '#66BB6A';
     ctx.beginPath(); ctx.moveTo(tx+10,H-80-th*0.8); ctx.lineTo(tcx,H-80-th); ctx.lineTo(tx+tw-10,H-80-th*0.8); ctx.closePath(); ctx.fill();
-    ctx.strokeStyle = '#A5D6A7'; ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.moveTo(tx+10,H-80-th*0.8); ctx.lineTo(tcx,H-80-th); ctx.lineTo(tx+tw-10,H-80-th*0.8); ctx.closePath(); ctx.stroke();
+    if(!_isMobile){ ctx.strokeStyle = '#A5D6A7'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(tx+10,H-80-th*0.8); ctx.lineTo(tcx,H-80-th); ctx.lineTo(tx+tw-10,H-80-th*0.8); ctx.closePath(); ctx.stroke(); }
     // snow tip
     ctx.fillStyle = '#dff0ff99';
     ctx.beginPath(); ctx.moveTo(tcx-7,H-80-th*0.93); ctx.lineTo(tcx,H-80-th); ctx.lineTo(tcx+7,H-80-th*0.93); ctx.closePath(); ctx.fill();
@@ -4128,9 +4131,9 @@ function drawSunnyBlueSkyBg() {
   ctx.fillStyle = '#FFF7AA';
   ctx.beginPath(); ctx.arc(sunX, sunY, 26, 0, Math.PI*2); ctx.fill();
   ctx.shadowBlur = 0;
-  var sunHalo = ctx.createRadialGradient(sunX, sunY, 20, sunX, sunY, 80);
-  sunHalo.addColorStop(0,'#FFE06066'); sunHalo.addColorStop(1,'transparent');
-  ctx.fillStyle = sunHalo; ctx.fillRect(0,0,W,H);
+  // Cache sun halo — position never changes
+  if(!_sunHalo){ _sunHalo=ctx.createRadialGradient(sunX,sunY,20,sunX,sunY,80); _sunHalo.addColorStop(0,'#FFE06066'); _sunHalo.addColorStop(1,'transparent'); }
+  ctx.fillStyle = _sunHalo; ctx.fillRect(0,0,W,H);
   // Fluffy clouds
   drawClouds(0.62);
 }
@@ -4180,7 +4183,18 @@ function drawAsteroids() {
     {ox:370, y:250, r: 7, speed:0.14, rot:0.015},
     {ox:80,  y:380, r:13, speed:0.07, rot:-0.007},
   ];
-  for(var ai3 = 0; ai3 < asteroids.length; ai3++) {
+  // Cache radial gradients — created once in local (0,0) space, reused every frame
+  if(!_astGrads) {
+    _astGrads = [];
+    for(var _ai=0; _ai<asteroids.length; _ai++) {
+      var _r = asteroids[_ai].r;
+      var _g = ctx.createRadialGradient(-_r*0.3,-_r*0.3,0,0,0,_r);
+      _g.addColorStop(0,'#887766'); _g.addColorStop(0.6,'#554433'); _g.addColorStop(1,'#332211');
+      _astGrads.push(_g);
+    }
+  }
+  var _astCount = _isMobile ? 4 : asteroids.length; // skip 2 smallest on mobile
+  for(var ai3 = 0; ai3 < _astCount; ai3++) {
     var ast = asteroids[ai3];
     var ax = ((ast.ox - frame * ast.speed * 60) % (W + ast.r*3) + W + ast.r*3) % (W + ast.r*3) - ast.r*1.5;
     var ay = ast.y;
@@ -4198,25 +4212,24 @@ function drawAsteroids() {
                : ctx.lineTo(Math.cos(aang)*ar, Math.sin(aang)*ar);
     }
     ctx.closePath();
-    var ag = ctx.createRadialGradient(-ast.r*0.3, -ast.r*0.3, 0, 0, 0, ast.r);
-    ag.addColorStop(0, '#887766'); ag.addColorStop(0.6, '#554433'); ag.addColorStop(1, '#332211');
-    ctx.fillStyle = ag;
+    ctx.fillStyle = _astGrads[ai3]; // cached gradient
     ctx.fill();
     ctx.strokeStyle = '#998877'; ctx.lineWidth = 1; ctx.stroke();
-    // Crater marks
-    ctx.fillStyle = '#443322aa';
-    ctx.beginPath(); ctx.arc(ast.r*0.25, -ast.r*0.2, ast.r*0.22, 0, Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc(-ast.r*0.3, ast.r*0.25, ast.r*0.15, 0, Math.PI*2); ctx.fill();
+    // Crater marks — skip on mobile
+    if(!_isMobile) {
+      ctx.fillStyle = '#443322aa';
+      ctx.beginPath(); ctx.arc(ast.r*0.25, -ast.r*0.2, ast.r*0.22, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(-ast.r*0.3, ast.r*0.25, ast.r*0.15, 0, Math.PI*2); ctx.fill();
+    }
     ctx.restore();
   }
 }
 
 function drawCelestialDesertBg() {
-  // Large celestial moon
+  // Large celestial moon — gradient cached (position never changes)
   var moonX = W*0.2, moonY = 90;
-  var mg2 = ctx.createRadialGradient(moonX-15, moonY-15, 4, moonX, moonY, 55);
-  mg2.addColorStop(0,'#ffeecc'); mg2.addColorStop(0.6,'#cc8844'); mg2.addColorStop(1,'#55220088');
-  ctx.fillStyle = mg2;
+  if(!_moonGrad){ _moonGrad=ctx.createRadialGradient(moonX-15,moonY-15,4,moonX,moonY,55); _moonGrad.addColorStop(0,'#ffeecc'); _moonGrad.addColorStop(0.6,'#cc8844'); _moonGrad.addColorStop(1,'#55220088'); }
+  ctx.fillStyle = _moonGrad;
   ctx.beginPath(); ctx.arc(moonX, moonY, 55, 0, Math.PI*2); ctx.fill();
   ctx.shadowColor = '#cc7722'; ctx.shadowBlur = 30;
   ctx.strokeStyle = '#ffaa5544'; ctx.lineWidth = 3;
@@ -4401,9 +4414,14 @@ function drawSpacePlanetsBg() {
   for(var pi2 = 0; pi2 < planets.length; pi2++) {
     var pl = planets[pi2];
     var plx = ((pl.ox - frame*0.055) % (W+120) + W+120) % (W+120) - 60;
-    var plg = ctx.createRadialGradient(plx - pl.r*0.35, pl.y - pl.r*0.35, pl.r*0.08, plx, pl.y, pl.r);
-    plg.addColorStop(0, pl.c2); plg.addColorStop(0.65, pl.c1); plg.addColorStop(1, '#00000088');
-    ctx.fillStyle = plg;
+    if(_isMobile) {
+      // Flat color on mobile — skip createRadialGradient (position changes each frame)
+      ctx.fillStyle = pl.c1;
+    } else {
+      var plg = ctx.createRadialGradient(plx - pl.r*0.35, pl.y - pl.r*0.35, pl.r*0.08, plx, pl.y, pl.r);
+      plg.addColorStop(0, pl.c2); plg.addColorStop(0.65, pl.c1); plg.addColorStop(1, '#00000088');
+      ctx.fillStyle = plg;
+    }
     ctx.beginPath(); ctx.arc(plx, pl.y, pl.r, 0, Math.PI*2); ctx.fill();
     if(pl.ring) {
       ctx.strokeStyle = '#aa886655'; ctx.lineWidth = 5;
