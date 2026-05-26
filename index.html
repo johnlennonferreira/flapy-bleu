@@ -977,66 +977,127 @@ const ALIEN_COLORS = [
 function drawMarketTab() {
   ctx.fillStyle='rgba(0,4,18,0.92)'; ctx.fillRect(0,0,W,H);
   ctx.textAlign='center';
-  // Título
+
+  // ── Título ──
   ctx.font='bold 16px Courier New';
   var _mg=ctx.createLinearGradient(W/2-60,0,W/2+60,0);
   _mg.addColorStop(0,'#00D4FF'); _mg.addColorStop(1,'#FFD700');
   ctx.fillStyle=_mg; ctx.shadowColor='#00D4FF'; ctx.shadowBlur=8;
-  ctx.fillText('MARKET', W/2, 32); ctx.shadowBlur=0;
-  ctx.font='10px Courier New'; ctx.fillStyle='#ffffff44';
-  ctx.fillText('guia de itens — compre na aba SHOP', W/2, 48);
+  ctx.fillText('MARKET', W/2, 28); ctx.shadowBlur=0;
+  ctx.font='9px Courier New'; ctx.fillStyle='#ffffff33';
+  ctx.fillText('guia completo · compras na aba SHOP', W/2, 42);
+
+  // ── helper: desenha um card compacto horizontal ──
+  function _mCard(cy, h, icon, iconCol, name, nameCol, tag, tagCol, desc) {
+    ctx.fillStyle = iconCol+'0d';
+    ctx.strokeStyle = iconCol+'44'; ctx.lineWidth=1.2;
+    ctx.beginPath(); ctx.roundRect(10, cy, W-20, h, 8); ctx.fill(); ctx.stroke();
+    // círculo ícone
+    ctx.fillStyle = iconCol+'30';
+    ctx.beginPath(); ctx.arc(34, cy+h/2, 16, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = iconCol+'77'; ctx.lineWidth=1.2;
+    ctx.beginPath(); ctx.arc(34, cy+h/2, 17, 0, Math.PI*2); ctx.stroke();
+    ctx.font='17px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(icon, 34, cy+h/2); ctx.textBaseline='alphabetic';
+    // nome
+    ctx.font='bold 11px Courier New'; ctx.fillStyle=nameCol; ctx.textAlign='left';
+    ctx.fillText(name, 60, cy+18);
+    // tag (preço / requisito)
+    ctx.font='bold 9px Courier New'; ctx.fillStyle=tagCol;
+    ctx.fillText(tag, 60, cy+31);
+    // descrição
+    ctx.font='8px Courier New'; ctx.fillStyle='#ffffff77';
+    ctx.fillText(desc, 60, cy+44);
+  }
+
+  var _cy = 50;
+
+  // ══ SEÇÃO: ITENS ══
+  ctx.font='bold 9px Courier New'; ctx.fillStyle='#ffffff33'; ctx.textAlign='left';
+  ctx.fillText('── ITENS ─────────────────────────────', 10, _cy+10);
+  _cy += 16;
 
   var _items=[
-    { icon:'🛡', name:'SHIELD',     price:'🐉 80 coins', col:'#00FF88',
-      desc:'Absorve 1 impacto fatal.\nAtiva automaticamente ao iniciar a run.',
-      where:'Compre na aba SHOP' },
-    { icon:'⚗', name:'SLOW-MO',    price:'USDC $0.25',  col:'#00D4FF',
-      desc:'Reduz a velocidade do jogo\npor 45 segundos (dura 1 fase inteira).',
-      where:'Compre na aba SHOP · Base Network' },
-    { icon:'♥', name:'+CORAÇÃO',   price:'USDC $0.25',  col:'#FF6680',
-      desc:'Adiciona +1 vida na próxima\npartida. Máximo de +2 corações.',
-      where:'Compre na aba SHOP · Base Network' },
-    { icon:'🃏', name:'CHECKPOINT', price:'USDC $0.50',  col:'#FFD700',
-      desc:'Revive no ponto da morte com\ninvencibilidade. 1 uso por partida.',
-      where:'Compre na aba SHOP · Base Network' },
+    { icon:'🛡', col:'#00FF88', name:'SHIELD',
+      tag:'🐉 80 coins',           tagCol:'#FFD700',
+      desc:'Absorve 1 impacto. Ativa ao iniciar a run.' },
+    { icon:'⚗', col:'#00D4FF', name:'SLOW-MO',
+      tag:'USDC $0.25 · Base Network', tagCol:'#00D4FF',
+      desc:'Velocidade -28% por 45s (1 fase inteira).' },
+    { icon:'♥', col:'#FF6680', name:'+CORAÇÃO',
+      tag:'USDC $0.25 · Base Network', tagCol:'#FF6680',
+      desc:'+1 vida na próxima partida. Máx +2.' },
+    { icon:'🃏', col:'#FFD700', name:'CHECKPOINT',
+      tag:'USDC $0.50 · Base Network', tagCol:'#FFD700',
+      desc:'Revive no ponto da morte. 1 uso/run.' },
   ];
-  var _cy=62;
   for(var _mi=0;_mi<_items.length;_mi++){
     var _it=_items[_mi];
-    var _cardH=96;
-    // card bg + borda colorida
-    ctx.fillStyle=_it.col+'0e';
-    ctx.strokeStyle=_it.col+'55'; ctx.lineWidth=1.5;
-    ctx.beginPath(); ctx.roundRect(10, _cy, W-20, _cardH, 10); ctx.fill(); ctx.stroke();
-    // círculo de fundo do ícone
-    ctx.fillStyle=_it.col+'28';
-    ctx.beginPath(); ctx.arc(36, _cy+_cardH/2, 20, 0, Math.PI*2); ctx.fill();
-    ctx.strokeStyle=_it.col+'66'; ctx.lineWidth=1.2;
-    ctx.beginPath(); ctx.arc(36, _cy+_cardH/2, 21, 0, Math.PI*2); ctx.stroke();
-    // ícone
-    ctx.font='22px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText(_it.icon, 36, _cy+_cardH/2);
-    ctx.textBaseline='alphabetic'; ctx.textAlign='left';
-    // nome
-    ctx.font='bold 12px Courier New'; ctx.fillStyle=_it.col;
-    ctx.fillText(_it.name, 66, _cy+20);
-    // preço (badge)
-    ctx.font='bold 10px Courier New'; ctx.fillStyle='#FFD700';
-    ctx.fillText(_it.price, 66, _cy+35);
-    // descrição
-    var _lines=_it.desc.split('\n');
-    ctx.font='8.5px Courier New'; ctx.fillStyle='#ffffffaa';
-    ctx.fillText(_lines[0], 66, _cy+52);
-    if(_lines[1]) ctx.fillText(_lines[1], 66, _cy+64);
-    // onde comprar — badge pequeno
-    ctx.font='7px Courier New'; ctx.fillStyle=_it.col+'88';
-    ctx.fillText(_it.where, 66, _cy+80);
-    _cy+=_cardH+7;
+    _mCard(_cy, 52, _it.icon, _it.col, _it.name, _it.col, _it.tag, _it.tagCol, _it.desc);
+    _cy += 57;
   }
-  // Rodapé
+
+  // ══ SEÇÃO: PERSONAGENS ══
+  _cy += 4;
+  ctx.font='bold 9px Courier New'; ctx.fillStyle='#ffffff33'; ctx.textAlign='left';
+  ctx.fillText('── PERSONAGENS DESBLOQUEÁVEIS ────────', 10, _cy+10);
+  _cy += 16;
+
+  var _chars=[
+    { icon:'?', col:'#aa44ff', name:'PHANTOM',
+      tag:'NG+1 — zere as 10 fases 1 vez',       tagCol:'#aa44ff',
+      unlocked: gengarUnlocked,
+      usdcTag:'ou USDC $0.50 · desbloqueio permanente' },
+    { icon:'?', col:'#88dd44', name:'WORM',
+      tag:'NG+2 — complete 2 loops completos',    tagCol:'#88dd44',
+      unlocked: wormUnlocked,
+      usdcTag:'ou USDC $0.50 · desbloqueio permanente' },
+    { icon:'?', col:'#44FF88', name:'ALIEN',
+      tag:'NG+3 — complete 3 loops completos',    tagCol:'#44FF88',
+      unlocked: alienUnlocked,
+      usdcTag:'ou USDC $0.50 · desbloqueio permanente' },
+    { icon:'?', col:'#FFD700', name:'??? SECRETO',
+      tag:'NG+5 — em breve',                      tagCol:'#FFD70066',
+      unlocked: false,
+      usdcTag:'' },
+  ];
+  for(var _ci=0;_ci<_chars.length;_ci++){
+    var _ch=_chars[_ci];
+    var _chH=_ch.usdcTag?60:50;
+    // card
+    ctx.fillStyle=_ch.col+'0d';
+    ctx.strokeStyle=(_ch.unlocked?_ch.col+'88':_ch.col+'33'); ctx.lineWidth=1.2;
+    ctx.beginPath(); ctx.roundRect(10, _cy, W-20, _chH, 8); ctx.fill(); ctx.stroke();
+    // círculo ícone — "?" ou check
+    ctx.fillStyle=_ch.col+'25';
+    ctx.beginPath(); ctx.arc(34, _cy+_chH/2, 16, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle=_ch.col+(_ch.unlocked?'bb':'44'); ctx.lineWidth=1.2;
+    ctx.beginPath(); ctx.arc(34, _cy+_chH/2, 17, 0, Math.PI*2); ctx.stroke();
+    ctx.font='bold 14px Courier New'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillStyle=_ch.unlocked?_ch.col:'#ffffff55';
+    ctx.fillText(_ch.unlocked?'✓':'?', 34, _cy+_chH/2); ctx.textBaseline='alphabetic';
+    // nome + status
+    ctx.textAlign='left';
+    ctx.font='bold 11px Courier New'; ctx.fillStyle=_ch.unlocked?_ch.col:_ch.col+'aa';
+    ctx.fillText((_ch.unlocked?'✓ ':'')+_ch.name, 60, _cy+16);
+    ctx.font='bold 9px Courier New'; ctx.fillStyle=_ch.tagCol;
+    ctx.fillText(_ch.tag, 60, _cy+29);
+    if(_ch.usdcTag){
+      ctx.font='7px Courier New'; ctx.fillStyle='#ffffff44';
+      ctx.fillText(_ch.usdcTag, 60, _cy+42);
+    }
+    // badge "DESBLOQUEADO" se já tem
+    if(_ch.unlocked){
+      ctx.font='bold 7px Courier New'; ctx.fillStyle=_ch.col+'cc'; ctx.textAlign='right';
+      ctx.fillText('DESBLOQUEADO', W-16, _cy+16);
+    }
+    _cy += _chH+5;
+  }
+
+  // progresso atual
   ctx.textAlign='center';
-  ctx.font='8px Courier New'; ctx.fillStyle='#ffffff22';
-  ctx.fillText('vá para SHOP para adquirir qualquer item', W/2, _cy+8);
+  ctx.font='8px Courier New'; ctx.fillStyle='#ffffff33';
+  ctx.fillText('seu melhor: NG+'+bestPrestige, W/2, _cy+10);
 }
 
 // ─── LEADERBOARD TAB ────────────────────────────────────────────────
