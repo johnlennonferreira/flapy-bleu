@@ -2266,24 +2266,24 @@ function drawPhantom(x, y, flapAnim, angle) {
 
   // ── OUTER ETHEREAL AURA — só durante star power ──
   if(typeof starPower !== 'undefined' && starPower > 0) {
-    var _auraR = 52 + _pulse * 10; // muito maior e mais épica
-    // Anel branco externo
-    var _ag0 = ctx.createRadialGradient(0, -3, 24, 0, -3, _auraR);
-    _ag0.addColorStop(0, '#ffffff00');
-    _ag0.addColorStop(0.75, '#ffffff18');
-    _ag0.addColorStop(0.9, '#00D4FF44');
-    _ag0.addColorStop(1, '#00D4FF00');
+    var _auraR = 52 + _pulse * 10;
     ctx.globalAlpha = 0.7 + _pulse * 0.3;
     ctx.beginPath(); ctx.arc(0, -3, _auraR, 0, Math.PI*2);
-    ctx.fillStyle = _ag0; ctx.fill();
-    // Núcleo brilhante
-    var _ag = ctx.createRadialGradient(0, -3, 0, 0, -3, 28);
-    _ag.addColorStop(0, '#ffffff66');
-    _ag.addColorStop(0.5, cGl + '33');
-    _ag.addColorStop(1, cGl + '00');
+    if(!_isMobile){
+      var _ag0 = ctx.createRadialGradient(0, -3, 24, 0, -3, _auraR);
+      _ag0.addColorStop(0, '#ffffff00'); _ag0.addColorStop(0.75, '#ffffff18');
+      _ag0.addColorStop(0.9, '#00D4FF44'); _ag0.addColorStop(1, '#00D4FF00');
+      ctx.fillStyle = _ag0;
+    } else { ctx.fillStyle = '#00D4FF22'; }
+    ctx.fill();
     ctx.globalAlpha = 0.5 + _pulse * 0.4;
     ctx.beginPath(); ctx.arc(0, -3, 28, 0, Math.PI*2);
-    ctx.fillStyle = _ag; ctx.fill();
+    if(!_isMobile){
+      var _ag = ctx.createRadialGradient(0, -3, 0, 0, -3, 28);
+      _ag.addColorStop(0, '#ffffff66'); _ag.addColorStop(0.5, cGl + '33'); _ag.addColorStop(1, cGl + '00');
+      ctx.fillStyle = _ag;
+    } else { ctx.fillStyle = cGl + '44'; }
+    ctx.fill();
     ctx.globalAlpha = 1;
   }
 
@@ -5884,13 +5884,16 @@ function loop(ts) {
       var _tintAlpha = _returning ? (0.12 + 0.12*Math.sin(frame*0.55)) : 0.20;
       ctx.globalAlpha=_tintAlpha; ctx.fillStyle='#FF3300'; ctx.fillRect(0,0,W,H); ctx.globalAlpha=1;
 
-      // Aura de fogo ao redor do pássaro — maior e mais intensa
+      // Aura de fogo ao redor do pássaro — flat on mobile
       var _faR=44+10*Math.abs(Math.sin(frame*0.32));
       ctx.globalAlpha=(0.45+0.25*Math.sin(frame*0.5))*_ff;
-      var _fag=ctx.createRadialGradient(bleu.x,bleu.y,4,bleu.x,bleu.y,_faR);
-      _fag.addColorStop(0,'#ffffffcc'); _fag.addColorStop(0.25,'#FF8800aa'); _fag.addColorStop(0.6,'#FF440066'); _fag.addColorStop(1,'#FF440000');
-      ctx.fillStyle=_fag;
-      ctx.beginPath(); ctx.arc(bleu.x,bleu.y,_faR,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(bleu.x,bleu.y,_faR,0,Math.PI*2);
+      if(!_isMobile){
+        var _fag=ctx.createRadialGradient(bleu.x,bleu.y,4,bleu.x,bleu.y,_faR);
+        _fag.addColorStop(0,'#ffffffcc'); _fag.addColorStop(0.25,'#FF8800aa'); _fag.addColorStop(0.6,'#FF440066'); _fag.addColorStop(1,'#FF440000');
+        ctx.fillStyle=_fag;
+      } else { ctx.fillStyle='#FF660055'; }
+      ctx.fill();
       ctx.globalAlpha=1;
 
       // Coroa de chamas acima do pássaro
