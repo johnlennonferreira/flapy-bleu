@@ -5789,8 +5789,8 @@ function loop(ts) {
     }
 
     // ─── STAR POWER-UP spawn ─────────────────
-    if(slowMoActive > 0) slowMoActive--;
-    var _slowMult = slowMoActive > 0 ? 0.72 : 1; // 28% mais lento quando ativo
+    if(slowMoActive > 0 && !phasePaused) slowMoActive--; // don't drain during phase freeze
+    var _slowMult = slowMoActive > 0 ? 0.72 : 1; // 28% slower when active
     var spd = phasePaused ? 0 : ph.speed * (starPower > 0 ? 2.2 : firePower > 0 ? 3.0 : 1) * _slowMult;
     // Estrela azul: rara, só aparece sem escudo na tela e sem sobreposição
     if(frame % 420 === 60 && Math.random() < 0.12 && starPower === 0 && firePower === 0 && shieldItems.length === 0) {
