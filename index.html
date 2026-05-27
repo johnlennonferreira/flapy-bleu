@@ -679,7 +679,7 @@ function drawLegendaryUnlockScreen() {
   if(_sIn > 0){
     ctx.globalAlpha = _sIn;
     ctx.font='bold 10px Courier New'; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillStyle='#FF8833'; ctx.fillText('5 LOOPS CONQUISTADOS', 0, 80);
+    ctx.fillStyle='#FF8833'; ctx.fillText('5 LOOPS CONQUERED', 0, 80);
     ctx.font='9px Courier New'; ctx.fillStyle='#ffffff55';
     ctx.fillText('THE SEAS BOW BEFORE YOU', 0, 94);
   }
@@ -1323,7 +1323,7 @@ function drawMarketTab() {
   ctx.font='8px Courier New'; ctx.fillStyle='#ffffff66';
   ctx.fillText('Speed -28% for 45s (1 phase).', 58, _cy+27);
   ctx.fillText('Stacks in inventory.', 58, _cy+38);
-  var _b0=_drawUSDCBtn(_cy, _hBtn, '#00D4FF', 'COMPRAR', '$0.25', false);
+  var _b0=_drawUSDCBtn(_cy, _hBtn, '#00D4FF', 'BUY', '$0.25', false);
   if(_b0) _marketBtns.push({rect:_b0, action:function(){ if(slowMoStock>=5) return; sendUSDCPurchase(USDC_SLOWMO,function(){ slowMoStock=Math.min(slowMoStock+1,5); _ls.set('bleuSlowMo',slowMoStock); beep(440,880,0.2,'sine',0.14); spawnParticles(W/2,H/2,'#00D4FF',14); }); }});
   _cy+=_hBtn+_gap;
 
@@ -1336,7 +1336,7 @@ function drawMarketTab() {
   ctx.font='8px Courier New'; ctx.fillStyle='#ffffff66';
   ctx.fillText('+1 life next run. Max +2.', 58, _cy+27);
   ctx.fillText('Owned: '+extraHeartStock+'/2', 58, _cy+38);
-  var _b1=_drawUSDCBtn(_cy, _hBtn, '#FF6680', 'COMPRAR', '$0.25', _heartDis);
+  var _b1=_drawUSDCBtn(_cy, _hBtn, '#FF6680', 'BUY', '$0.25', _heartDis);
   if(_b1) _marketBtns.push({rect:_b1, action:function(){ if(extraHeartStock<2) sendUSDCPurchase(USDC_HEART,function(){ extraHeartStock++; _ls.set('bleuExtraHeart',extraHeartStock); beep(523,880,0.2,'sine',0.14); spawnParticles(W/2,H/2,'#FF6680',14); }); }});
   _cy+=_hBtn+_gap;
 
@@ -1349,7 +1349,7 @@ function drawMarketTab() {
   ctx.font='8px Courier New'; ctx.fillStyle='#ffffff66';
   ctx.fillText('Revive at the death point.', 58, _cy+27);
   ctx.fillText('1 use per run.', 58, _cy+38);
-  var _b2=_drawUSDCBtn(_cy, _hBtn, '#FFD700', 'COMPRAR', '$0.50', _cpDis);
+  var _b2=_drawUSDCBtn(_cy, _hBtn, '#FFD700', 'BUY', '$0.50', _cpDis);
   if(_b2) _marketBtns.push({rect:_b2, action:function(){ if(checkpointStock<1) sendUSDCPurchase(USDC_CHECKPOINT,function(){ checkpointStock=1; _ls.set('bleuCheckpoint',1); beep(660,1320,0.25,'sine',0.16); spawnParticles(W/2,H/2,'#FFD700',18); }); }});
   _cy+=_hBtn+_gap;
 
@@ -1359,7 +1359,7 @@ function drawMarketTab() {
   ctx.fillText('── UNLOCKABLE CHARACTERS ──────────────', 10, _cy+9); _cy+=14;
 
   var _secretEntry = boatUnlocked
-    ? { col:'#FFD700',   name:'VIKING BOAT ⚓', req:'NG+5 LEGENDARY · desbloqueado!', unlocked:true,  charIdx:-1 }
+    ? { col:'#FFD700',   name:'VIKING BOAT ⚓', req:'NG+5 LEGENDARY · unlocked!',     unlocked:true,  charIdx:-1 }
     : { col:'#FFD70088', name:'??? SECRET',      req:'NG+5 · complete 5 loops',        unlocked:false, charIdx:-1 };
   var _charDefs=[
     { icon:'?', col:'#aa44ff', name:'PHANTOM', req:'NG+1 · clear all 10 phases once  ', unlocked:gengarUnlocked, charIdx:1 },
