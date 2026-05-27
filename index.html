@@ -2460,13 +2460,18 @@ function drawPhantomFarts() {
     var t = p.life / p.maxLife; // 1→0
     ctx.save();
     ctx.globalAlpha = p.alpha * t * t;
-    // Fart cloud: layered yellowish-green gas
-    var fg = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
-    fg.addColorStop(0, '#ccff44cc');
-    fg.addColorStop(0.5,'#88cc22aa');
-    fg.addColorStop(1,  '#44881100');
-    ctx.fillStyle = fg;
-    ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.fill();
+    // Fart cloud: radial gradient on desktop, flat fill on mobile (no radialGradient per frame)
+    if(_isMobile){
+      ctx.fillStyle = '#88cc22';
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.fill();
+    } else {
+      var fg = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
+      fg.addColorStop(0, '#ccff44cc');
+      fg.addColorStop(0.5,'#88cc22aa');
+      fg.addColorStop(1,  '#44881100');
+      ctx.fillStyle = fg;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.fill();
+    }
     ctx.globalAlpha=1; ctx.restore();
   }
 }
