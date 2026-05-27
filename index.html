@@ -1625,7 +1625,7 @@ var top5 = loadTop5();
 
 // ─── NFT CHARACTER SYSTEM ────────────────────
 var unlockedChars = parseInt(_ls.get('bleuChars','1')); // 1=Bleu only
-var activeChar    = parseInt(_ls.get('bleuActiveChar','0')); // 0=Bleu, 1=Brett
+// NOTE: activeChar is declared at line ~1686 via _ls.get('bleuChar') — canonical load
 var nftFlash      = 0; // NFT unlock animation counter
 var showCharSel   = false; // show character selector in idle
 
@@ -1652,6 +1652,9 @@ var _bgGrad=null, _bgGradPhase=-1;
 var _gndGrad=null, _gndGradPhase=-1;
 var _heavenMist=null, _dungeonMist=null;
 var _sunHalo=null, _moonGrad=null, _astGrads=null;
+var _forestLake=null, _forestFog=null, _desertSand=null;
+var _starEdgeH=null, _starEdgeV=null; // star power screen-edge gradient cache
+var _barGrad=null, _barGradPhase=-1;  // progress bar gradient cache (per phase)
 // ── LIVES + POWER-UPS ──
 var lives=3, invincible=0, starPower=0, stars=[];
 // ── Itens de loja ──────────────────────────────────────────────
@@ -2304,14 +2307,19 @@ function drawPhantom(x, y, flapAnim, angle) {
   }
   ctx.closePath();
   // Animated shimmer gradient: highlight center wanders left-right
-  var _gx = -6 + _shimmer * 5;
-  var _gy = -12 + _shimmer * 3;
-  var _bg = ctx.createRadialGradient(_gx, _gy, 2, 0, -3, 27);
-  _bg.addColorStop(0,    cBL);
-  _bg.addColorStop(0.38, cB);
-  _bg.addColorStop(0.78, cD);
-  _bg.addColorStop(1,    cD + '88');
-  ctx.fillStyle = _bg; ctx.fill();
+  // Mobile: flat fill — skip per-frame radialGradient allocation
+  if(_isMobile){
+    ctx.fillStyle = cB; ctx.fill();
+  } else {
+    var _gx = -6 + _shimmer * 5;
+    var _gy = -12 + _shimmer * 3;
+    var _bg = ctx.createRadialGradient(_gx, _gy, 2, 0, -3, 27);
+    _bg.addColorStop(0,    cBL);
+    _bg.addColorStop(0.38, cB);
+    _bg.addColorStop(0.78, cD);
+    _bg.addColorStop(1,    cD + '88');
+    ctx.fillStyle = _bg; ctx.fill();
+  }
   ctx.lineWidth = 2.2; ctx.strokeStyle = cO; ctx.stroke();
 
   // Inner translucency highlights (two overlapping glows for depth)
@@ -2346,17 +2354,19 @@ function drawPhantom(x, y, flapAnim, angle) {
   }
 
   // ── EYES — Haunter's huge, iconic eyes ──
-  // Coloured glow rings behind each eye (pulsing)
-  var _eyeGl = 0.28 + 0.16*_pulse;
-  var _egL = ctx.createRadialGradient(-8,-5,5,-8,-5,15);
-  _egL.addColorStop(0, cEy+'88'); _egL.addColorStop(1, cEy+'00');
-  ctx.beginPath(); ctx.ellipse(-8,-5,14,13,0,0,Math.PI*2);
-  ctx.fillStyle=_egL; ctx.globalAlpha=_eyeGl; ctx.fill();
-  var _egR = ctx.createRadialGradient(8,-5,5,8,-5,15);
-  _egR.addColorStop(0, cEy+'88'); _egR.addColorStop(1, cEy+'00');
-  ctx.beginPath(); ctx.ellipse(8,-5,14,13,0,0,Math.PI*2);
-  ctx.fillStyle=_egR; ctx.globalAlpha=_eyeGl; ctx.fill();
-  ctx.globalAlpha=1;
+  // Coloured glow rings behind each eye — skipped on mobile (2 radialGradients/frame)
+  if(!_isMobile){
+    var _eyeGl = 0.28 + 0.16*_pulse;
+    var _egL = ctx.createRadialGradient(-8,-5,5,-8,-5,15);
+    _egL.addColorStop(0, cEy+'88'); _egL.addColorStop(1, cEy+'00');
+    ctx.beginPath(); ctx.ellipse(-8,-5,14,13,0,0,Math.PI*2);
+    ctx.fillStyle=_egL; ctx.globalAlpha=_eyeGl; ctx.fill();
+    var _egR = ctx.createRadialGradient(8,-5,5,8,-5,15);
+    _egR.addColorStop(0, cEy+'88'); _egR.addColorStop(1, cEy+'00');
+    ctx.beginPath(); ctx.ellipse(8,-5,14,13,0,0,Math.PI*2);
+    ctx.fillStyle=_egR; ctx.globalAlpha=_eyeGl; ctx.fill();
+    ctx.globalAlpha=1;
+  }
 
   // White sclera — scale Y for terror/squint expression
   var _eRy = 8 * _eyeScaleY;
@@ -2589,11 +2599,13 @@ function drawWorm(x, y, flapAnim, angle) {
     ctx.beginPath(); ctx.moveTo(a.sx, a.sy);
     ctx.bezierCurveTo(a.cx, a.cy, a.cx, a.cy, a.ex, a.ey);
     ctx.strokeStyle = cO; ctx.lineWidth = 1.3; ctx.globalAlpha = 0.85; ctx.stroke();
-    // Glow halo na ponta
-    var _tgl = ctx.createRadialGradient(a.ex, a.ey, 0, a.ex, a.ey, 6);
-    _tgl.addColorStop(0, cBL+'dd'); _tgl.addColorStop(1, cBL+'00');
-    ctx.fillStyle = _tgl; ctx.globalAlpha = 0.55;
-    ctx.beginPath(); ctx.arc(a.ex, a.ey, 6, 0, Math.PI*2); ctx.fill();
+    // Glow halo na ponta — flat on mobile
+    if(!_isMobile){
+      var _tgl = ctx.createRadialGradient(a.ex, a.ey, 0, a.ex, a.ey, 6);
+      _tgl.addColorStop(0, cBL+'dd'); _tgl.addColorStop(1, cBL+'00');
+      ctx.fillStyle = _tgl; ctx.globalAlpha = 0.55;
+      ctx.beginPath(); ctx.arc(a.ex, a.ey, 6, 0, Math.PI*2); ctx.fill();
+    }
     // Bolinha sólida
     ctx.beginPath(); ctx.arc(a.ex, a.ey, 2.6, 0, Math.PI*2);
     ctx.fillStyle = cBL; ctx.globalAlpha = 1; ctx.fill();
@@ -2615,13 +2627,16 @@ function drawWorm(x, y, flapAnim, angle) {
     ctx.beginPath(); ctx.ellipse(0, 0, rS, rS*1.2, 0, 0, Math.PI*2);
     ctx.fillStyle = '#ffffff'; ctx.fill();
     ctx.lineWidth = 1.1; ctx.strokeStyle = cO; ctx.stroke();
-    // Íris gradiente
-    var _ig = ctx.createRadialGradient(-rI*0.25, -rI*0.25, rI*0.05, 0, 0, rI);
-    _ig.addColorStop(0,   cBL+'ff');
-    _ig.addColorStop(0.55, cEy+'ee');
-    _ig.addColorStop(1,   cD+'cc');
+    // Íris — flat on mobile (2 radialGradients/frame saved)
     ctx.beginPath(); ctx.ellipse(0, 0, rI, rI*1.18, 0, 0, Math.PI*2);
-    ctx.fillStyle = _ig; ctx.fill();
+    if(_isMobile){
+      ctx.fillStyle = cEy;
+    } else {
+      var _ig = ctx.createRadialGradient(-rI*0.25, -rI*0.25, rI*0.05, 0, 0, rI);
+      _ig.addColorStop(0,   cBL+'ff'); _ig.addColorStop(0.55, cEy+'ee'); _ig.addColorStop(1, cD+'cc');
+      ctx.fillStyle = _ig;
+    }
+    ctx.fill();
     // Pupila
     ctx.beginPath(); ctx.ellipse(0.2, 0.3, rP, rP*1.2, 0, 0, Math.PI*2);
     ctx.fillStyle = '#080808'; ctx.fill();
@@ -2669,23 +2684,35 @@ function drawWorm(x, y, flapAnim, angle) {
   var _mR = _wFastFall ? 4.5 : 5.2; // "O" menor de susto vs sorriso normal
 
   // Bochechas rosadas — clipped ao círculo da cabeça para não vazar
+  // Mobile: flat alpha ellipses — skip 2 radialGradients/frame
   ctx.save();
   ctx.beginPath(); ctx.arc(hx, hy, hr, 0, Math.PI*2); ctx.clip();
-  [_mx - 9, _mx + 7].forEach(function(bx) {
-    var _g = ctx.createRadialGradient(bx, _my - 2, 0, bx, _my - 2, 6.5);
-    _g.addColorStop(0, 'rgba(255,100,115,0.44)');
-    _g.addColorStop(1, 'rgba(255,100,115,0)');
-    ctx.fillStyle = _g; ctx.beginPath(); ctx.arc(bx, _my - 2, 6.5, 0, Math.PI*2); ctx.fill();
-  });
+  if(_isMobile){
+    ctx.fillStyle = 'rgba(255,100,115,0.28)';
+    [_mx - 9, _mx + 7].forEach(function(bx){
+      ctx.beginPath(); ctx.arc(bx, _my - 2, 6.5, 0, Math.PI*2); ctx.fill();
+    });
+  } else {
+    [_mx - 9, _mx + 7].forEach(function(bx) {
+      var _g = ctx.createRadialGradient(bx, _my - 2, 0, bx, _my - 2, 6.5);
+      _g.addColorStop(0, 'rgba(255,100,115,0.44)'); _g.addColorStop(1, 'rgba(255,100,115,0)');
+      ctx.fillStyle = _g; ctx.beginPath(); ctx.arc(bx, _my - 2, 6.5, 0, Math.PI*2); ctx.fill();
+    });
+  }
   ctx.restore();
 
   // ── Nariz de palhaço 🔴 — entre os olhos e a boca ──
   var _nx = hx+10, _ny = hy+1;
   var _nRad = 3.0;
-  var _nog = ctx.createRadialGradient(_nx-0.8, _ny-0.8, 0, _nx, _ny, _nRad);
-  _nog.addColorStop(0, '#ff5577'); _nog.addColorStop(1, '#cc0022');
   ctx.beginPath(); ctx.arc(_nx, _ny, _nRad, 0, Math.PI*2);
-  ctx.fillStyle = _nog; ctx.fill();
+  if(_isMobile){
+    ctx.fillStyle = '#ee2244';
+  } else {
+    var _nog = ctx.createRadialGradient(_nx-0.8, _ny-0.8, 0, _nx, _ny, _nRad);
+    _nog.addColorStop(0, '#ff5577'); _nog.addColorStop(1, '#cc0022');
+    ctx.fillStyle = _nog;
+  }
+  ctx.fill();
   ctx.lineWidth = 0.8; ctx.strokeStyle = '#880011'; ctx.globalAlpha = 0.5; ctx.stroke(); ctx.globalAlpha = 1;
   // brilho do nariz
   ctx.beginPath(); ctx.arc(_nx-1.0, _ny-1.0, 1.1, 0, Math.PI*2);
@@ -2717,9 +2744,9 @@ function drawWorm(x, y, flapAnim, angle) {
   ctx.restore();
 }
 
-// ─── BRETT — coming soon ──
-function drawBrett(x, y, flapAnim, vy) { drawBleu(x, y, flapAnim, vy); }
-function drawBrett_ORIG(x, y, flapAnim, vy) {
+// ─── BRETT — removed (character retired) ──
+// function drawBrett was here; character slot repurposed for Phantom (activeChar=1)
+function drawBrett_ORIG_ARCHIVED(x, y, flapAnim, vy) {
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(Math.max(-0.45, Math.min(0.65, vy * 0.04)));
@@ -3042,18 +3069,28 @@ function drawAlien(x, y, flapAnim, angle) {
   ctx.fillStyle = cBL; ctx.globalAlpha = 0.38; ctx.fill(); ctx.globalAlpha = 1;
 
   // ── 10. DISCO — desenhado SOBRE a cabeça (esconde metade inferior) ──
-  // corpo principal do disco — gradiente metálico
-  var _dg = ctx.createLinearGradient(0, 3, 0, 18);
-  _dg.addColorStop(0, cUL); _dg.addColorStop(0.4, cU); _dg.addColorStop(1, cUS);
+  // corpo principal do disco — flat on mobile (2 linearGradients/frame saved)
   ctx.beginPath(); ctx.ellipse(0, 10, 28, 8, 0, 0, Math.PI*2);
-  ctx.fillStyle = _dg; ctx.fill();
+  if(_isMobile){
+    ctx.fillStyle = cU;
+  } else {
+    var _dg = ctx.createLinearGradient(0, 3, 0, 18);
+    _dg.addColorStop(0, cUL); _dg.addColorStop(0.4, cU); _dg.addColorStop(1, cUS);
+    ctx.fillStyle = _dg;
+  }
+  ctx.fill();
   ctx.lineWidth = 1.5; ctx.strokeStyle = cO + '77'; ctx.stroke();
 
   // borda superior do disco — aro que "abraça" a cabeça
-  var _rimGrad = ctx.createLinearGradient(-28, 0, 28, 0);
-  _rimGrad.addColorStop(0, cUS); _rimGrad.addColorStop(0.3, cUL); _rimGrad.addColorStop(0.7, cUL); _rimGrad.addColorStop(1, cUS);
   ctx.beginPath(); ctx.ellipse(0, 8, 28, 5.5, 0, 0, Math.PI*2);
-  ctx.fillStyle = _rimGrad; ctx.fill();
+  if(_isMobile){
+    ctx.fillStyle = cUL;
+  } else {
+    var _rimGrad = ctx.createLinearGradient(-28, 0, 28, 0);
+    _rimGrad.addColorStop(0, cUS); _rimGrad.addColorStop(0.3, cUL); _rimGrad.addColorStop(0.7, cUL); _rimGrad.addColorStop(1, cUS);
+    ctx.fillStyle = _rimGrad;
+  }
+  ctx.fill();
   ctx.lineWidth = 1.2; ctx.strokeStyle = cUL + 'bb'; ctx.stroke();
 
   // highlight superior metálico no aro
@@ -3608,13 +3645,13 @@ function drawSkeletonArmObstacle(p) {
       var headBaseY = tipY + dir * headLen;
       var headW = 10;
 
-      // Leaf-shaped spearhead
-      var shG = ctx.createLinearGradient(cx - headW, 0, cx + headW, 0);
-      shG.addColorStop(0, '#5566aa');
-      shG.addColorStop(0.35, '#cce0ff');
-      shG.addColorStop(0.55, '#ffffff');
-      shG.addColorStop(1, '#3a4466');
-      ctx.fillStyle = shG;
+      // Leaf-shaped spearhead — flat on mobile
+      if(!_isMobile){
+        var shG = ctx.createLinearGradient(cx - headW, 0, cx + headW, 0);
+        shG.addColorStop(0, '#5566aa'); shG.addColorStop(0.35, '#cce0ff');
+        shG.addColorStop(0.55, '#ffffff'); shG.addColorStop(1, '#3a4466');
+        ctx.fillStyle = shG;
+      } else { ctx.fillStyle = '#8899cc'; }
       ctx.beginPath();
       ctx.moveTo(cx, tipY);
       ctx.quadraticCurveTo(cx - headW - 3, tipY + dir * headLen * 0.52, cx - headW * 0.4, headBaseY);
@@ -3640,14 +3677,16 @@ function drawSkeletonArmObstacle(p) {
       ctx.beginPath(); ctx.moveTo(cx - 5.5, headBaseY); ctx.lineTo(cx + 5.5, headBaseY); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(cx - 5.5, headBaseY + dir * sockLen); ctx.lineTo(cx + 5.5, headBaseY + dir * sockLen); ctx.stroke();
 
-      // Wooden shaft
+      // Wooden shaft — flat on mobile
       var shaftStart = headBaseY + dir * sockLen;
       var shaftLen2  = Math.min(h * 0.56, h - headLen - sockLen - 14);
       var shaftEnd   = shaftStart + dir * shaftLen2;
-      var woodG = ctx.createLinearGradient(cx - 4, 0, cx + 4, 0);
-      woodG.addColorStop(0, '#3c1a06'); woodG.addColorStop(0.45, '#9c6030');
-      woodG.addColorStop(0.55, '#c07840'); woodG.addColorStop(1, '#4a2008');
-      ctx.fillStyle = woodG;
+      if(!_isMobile){
+        var woodG = ctx.createLinearGradient(cx - 4, 0, cx + 4, 0);
+        woodG.addColorStop(0, '#3c1a06'); woodG.addColorStop(0.45, '#9c6030');
+        woodG.addColorStop(0.55, '#c07840'); woodG.addColorStop(1, '#4a2008');
+        ctx.fillStyle = woodG;
+      } else { ctx.fillStyle = '#9c6030'; }
       ctx.fillRect(cx - 3.5, Math.min(shaftStart, shaftEnd), 7, Math.abs(shaftEnd - shaftStart));
       // Wood grain
       ctx.strokeStyle = '#2a100433'; ctx.lineWidth = 0.8;
@@ -3694,13 +3733,17 @@ function drawWormObstacle(p) {
       var segY = wallY + (headY - wallY) * t;
       var r = segR * (0.48 + t * 0.52);
       var wobble = Math.sin(frame * 0.07 + si * 0.95) * (4 * (1 - t));
-      var sg = ctx.createRadialGradient(
-        cx + wobble - r*0.3, segY - dir*r*0.25, r*0.08,
-        cx + wobble, segY, r);
-      sg.addColorStop(0, '#c8a060');
-      sg.addColorStop(0.45, '#8a4e20');
-      sg.addColorStop(1, '#3e1a06');
-      ctx.fillStyle = sg;
+      if(_isMobile){
+        ctx.fillStyle = '#8a4e20'; // flat mid-tone — skip radialGradient per segment
+      } else {
+        var sg = ctx.createRadialGradient(
+          cx + wobble - r*0.3, segY - dir*r*0.25, r*0.08,
+          cx + wobble, segY, r);
+        sg.addColorStop(0, '#c8a060');
+        sg.addColorStop(0.45, '#8a4e20');
+        sg.addColorStop(1, '#3e1a06');
+        ctx.fillStyle = sg;
+      }
       ctx.beginPath(); ctx.arc(cx + wobble, segY, r, 0, Math.PI*2); ctx.fill();
       // Segment ring line
       ctx.strokeStyle = '#3e1a0666'; ctx.lineWidth = 1.5;
@@ -3715,11 +3758,13 @@ function drawWormObstacle(p) {
 
     // ── HEAD ──
     var hR = segR * 1.18;
-    var hg = ctx.createRadialGradient(cx - hR*0.28, headY + dir*hR*0.28, hR*0.1, cx, headY, hR*1.15);
-    hg.addColorStop(0, '#e0b070');
-    hg.addColorStop(0.4, '#a05a28');
-    hg.addColorStop(1, '#2e0e02');
-    ctx.fillStyle = hg;
+    if(_isMobile){
+      ctx.fillStyle = '#a05a28';
+    } else {
+      var hg = ctx.createRadialGradient(cx - hR*0.28, headY + dir*hR*0.28, hR*0.1, cx, headY, hR*1.15);
+      hg.addColorStop(0, '#e0b070'); hg.addColorStop(0.4, '#a05a28'); hg.addColorStop(1, '#2e0e02');
+      ctx.fillStyle = hg;
+    }
     ctx.beginPath(); ctx.arc(cx, headY, hR, 0, Math.PI*2); ctx.fill();
     ctx.strokeStyle = '#1a0800'; ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.arc(cx, headY, hR, 0, Math.PI*2); ctx.stroke();
@@ -3996,6 +4041,13 @@ function drawBasePipeObstacle(p) {
   }
 
   function drawPipe(bodyY1, bodyY2, rimY, rimDir) {
+    // Body — flat on mobile to skip 4 linearGradient allocations per frame
+    if(_isMobile){
+      ctx.fillStyle = pB;
+      ctx.fillRect(p.x, bodyY1, p.bodyW, bodyY2 - bodyY1);
+      ctx.fillStyle = pL; ctx.fillRect(p.x+4, bodyY1, 8, bodyY2-bodyY1); // shine strip
+      ctx.fillStyle = pD; ctx.fillRect(p.x, rimY, p.bodyW+rimExt*2, rimH); // flat rim
+    } else {
     // Body
     ctx.fillStyle = pipeGrad(p.x, p.bodyW);
     ctx.fillRect(p.x, bodyY1, p.bodyW, bodyY2 - bodyY1);
@@ -4020,6 +4072,7 @@ function drawBasePipeObstacle(p) {
       ctx.shadowBlur = 0;
       ctx.restore();
     }
+    } // end desktop-only gradient branch
   }
 
   drawPipe(0, p.topH - rimH, p.topH - rimH, -1);
@@ -4144,10 +4197,12 @@ function drawVineObstacle(p) {
   var cx = p.x + p.bodyW/2;
 
   function drawVineBody(y1, y2) {
-    // Main vine body
-    var vg = ctx.createLinearGradient(p.x, 0, p.x+p.bodyW, 0);
-    vg.addColorStop(0, vD); vg.addColorStop(0.4, vM); vg.addColorStop(0.7, vG); vg.addColorStop(1, vD);
-    ctx.fillStyle = vg;
+    // Main vine body — flat on mobile
+    if(!_isMobile){
+      var vg = ctx.createLinearGradient(p.x, 0, p.x+p.bodyW, 0);
+      vg.addColorStop(0, vD); vg.addColorStop(0.4, vM); vg.addColorStop(0.7, vG); vg.addColorStop(1, vD);
+      ctx.fillStyle = vg;
+    } else { ctx.fillStyle = vM; }
     ctx.fillRect(p.x, y1, p.bodyW, y2 - y1);
     // Vine texture lines
     ctx.strokeStyle = vD; ctx.lineWidth = 1;
@@ -4697,10 +4752,9 @@ function drawCelestialDesertBg() {
     }
     ctx.fillStyle = '#1a0800aa';
   }
-  // Sandy desert ground band
-  var sand = ctx.createLinearGradient(0, H-120, 0, H-80);
-  sand.addColorStop(0,'#4a2800aa'); sand.addColorStop(1,'#6a3c1088');
-  ctx.fillStyle = sand; ctx.fillRect(0, H-120, W, 40);
+  // Sandy desert ground band — gradient cached (fixed params)
+  if(!_desertSand){ _desertSand=ctx.createLinearGradient(0,H-120,0,H-80); _desertSand.addColorStop(0,'#4a2800aa'); _desertSand.addColorStop(1,'#6a3c1088'); }
+  ctx.fillStyle = _desertSand; ctx.fillRect(0, H-120, W, 40);
   // Dune wave
   ctx.fillStyle = '#3a200666';
   ctx.beginPath();
@@ -5293,14 +5347,12 @@ function drawBg() {
     // PHASE 4 — CRYPTO FOREST: pine trees (drizzle pula no mobile)
     drawForestTrees();
     var lakeY = H - 180;
-    var lake = ctx.createLinearGradient(0, lakeY, 0, lakeY+40);
-    lake.addColorStop(0, '#1a3a4a66'); lake.addColorStop(1, '#0a1e2a44');
-    ctx.fillStyle = lake; ctx.fillRect(0, lakeY, W, 40);
+    if(!_forestLake){ _forestLake=ctx.createLinearGradient(0,lakeY,0,lakeY+40); _forestLake.addColorStop(0,'#1a3a4a66'); _forestLake.addColorStop(1,'#0a1e2a44'); }
+    if(!_forestFog){ _forestFog=ctx.createLinearGradient(0,H-200,0,H-80); _forestFog.addColorStop(0,'transparent'); _forestFog.addColorStop(1,'#b0d8f018'); }
+    ctx.fillStyle = _forestLake; ctx.fillRect(0, lakeY, W, 40);
     ctx.strokeStyle = '#4a8aaa55'; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(0,lakeY); ctx.lineTo(W,lakeY); ctx.stroke();
-    var fog = ctx.createLinearGradient(0, H-200, 0, H-80);
-    fog.addColorStop(0,'transparent'); fog.addColorStop(1,'#b0d8f018');
-    ctx.fillStyle = fog; ctx.fillRect(0, H-200, W, 120);
+    ctx.fillStyle = _forestFog; ctx.fillRect(0, H-200, W, 120);
     if(!_isMobile) drawDrizzle();
 
   } else if(pi === 4) {
@@ -5896,14 +5948,12 @@ function loop(ts) {
 
     if(starPower>0){ starPower--;
       var slFade = starPower < 60 ? starPower/60 : 1;
-      // ── Screen edge chromatic glow ──
-      var _sg = ctx.createLinearGradient(0,0,W,0);
-      _sg.addColorStop(0,'#FF000033'); _sg.addColorStop(0.5,'#00000000'); _sg.addColorStop(1,'#0052FF33');
+      // ── Screen edge chromatic glow — cached (fixed params) ──
+      if(!_starEdgeH){ _starEdgeH=ctx.createLinearGradient(0,0,W,0); _starEdgeH.addColorStop(0,'#FF000033'); _starEdgeH.addColorStop(0.5,'#00000000'); _starEdgeH.addColorStop(1,'#0052FF33'); }
+      if(!_starEdgeV){ _starEdgeV=ctx.createLinearGradient(0,0,0,H); _starEdgeV.addColorStop(0,'#ffffff22'); _starEdgeV.addColorStop(0.5,'#00000000'); _starEdgeV.addColorStop(1,'#FFD70022'); }
       ctx.globalAlpha=slFade*0.7;
-      ctx.fillStyle=_sg; ctx.fillRect(0,0,W,H);
-      var _sg2=ctx.createLinearGradient(0,0,0,H);
-      _sg2.addColorStop(0,'#ffffff22'); _sg2.addColorStop(0.5,'#00000000'); _sg2.addColorStop(1,'#FFD70022');
-      ctx.fillStyle=_sg2; ctx.fillRect(0,0,W,H);
+      ctx.fillStyle=_starEdgeH; ctx.fillRect(0,0,W,H);
+      ctx.fillStyle=_starEdgeV; ctx.fillRect(0,0,W,H);
       ctx.globalAlpha=1;
       // ── Speed lines — mais rápidas e densas ──
       ctx.lineCap='round';
@@ -5920,12 +5970,14 @@ function loop(ts) {
         ctx.beginPath(); ctx.moveTo(line.x+line.len*1.8, line.y); ctx.lineTo(line.x, line.y); ctx.stroke();
       }
       ctx.globalAlpha=1; ctx.lineCap='butt';
-      // ── Aura épica pulsante ──
+      // ── Aura épica pulsante — flat on mobile ──
       var _auraR2 = 38 + 8*Math.abs(Math.sin(frame*0.25));
       ctx.globalAlpha=(0.28+0.18*Math.sin(frame*0.4))*slFade;
-      var _ag2=ctx.createRadialGradient(bleu.x,bleu.y,4,bleu.x,bleu.y,_auraR2);
-      _ag2.addColorStop(0,'#ffffff88'); _ag2.addColorStop(0.4,'#00D4FF66'); _ag2.addColorStop(1,'#00D4FF00');
-      ctx.fillStyle=_ag2;
+      if(!_isMobile){
+        var _ag2=ctx.createRadialGradient(bleu.x,bleu.y,4,bleu.x,bleu.y,_auraR2);
+        _ag2.addColorStop(0,'#ffffff88'); _ag2.addColorStop(0.4,'#00D4FF66'); _ag2.addColorStop(1,'#00D4FF00');
+        ctx.fillStyle=_ag2;
+      } else { ctx.fillStyle='#00D4FF44'; }
       ctx.beginPath(); ctx.arc(bleu.x,bleu.y,_auraR2,0,Math.PI*2); ctx.fill();
       ctx.globalAlpha=1;
       // ── Rastro de partículas a cada 3 frames ──
@@ -6194,9 +6246,8 @@ function loop(ts) {
     var progress = (score % 15) / 15;
     ctx.fillStyle = '#ffffff10';
     ctx.beginPath(); ctx.roundRect(W/2-38, 72, 76, 3, 2); ctx.fill();
-    var barG = ctx.createLinearGradient(W/2-38, 0, W/2+38, 0);
-    barG.addColorStop(0, pv.glowColor); barG.addColorStop(1,'#FFD700');
-    ctx.fillStyle = barG;
+    if(_barGradPhase !== _bgGradPhase){ _barGradPhase=_bgGradPhase; _barGrad=ctx.createLinearGradient(W/2-38,0,W/2+38,0); _barGrad.addColorStop(0,pv.glowColor); _barGrad.addColorStop(1,'#FFD700'); }
+    ctx.fillStyle = _barGrad;
     ctx.beginPath(); ctx.roundRect(W/2-38, 72, 76*progress, 3, 2); ctx.fill();
     // lives + star power HUD
     drawLivesHUD();
