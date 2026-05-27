@@ -157,7 +157,7 @@ document.getElementById('mute').onclick = function() {
   document.getElementById('mute').textContent = muted ? '🔇 MUTE' : '🔊 SFX';
   if(muted){ if(_curAudio) _curAudio.pause(); if(_presAudio) _presAudio.pause(); }
     else if(_starActive){ _playAudio(_starAudio); }
-    else if(gameState==='prestige'){ _playAudio(_presAudio); }
+    else if(gameState==='prestige'||gameState==='legendary'){ _playAudio(_presAudio); }
     else if(gameState==='playing'||gameState==='hurt') startMusic(getPhaseIdx());
 };
 function getAC() {
@@ -1408,7 +1408,8 @@ function drawMarketTab() {
         ctx.fillText('coming soon', 58, _cy+38);
       }
     }
-    if(_ch.unlocked){
+    // "UNLOCKED" badge — só em chars normais (não secreto: o boat tem o botão EQUIP no lugar)
+    if(_ch.unlocked && !_isSecret){
       ctx.font='bold 7px Courier New'; ctx.fillStyle=_ch.col+'cc'; ctx.textAlign='right';
       ctx.fillText('UNLOCKED', W-16, _cy+15);
     }
@@ -5581,14 +5582,32 @@ function loop(ts) {
         var _prBadgeY = H/2-40;
         var _prGlow = 0.85+0.15*Math.sin(frame*0.09);
         ctx.save(); ctx.translate(W/2, _prBadgeY); ctx.scale(_prGlow, _prGlow);
-        var _prLabel = '★  NG+' + bestPrestige + '  PRESTIGE  ' + bestPrestige + '×';
-        var _prW = ctx.measureText(_prLabel).width + 24;
         ctx.font = 'bold 9px Courier New';
-        ctx.fillStyle = '#FFD70022'; ctx.strokeStyle = '#FFD700cc'; ctx.lineWidth = 1.5;
-        ctx.beginPath(); ctx.roundRect(-_prW/2, -10, _prW, 20, 10); ctx.fill(); ctx.stroke();
-        ctx.fillStyle = '#FFD700'; ctx.textAlign='center'; ctx.textBaseline='middle';
-        ctx.shadowColor='#FFD700'; ctx.shadowBlur=10;
-        ctx.fillText(_prLabel, 0, 0);
+        if(boatUnlocked) {
+          // NG+5: badge lendário — fire colors com ⚓
+          var _lgLabel = '⚓  NG+5  LEGENDARY  ⚓';
+          var _lgW = ctx.measureText(_lgLabel).width + 24;
+          var _lgG = ctx.createLinearGradient(-_lgW/2,0,_lgW/2,0);
+          _lgG.addColorStop(0,'#FF220022'); _lgG.addColorStop(0.5,'#FFD70022'); _lgG.addColorStop(1,'#FF220022');
+          ctx.fillStyle=_lgG;
+          var _lgSG = ctx.createLinearGradient(-_lgW/2,0,_lgW/2,0);
+          _lgSG.addColorStop(0,'#FF6600cc'); _lgSG.addColorStop(0.5,'#FFD700cc'); _lgSG.addColorStop(1,'#FF6600cc');
+          ctx.strokeStyle=_lgSG; ctx.lineWidth=1.5;
+          ctx.beginPath(); ctx.roundRect(-_lgW/2,-10,_lgW,20,10); ctx.fill(); ctx.stroke();
+          var _lgTG=ctx.createLinearGradient(-60,0,60,0);
+          _lgTG.addColorStop(0,'#FF6600'); _lgTG.addColorStop(0.5,'#FFD700'); _lgTG.addColorStop(1,'#FF6600');
+          ctx.fillStyle=_lgTG; ctx.textAlign='center'; ctx.textBaseline='middle';
+          ctx.shadowColor='#FF8800'; ctx.shadowBlur=12;
+          ctx.fillText(_lgLabel, 0, 0);
+        } else {
+          var _prLabel = '★  NG+' + bestPrestige + '  PRESTIGE  ' + bestPrestige + '×';
+          var _prW = ctx.measureText(_prLabel).width + 24;
+          ctx.fillStyle = '#FFD70022'; ctx.strokeStyle = '#FFD700cc'; ctx.lineWidth = 1.5;
+          ctx.beginPath(); ctx.roundRect(-_prW/2, -10, _prW, 20, 10); ctx.fill(); ctx.stroke();
+          ctx.fillStyle = '#FFD700'; ctx.textAlign='center'; ctx.textBaseline='middle';
+          ctx.shadowColor='#FFD700'; ctx.shadowBlur=10;
+          ctx.fillText(_prLabel, 0, 0);
+        }
         ctx.shadowBlur=0; ctx.textBaseline='alphabetic'; ctx.restore();
       }
 
@@ -6685,7 +6704,7 @@ function handleClick(ex, ey) {
     document.getElementById('mute').textContent = muted ? '🔇 MUTE' : '🔊 SFX';
     if(muted){ if(_curAudio) _curAudio.pause(); if(_presAudio) _presAudio.pause(); }
     else if(_starActive){ _playAudio(_starAudio); }
-    else if(gameState==='prestige'){ _playAudio(_presAudio); }
+    else if(gameState==='prestige'||gameState==='legendary'){ _playAudio(_presAudio); }
     else if(gameState==='playing'||gameState==='hurt') startMusic(getPhaseIdx());
     return;
   }
