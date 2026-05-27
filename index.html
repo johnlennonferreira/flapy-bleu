@@ -1095,7 +1095,7 @@ function drawShopTab() {
       { label:'SLOW-MO',    price:'USDC $0.25',  col:'#00D4FF',
         canBuy: !!walletAddress && slowMoStock < 5,
         maxed: slowMoStock >= 5, stock: slowMoStock>0?'x'+slowMoStock+'/5':'' },
-      { label:'+CORAÇÃO',   price:'USDC $0.25',  col:'#FF6680',
+      { label:'+HEART',      price:'USDC $0.25',  col:'#FF6680',
         canBuy: !!walletAddress && extraHeartStock<2,
         maxed: extraHeartStock>=2, stock: extraHeartStock>0?'x'+extraHeartStock:'' },
       { label:'CHECKPOINT', price:'USDC $0.50',  col:'#FFD700',
@@ -1877,7 +1877,8 @@ function buyColorWithUSDC(charIdx, colorIdx) {
   sendUSDCPurchase(prices[colorIdx], function(){
     if(charIdx===0){ unlockedColorsBleu.push(colorIdx); _ls.set('bleuColsB',JSON.stringify(unlockedColorsBleu)); activeColorBleu=colorIdx; _ls.set('bleuColorB',''+colorIdx); }
     else if(charIdx===1){ unlockedColorsGengar.push(colorIdx); _ls.set('bleuColsG',JSON.stringify(unlockedColorsGengar)); activeColorGengar=colorIdx; _ls.set('bleuColorG',''+colorIdx); }
-    else { unlockedColorsWorm.push(colorIdx); _ls.set('bleuColsW',JSON.stringify(unlockedColorsWorm)); activeColorWorm=colorIdx; _ls.set('bleuColorW',''+colorIdx); }
+    else if(charIdx===2){ unlockedColorsWorm.push(colorIdx); _ls.set('bleuColsW',JSON.stringify(unlockedColorsWorm)); activeColorWorm=colorIdx; _ls.set('bleuColorW',''+colorIdx); }
+    else if(charIdx===3){ unlockedColorsAlien.push(colorIdx); _ls.set('bleuColsA',JSON.stringify(unlockedColorsAlien)); activeColorAlien=colorIdx; _ls.set('bleuColorA',''+colorIdx); }
     activeChar=charIdx; _ls.set('bleuChar',''+charIdx);
   });
 }
