@@ -1655,6 +1655,9 @@ var _sunHalo=null, _moonGrad=null, _astGrads=null;
 var _forestLake=null, _forestFog=null, _desertSand=null;
 var _starEdgeH=null, _starEdgeV=null; // star power screen-edge gradient cache
 var _barGrad=null, _barGradPhase=-1;  // progress bar gradient cache (per phase)
+var _idleTitleGrad=null;              // FLAPY BLEU title gradient (fixed, cached once)
+var _idleBtnGrad=null;                // TAP TO START button gradient (fixed, cached once)
+var _idleBtnLockGrad=null;            // TAP TO CONFIRM (locked) button gradient
 // ── LIVES + POWER-UPS ──
 var lives=3, invincible=0, starPower=0, stars=[];
 // ── Itens de loja ──────────────────────────────────────────────
@@ -4804,26 +4807,30 @@ function drawLimboBg() {
 }
 
 function drawPoisonDrops() {
-  var nDrops = 20;
+  var nDrops = _isMobile ? 12 : 20; // fewer drops on mobile
   for (var pd = 0; pd < nDrops; pd++) {
     var pdx = (pd * 67 + 23) % W;
     var pdy = ((frame * (1.6 + (pd % 5) * 0.25) + pd * 43) % (H - 80));
     var pdR = 2.5 + (pd % 3) * 0.8;
     ctx.globalAlpha = 0.38 + Math.sin(frame * 0.09 + pd * 1.1) * 0.18;
     // Teardrop — round body
-    var pdg = ctx.createRadialGradient(pdx - 0.8, pdy - 0.8, 0.3, pdx, pdy, pdR);
-    pdg.addColorStop(0, '#ccff55');
-    pdg.addColorStop(0.5, '#77cc00');
-    pdg.addColorStop(1, '#224400');
-    ctx.fillStyle = pdg;
-    ctx.shadowColor = '#88ff22'; ctx.shadowBlur = 9;
+    if(_isMobile){
+      ctx.fillStyle = '#77cc00'; // flat — skip 20 radialGradient per frame on mobile
+    } else {
+      var pdg = ctx.createRadialGradient(pdx - 0.8, pdy - 0.8, 0.3, pdx, pdy, pdR);
+      pdg.addColorStop(0, '#ccff55');
+      pdg.addColorStop(0.5, '#77cc00');
+      pdg.addColorStop(1, '#224400');
+      ctx.fillStyle = pdg;
+      ctx.shadowColor = '#88ff22'; ctx.shadowBlur = 9;
+    }
     ctx.beginPath(); ctx.arc(pdx, pdy, pdR, 0, Math.PI*2); ctx.fill();
     // Pointed tail above (direction of fall)
     ctx.beginPath();
     ctx.moveTo(pdx - pdR * 0.38, pdy - pdR * 0.65);
     ctx.quadraticCurveTo(pdx, pdy - pdR * 2.3, pdx + pdR * 0.38, pdy - pdR * 0.65);
     ctx.closePath(); ctx.fill();
-    ctx.shadowBlur = 0;
+    if(!_isMobile) ctx.shadowBlur = 0;
   }
   ctx.globalAlpha = 1;
 }
@@ -5614,10 +5621,9 @@ function loop(ts) {
       ctx.font = 'bold 38px Courier New';
       ctx.fillStyle = '#001AFF44';
       ctx.fillText('FLAPY BLEU', W/2+3, H/2-79);
-      // ── Title gradient ──
-      var tg = ctx.createLinearGradient(W/2-90, 0, W/2+90, 0);
-      tg.addColorStop(0,'#0052FF'); tg.addColorStop(0.45,'#00D4FF'); tg.addColorStop(1,'#FFD700');
-      ctx.fillStyle = tg;
+      // ── Title gradient — cached (fixed params) ──
+      if(!_idleTitleGrad){ _idleTitleGrad=ctx.createLinearGradient(W/2-90,0,W/2+90,0); _idleTitleGrad.addColorStop(0,'#0052FF'); _idleTitleGrad.addColorStop(0.45,'#00D4FF'); _idleTitleGrad.addColorStop(1,'#FFD700'); }
+      ctx.fillStyle = _idleTitleGrad;
       ctx.shadowColor = '#0066FF'; ctx.shadowBlur = 32;
       ctx.fillText('FLAPY BLEU', W/2, H/2-82);
       ctx.shadowBlur = 0;
@@ -5689,15 +5695,13 @@ function loop(ts) {
         : 0.96 + 0.04*Math.sin(frame*0.12);
       ctx.save(); ctx.translate(W/2, H/2+50); ctx.scale(_sp, _sp);
       if(_tapLocked){
-        // Estado bloqueado: gradiente laranja/âmbar — "confirme que quer jogar de novo"
-        var _sg = ctx.createLinearGradient(-88,0,88,0);
-        _sg.addColorStop(0,'#CC5500'); _sg.addColorStop(0.5,'#FF7700'); _sg.addColorStop(1,'#CC5500');
-        ctx.fillStyle = _sg;
+        // Estado bloqueado: gradiente laranja/âmbar — cached
+        if(!_idleBtnLockGrad){ _idleBtnLockGrad=ctx.createLinearGradient(-88,0,88,0); _idleBtnLockGrad.addColorStop(0,'#CC5500'); _idleBtnLockGrad.addColorStop(0.5,'#FF7700'); _idleBtnLockGrad.addColorStop(1,'#CC5500'); }
+        ctx.fillStyle = _idleBtnLockGrad;
         ctx.shadowColor='#FF7700'; ctx.shadowBlur=24+10*Math.abs(Math.sin(frame*0.22));
       } else {
-        var _sg = ctx.createLinearGradient(-88,0,88,0);
-        _sg.addColorStop(0,'#0044DD'); _sg.addColorStop(0.5,'#0066FF'); _sg.addColorStop(1,'#0044DD');
-        ctx.fillStyle = _sg;
+        if(!_idleBtnGrad){ _idleBtnGrad=ctx.createLinearGradient(-88,0,88,0); _idleBtnGrad.addColorStop(0,'#0044DD'); _idleBtnGrad.addColorStop(0.5,'#0066FF'); _idleBtnGrad.addColorStop(1,'#0044DD'); }
+        ctx.fillStyle = _idleBtnGrad;
         ctx.shadowColor='#0052FF'; ctx.shadowBlur=22;
       }
       ctx.beginPath(); ctx.roundRect(-88,-18,176,36,12); ctx.fill();
@@ -5941,8 +5945,13 @@ function loop(ts) {
               totalScore+=score; _ls.set('bleuTotal',totalScore);
               if(score>highScore){highScore=score;newRecord=true;_ls.set('bleuHS',highScore);}
               lastScore=score; _ls.set('bleuLastScore',lastScore);
-              saveTop5(score); submitWalletScore(score);
-              stopMusic(); menuTapReady = false; resetGame();
+              if(runPhase>bestPhaseEver){bestPhaseEver=runPhase;_ls.set('bleuBestPhase',bestPhaseEver);}
+              if(comboBest<combo) comboBest=combo;
+              top5=saveTop5(score); submitWalletScore(score);
+              stopMusic(); menuTapReady=false;
+              var _dc=Math.max(2,Math.min(12,Math.floor(score/2)+Math.floor(Math.random()*4)));
+              deadChest={active:true,opened:false,coins:_dc,anim:0,clicks:0};
+              deathOfferTimer=720; gameState='dead';
             }
           }
         }
@@ -6344,22 +6353,21 @@ function loop(ts) {
           if(navigator.vibrate) navigator.vibrate([20,10,60,10,120]);
           gameState = 'playing'; // continua sem ir para dead
         } else {
-          // Morte definitiva — salva stats e volta ao menu direto
+          // Morte definitiva — mostra tela REKT
           spawnParticles(bleu.x, bleu.y, '#FF1744', 12);
           beep(350, 60, 0.5, 'sawtooth', 0.25);
-          if(score > highScore){
-            highScore = score; _ls.set('bleuHS', highScore);
-          }
+          if(score > highScore){ highScore=score; newRecord=true; _ls.set('bleuHS',highScore); }
           lastScore=score; _ls.set('bleuLastScore',lastScore);
           totalScore+=score; _ls.set('bleuTotal',totalScore);
           if(score>0) top5=saveTop5(score);
-          if(runPhase > bestPhaseEver){ bestPhaseEver=runPhase; _ls.set('bleuBestPhase', bestPhaseEver); }
+          if(runPhase>bestPhaseEver){bestPhaseEver=runPhase;_ls.set('bleuBestPhase',bestPhaseEver);}
           if(comboBest<combo) comboBest=combo;
           if(score>0) submitWalletScore(score);
           if(navigator.vibrate) navigator.vibrate([80,30,80]);
-          stopMusic();
-          menuTapReady = false; // exige 2 toques no menu para reiniciar
-          resetGame(); // volta ao menu principal
+          stopMusic(); menuTapReady=false;
+          var _dc2=Math.max(2,Math.min(12,Math.floor(score/2)+Math.floor(Math.random()*4)));
+          deadChest={active:true,opened:false,coins:_dc2,anim:0,clicks:0};
+          deathOfferTimer=720; gameState='dead';
         }
       }
       } // fecha else do shield
@@ -7006,12 +7014,6 @@ function handleClick(ex, ey) {
       if(cx>=W/2-100&&cx<=W/2+100&&cy>=wy0c&&cy<=wy0c+32){
         walletAddress ? disconnectWallet() : connectWallet(); return;
       }
-    }
-// Character select (legacy, play tab)
-    if(idleTab==='play' && unlockedChars >= 2) {
-      var bx1=W/2-55, bx2=W/2+15, bby=H/2+80, bbw=40, bbh=16;
-      if(cx>=bx1&&cx<=bx1+bbw&&cy>=bby&&cy<=bby+bbh){ activeChar=0; _ls.set('bleuActiveChar','0'); beep(440,880,0.1,'sine',0.12); return; }
-      if(cx>=bx2&&cx<=bx2+bbw&&cy>=bby&&cy<=bby+bbh){ activeChar=1; _ls.set('bleuActiveChar','1'); beep(660,1320,0.1,'sine',0.12); return; }
     }
     return; // idle: qualquer clique sem alvo não deve iniciar o jogo
   }
