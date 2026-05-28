@@ -496,10 +496,9 @@ function drawPrestigeScreen() {
   // shadow pass
   ctx.font = 'bold 42px Courier New'; ctx.textAlign='center'; ctx.textBaseline='middle';
   ctx.fillStyle = '#FFD70033'; ctx.fillText('★ PRESTIGE ★', 2, -138+2);
-  // gradient text
-  var _ptg = ctx.createLinearGradient(-120,0,120,0);
-  _ptg.addColorStop(0,'#CC8800'); _ptg.addColorStop(0.4,'#FFD700'); _ptg.addColorStop(0.7,'#FFEE88'); _ptg.addColorStop(1,'#FFD700');
-  ctx.fillStyle = _ptg;
+  // gradient text — cached (fixed params in local translated space)
+  if(!_prestigeTitleGrad){ _prestigeTitleGrad=ctx.createLinearGradient(-120,0,120,0); _prestigeTitleGrad.addColorStop(0,'#CC8800'); _prestigeTitleGrad.addColorStop(0.4,'#FFD700'); _prestigeTitleGrad.addColorStop(0.7,'#FFEE88'); _prestigeTitleGrad.addColorStop(1,'#FFD700'); }
+  ctx.fillStyle = _prestigeTitleGrad;
   ctx.shadowColor = '#FFD700'; ctx.shadowBlur = 28;
   ctx.fillText('★ PRESTIGE ★', 0, -138); ctx.shadowBlur=0;
   ctx.restore();
@@ -547,9 +546,8 @@ function drawPrestigeScreen() {
   ctx.globalAlpha = Math.min(1, (_t-40)/20) * (0.8+0.2*Math.sin(_t*0.15));
   var _btnScale = 0.97+0.03*Math.sin(_t*0.12);
   ctx.save(); ctx.scale(_btnScale, _btnScale);
-  var _bg = ctx.createLinearGradient(-90,0,90,0);
-  _bg.addColorStop(0,'#332200'); _bg.addColorStop(0.5,'#FFD700'); _bg.addColorStop(1,'#332200');
-  ctx.fillStyle = _bg;
+  if(!_prestigeBtnGrad){ _prestigeBtnGrad=ctx.createLinearGradient(-90,0,90,0); _prestigeBtnGrad.addColorStop(0,'#332200'); _prestigeBtnGrad.addColorStop(0.5,'#FFD700'); _prestigeBtnGrad.addColorStop(1,'#332200'); }
+  ctx.fillStyle = _prestigeBtnGrad;
   ctx.strokeStyle = '#FFD700'; ctx.lineWidth = 2;
   ctx.beginPath(); ctx.roundRect(-90,-18,180,36,12); ctx.fill(); ctx.stroke();
   ctx.fillStyle = '#000'; ctx.font='bold 13px Courier New';
@@ -568,10 +566,9 @@ function drawLegendaryUnlockScreen() {
   var _sy = _shk > 0 ? (Math.random()-0.5)*_shk : 0;
   var _pulse = 0.5 + 0.5*Math.sin(_t * 0.07);
 
-  // Fundo: crimson-preto profundo (distinto do prestige azul-preto)
-  var _bg = ctx.createLinearGradient(0, 0, 0, H);
-  _bg.addColorStop(0,'#1A0006'); _bg.addColorStop(0.45,'#0D0002'); _bg.addColorStop(1,'#000000');
-  ctx.fillStyle = _bg; ctx.fillRect(0, 0, W, H);
+  // Fundo: crimson-preto profundo (distinto do prestige azul-preto) — cached
+  if(!_legendaryBgGrad){ _legendaryBgGrad=ctx.createLinearGradient(0,0,0,H); _legendaryBgGrad.addColorStop(0,'#1A0006'); _legendaryBgGrad.addColorStop(0.45,'#0D0002'); _legendaryBgGrad.addColorStop(1,'#000000'); }
+  ctx.fillStyle = _legendaryBgGrad; ctx.fillRect(0, 0, W, H);
 
   // ── FAÍSCAS DE FOGO caindo continuamente ──
   var _nSp = _isMobile ? 22 : 44;
@@ -609,9 +606,8 @@ function drawLegendaryUnlockScreen() {
     ctx.save(); ctx.scale(0.6+_bdIn*0.4, 0.6+_bdIn*0.4);
     ctx.font='bold 52px Courier New'; ctx.textAlign='center'; ctx.textBaseline='middle';
     ctx.fillStyle='#FF330015'; ctx.fillText('P5', 0, -128);
-    var _p5g=ctx.createLinearGradient(-35,0,35,0);
-    _p5g.addColorStop(0,'#FF6600'); _p5g.addColorStop(0.5,'#FFD700'); _p5g.addColorStop(1,'#FF6600');
-    ctx.fillStyle=_p5g; ctx.shadowColor='#FF7700'; ctx.shadowBlur=32;
+    if(!_legendaryP5Grad){ _legendaryP5Grad=ctx.createLinearGradient(-35,0,35,0); _legendaryP5Grad.addColorStop(0,'#FF6600'); _legendaryP5Grad.addColorStop(0.5,'#FFD700'); _legendaryP5Grad.addColorStop(1,'#FF6600'); }
+    ctx.fillStyle=_legendaryP5Grad; ctx.shadowColor='#FF7700'; ctx.shadowBlur=32;
     ctx.fillText('P5', 0, -128); ctx.shadowBlur=0;
     ctx.strokeStyle='#FF660066'; ctx.lineWidth=2;
     ctx.beginPath(); ctx.arc(0, -128, 42, 0, Math.PI*2); ctx.stroke();
@@ -626,9 +622,8 @@ function drawLegendaryUnlockScreen() {
     ctx.scale(1+0.025*Math.sin(_t*0.09), 1+0.025*Math.sin(_t*0.09));
     ctx.font='bold 28px Courier New'; ctx.textAlign='center'; ctx.textBaseline='middle';
     ctx.fillStyle='#FF000033'; ctx.fillText('⚓  LEGENDARY  ⚓', 2, -90+2);
-    var _tg=ctx.createLinearGradient(-110,0,110,0);
-    _tg.addColorStop(0,'#FF2200'); _tg.addColorStop(0.3,'#FF8800'); _tg.addColorStop(0.65,'#FFD700'); _tg.addColorStop(1,'#FF8800');
-    ctx.fillStyle=_tg; ctx.shadowColor='#FF7700'; ctx.shadowBlur=36;
+    if(!_legendaryTitleGrad){ _legendaryTitleGrad=ctx.createLinearGradient(-110,0,110,0); _legendaryTitleGrad.addColorStop(0,'#FF2200'); _legendaryTitleGrad.addColorStop(0.3,'#FF8800'); _legendaryTitleGrad.addColorStop(0.65,'#FFD700'); _legendaryTitleGrad.addColorStop(1,'#FF8800'); }
+    ctx.fillStyle=_legendaryTitleGrad; ctx.shadowColor='#FF7700'; ctx.shadowBlur=36;
     ctx.fillText('⚓  LEGENDARY  ⚓', 0, -90); ctx.shadowBlur=0;
     ctx.restore();
   }
@@ -700,9 +695,8 @@ function drawLegendaryUnlockScreen() {
   if(_btIn > 0){
     ctx.globalAlpha = _btIn;
     ctx.save(); ctx.scale(0.97+0.03*Math.sin(_t*0.11), 0.97+0.03*Math.sin(_t*0.11));
-    var _btG=ctx.createLinearGradient(-100,0,100,0);
-    _btG.addColorStop(0,'#3D0000'); _btG.addColorStop(0.35,'#CC4400'); _btG.addColorStop(0.5,'#FFD700'); _btG.addColorStop(0.65,'#CC4400'); _btG.addColorStop(1,'#3D0000');
-    ctx.fillStyle=_btG; ctx.strokeStyle='#FFD700'; ctx.lineWidth=2;
+    if(!_legendaryBtnGrad){ _legendaryBtnGrad=ctx.createLinearGradient(-100,0,100,0); _legendaryBtnGrad.addColorStop(0,'#3D0000'); _legendaryBtnGrad.addColorStop(0.35,'#CC4400'); _legendaryBtnGrad.addColorStop(0.5,'#FFD700'); _legendaryBtnGrad.addColorStop(0.65,'#CC4400'); _legendaryBtnGrad.addColorStop(1,'#3D0000'); }
+    ctx.fillStyle=_legendaryBtnGrad; ctx.strokeStyle='#FFD700'; ctx.lineWidth=2;
     ctx.beginPath(); ctx.roundRect(-100,-19,200,38,12); ctx.fill(); ctx.stroke();
     ctx.fillStyle='#000'; ctx.font='bold 14px Courier New';
     ctx.textAlign='center'; ctx.textBaseline='middle';
@@ -856,9 +850,8 @@ function drawShopTab() {
   ctx.textAlign='center';
   // ── Header ──
   ctx.font='bold 16px Courier New';
-  var _shg=ctx.createLinearGradient(W/2-60,0,W/2+60,0);
-  _shg.addColorStop(0,'#FFD700'); _shg.addColorStop(1,'#00D4FF');
-  ctx.fillStyle=_shg; ctx.shadowColor='#FFD700'; ctx.shadowBlur=10;
+  if(!_tabHeaderGrad){ _tabHeaderGrad=ctx.createLinearGradient(W/2-60,0,W/2+60,0); _tabHeaderGrad.addColorStop(0,'#FFD700'); _tabHeaderGrad.addColorStop(1,'#00D4FF'); }
+  ctx.fillStyle=_tabHeaderGrad; ctx.shadowColor='#FFD700'; ctx.shadowBlur=10;
   ctx.fillText('SHOP', W/2, 32); ctx.shadowBlur=0;
   ctx.font='11px Courier New'; ctx.fillStyle='#FFD700';
   ctx.fillText('🐉 '+coinCount.toLocaleString()+' / 100,000', W/2, 50);
@@ -1241,9 +1234,8 @@ function drawMarketTab() {
   // ── Título ──
   ctx.textAlign='center';
   ctx.font='bold 16px Courier New';
-  var _mg=ctx.createLinearGradient(W/2-60,0,W/2+60,0);
-  _mg.addColorStop(0,'#00D4FF'); _mg.addColorStop(1,'#FFD700');
-  ctx.fillStyle=_mg; ctx.shadowColor='#00D4FF'; ctx.shadowBlur=8;
+  if(!_tabHeaderGradRev){ _tabHeaderGradRev=ctx.createLinearGradient(W/2-60,0,W/2+60,0); _tabHeaderGradRev.addColorStop(0,'#00D4FF'); _tabHeaderGradRev.addColorStop(1,'#FFD700'); }
+  ctx.fillStyle=_tabHeaderGradRev; ctx.shadowColor='#00D4FF'; ctx.shadowBlur=8;
   ctx.fillText('MARKET', W/2, 28); ctx.shadowBlur=0;
   ctx.font='9px Courier New'; ctx.fillStyle='#ffffff33';
   ctx.fillText('items & characters · Base Network', W/2, 42);
@@ -1430,9 +1422,8 @@ function drawLeaderboardTab() {
 
   // ── Title ──
   ctx.font='bold 15px Courier New';
-  var rg=ctx.createLinearGradient(W/2-70,0,W/2+70,0);
-  rg.addColorStop(0,'#FFD700'); rg.addColorStop(1,'#00D4FF');
-  ctx.fillStyle=rg; ctx.shadowColor='#FFD700'; ctx.shadowBlur=14;
+  if(!_tabHeaderGrad){ _tabHeaderGrad=ctx.createLinearGradient(W/2-60,0,W/2+60,0); _tabHeaderGrad.addColorStop(0,'#FFD700'); _tabHeaderGrad.addColorStop(1,'#00D4FF'); }
+  ctx.fillStyle=_tabHeaderGrad; ctx.shadowColor='#FFD700'; ctx.shadowBlur=14;
   ctx.fillText('⛓  ONCHAIN RANK', W/2, H/2-128); ctx.shadowBlur=0;
 
 
@@ -1543,9 +1534,8 @@ function drawDailyModal() {
   ctx.fillStyle='rgba(0,5,20,.9)'; ctx.fillRect(0,0,W,H);
   ctx.textAlign='center';
   ctx.font='bold 18px Courier New';
-  var dg=ctx.createLinearGradient(W/2-80,0,W/2+80,0);
-  dg.addColorStop(0,'#FFD700'); dg.addColorStop(1,'#00D4FF');
-  ctx.fillStyle=dg; ctx.shadowColor='#FFD700'; ctx.shadowBlur=20;
+  if(!_tabHeaderGrad){ _tabHeaderGrad=ctx.createLinearGradient(W/2-60,0,W/2+60,0); _tabHeaderGrad.addColorStop(0,'#FFD700'); _tabHeaderGrad.addColorStop(1,'#00D4FF'); }
+  ctx.fillStyle=_tabHeaderGrad; ctx.shadowColor='#FFD700'; ctx.shadowBlur=20;
   ctx.fillText('DAILY LOGIN', W/2, H/2-122); ctx.shadowBlur=0;
   ctx.font='11px Courier New'; ctx.fillStyle='#ffffff66';
   ctx.fillText('Day '+dailyDay+' of 7', W/2, H/2-98);
@@ -1658,6 +1648,14 @@ var _barGrad=null, _barGradPhase=-1;  // progress bar gradient cache (per phase)
 var _idleTitleGrad=null;              // FLAPY BLEU title gradient (fixed, cached once)
 var _idleBtnGrad=null;                // TAP TO START button gradient (fixed, cached once)
 var _idleBtnLockGrad=null;            // TAP TO CONFIRM (locked) button gradient
+var _tabHeaderGrad=null;              // SHOP/RANK/DAILY header gradient FFD700→00D4FF (cached once)
+var _tabHeaderGradRev=null;           // MARKET header gradient 00D4FF→FFD700 (cached once)
+var _prestigeTitleGrad=null;          // ★ PRESTIGE ★ title gradient (cached once)
+var _prestigeBtnGrad=null;            // TAP TO CONTINUE button gradient (cached once)
+var _legendaryBgGrad=null;            // legendary screen background gradient (cached once)
+var _legendaryP5Grad=null;            // P5 badge gradient (cached once)
+var _legendaryTitleGrad=null;         // LEGENDARY title gradient (cached once)
+var _legendaryBtnGrad=null;           // TAP TO CLAIM button gradient (cached once)
 // ── LIVES + POWER-UPS ──
 var lives=3, invincible=0, starPower=0, stars=[];
 // ── Itens de loja ──────────────────────────────────────────────
@@ -2950,10 +2948,15 @@ function drawAlien(x, y, flapAnim, angle) {
   // ── 1. THRUSTER — raio de energia embaixo ao flapar ──
   if(_ft > 0) {
     var _bPow = 1 - _ftp;
-    var _bG = ctx.createRadialGradient(0, 17, 0, 0, 24, 20 * _bPow + 8);
-    _bG.addColorStop(0, cGl + 'EE'); _bG.addColorStop(0.4, cGl + '66'); _bG.addColorStop(1, cGl + '00');
     ctx.globalAlpha = _bPow * 0.9;
-    ctx.fillStyle = _bG;
+    // Mobile: flat glow — skip createRadialGradient per flap frame
+    if(_isMobile) {
+      ctx.fillStyle = cGl + '88';
+    } else {
+      var _bG = ctx.createRadialGradient(0, 17, 0, 0, 24, 20 * _bPow + 8);
+      _bG.addColorStop(0, cGl + 'EE'); _bG.addColorStop(0.4, cGl + '66'); _bG.addColorStop(1, cGl + '00');
+      ctx.fillStyle = _bG;
+    }
     ctx.beginPath(); ctx.ellipse(0, 18, 14 + _bPow * 10, 10 + _bPow * 7, 0, 0, Math.PI*2); ctx.fill();
     ctx.globalAlpha = 1;
   }
