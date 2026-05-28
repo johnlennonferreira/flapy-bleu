@@ -1809,10 +1809,16 @@ let bleu, pipes, score, frame, gameState, particles, lastGapCenter;
 let phaseFlash = 0, lastPhaseIdx = 0, phasePaused = false;
 let screenShake = 0, scorePop = 0, hitFlash = 0, bleuSquish = 0;
 let coins = [], coinCount = parseInt(_ls.get('bleuCoins','0'));
-// 🔄 SHOP v2 — limpa flags de unlock de testes anteriores (personagens agora bloqueados por prestige)
-if(_ls.get('_shopV',null) !== '2'){
-  try{ localStorage.removeItem('bleuGengar'); localStorage.removeItem('bleuWorm'); localStorage.removeItem('bleuAlien'); localStorage.removeItem('bleuBestPrestige'); }catch(e){}
-  _ls.set('_shopV','2');
+// 🔄 SHOP v3 — limpa TODOS os flags de unlock de testes (sessões antigas ignoraram v2 por já ter _shopV='2')
+// v3 força nova limpeza mesmo em quem já tinha v2 — personagens SÓ desbloqueiam via prestige ou USDC real
+if(_ls.get('_shopV',null) !== '3'){
+  try{
+    localStorage.removeItem('bleuGengar'); localStorage.removeItem('bleuWorm');
+    localStorage.removeItem('bleuAlien'); localStorage.removeItem('bleuBoat');
+    localStorage.removeItem('bleuBestPrestige'); localStorage.removeItem('bleuRevP');
+    localStorage.removeItem('bleuChar'); // reset para Bleu (char 0)
+  }catch(e){}
+  _ls.set('_shopV','3');
 }
 // _mTimeout/_mPhase/_mPos removidos — substituídos pelo sistema HTML5 Audio
 var completedPhase=0, chestClicks=0, chestBounce=0, chestOpened=false, chestCoins=0, chestOpenAnim=0, awardCoins=0, awardCoinAnim=0;
