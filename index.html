@@ -4282,7 +4282,7 @@ function drawGrotesqueObstacle(p) {
     ctx.shadowBlur = 0;
 
     // ── FIRE on body ──
-    var nFlames = 9;
+    var nFlames = _isMobile ? 5 : 9; // fewer flames + flat color on mobile
     for (var fi6 = 0; fi6 < nFlames; fi6++) {
       var fx6 = p.x + (fi6 / (nFlames - 1)) * p.bodyW;
       // Flame base: 30% into body from gap side
@@ -4290,21 +4290,26 @@ function drawGrotesqueObstacle(p) {
       var flameH6 = 22 + Math.sin(frame * 0.17 + fi6 * 1.4) * 11 + Math.sin(frame * 0.31 + fi6 * 0.6) * 7;
       // Flames lick toward the gap
       var fireTip = fireBase - dir * flameH6;
-      var fg6 = ctx.createLinearGradient(fx6, fireBase, fx6, fireTip);
-      fg6.addColorStop(0, '#ff000000');
-      fg6.addColorStop(0.25, '#dd3300cc');
-      fg6.addColorStop(0.6,  '#ff7700bb');
-      fg6.addColorStop(0.85, '#ffcc0099');
-      fg6.addColorStop(1,    '#ffff6633');
-      ctx.fillStyle = fg6;
-      ctx.shadowColor = '#ff4400'; ctx.shadowBlur = 14;
+      // Mobile: flat orange — skip 9 linearGradient per frame
+      if(_isMobile){
+        ctx.fillStyle = '#ff6600cc';
+      } else {
+        var fg6 = ctx.createLinearGradient(fx6, fireBase, fx6, fireTip);
+        fg6.addColorStop(0, '#ff000000');
+        fg6.addColorStop(0.25, '#dd3300cc');
+        fg6.addColorStop(0.6,  '#ff7700bb');
+        fg6.addColorStop(0.85, '#ffcc0099');
+        fg6.addColorStop(1,    '#ffff6633');
+        ctx.fillStyle = fg6;
+        ctx.shadowColor = '#ff4400'; ctx.shadowBlur = 14;
+      }
       var sway = Math.sin(frame * 0.19 + fi6 * 2.1) * 5;
       ctx.beginPath();
       ctx.moveTo(fx6 - 5, fireBase);
       ctx.quadraticCurveTo(fx6 + sway - 3, (fireBase + fireTip) / 2, fx6 + sway, fireTip);
       ctx.quadraticCurveTo(fx6 + sway + 3, (fireBase + fireTip) / 2, fx6 + 5, fireBase);
       ctx.closePath(); ctx.fill();
-      ctx.shadowBlur = 0;
+      if(!_isMobile) ctx.shadowBlur = 0;
     }
 
     // ── EYES right at the gap tip ──
