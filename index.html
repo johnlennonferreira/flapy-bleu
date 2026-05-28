@@ -1857,7 +1857,9 @@ function ensureBaseNetwork(cb) {
 function sendUSDCPurchase(usdcAmount6, onSuccess) {
   if(!walletAddress){ connectWallet(); return; }
   if(!window.ethereum){ window.open('https://go.cb-w.com/dapp?cb_url='+encodeURIComponent('https://flapy-bleu.vercel.app'),'_blank'); return; }
-  if(TREASURY_WALLET==='0x0000000000000000000000000000000000000000'){ beep(220,150,0.12,'sawtooth',0.08); return; }
+  // Guard: block payments to zero/burn/placeholder addresses
+  var _tw=TREASURY_WALLET.toLowerCase();
+  if(_tw==='0x0000000000000000000000000000000000000000'||_tw==='0x000000000000000000000000000000000000dead'){ beep(220,150,0.12,'sawtooth',0.08); return; }
   ensureBaseNetwork(function(){
     // ERC-20 transfer(address,uint256) selector = 0xa9059cbb
     var to32  = TREASURY_WALLET.replace('0x','').toLowerCase().padStart(64,'0');
@@ -6133,11 +6135,8 @@ function loop(ts) {
           spawnParticles(W/2, H/2, '#00D4FF', 20);
           var fs = [440,554,659,880];
           fs.forEach(function(f,ii){ setTimeout(function(){ beep(f,f*1.5,0.2,'sine',0.18); }, ii*80); });
-          // NFT unlock at phase 10 (score >= 100 in test mode)
-          if(newPI >= 9 && unlockedChars < 2) { // phase 10 reached (score >= 36 in test mode)
-            unlockedChars = 2;
-            _ls.set('bleuChars', '2');
-            nftFlash = 220;
+          // Phase 10 milestone particles — character unlocks happen via prestige (not here)
+          if(newPI >= 9) {
             spawnParticles(W/2, H/2, '#FF6B20', 40);
             spawnParticles(W/2, H/2, '#FFD700', 40);
             [523,659,784,1047,1319].forEach(function(f,ii){
