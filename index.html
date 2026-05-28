@@ -6798,6 +6798,7 @@ function flap() {
   else if(gameState==='dead')    { resetGame(); gameState='playing'; startMusic(0); bleu.vy=-7.5; bleuFlapTimer=18; }
   else if(gameState==='prestige') {
     if(prestigeAnim < 40) return; // aguarda animação mínima
+    stopMusic(); // para _presAudio antes de qualquer transição
     if(pendingNFTReveal >= 0) {
       nftRevealAnim=0; nftRevealChar=pendingNFTReveal; pendingNFTReveal=-1;
       gameState='nftReveal';
@@ -6812,6 +6813,7 @@ function flap() {
   }
   else if(gameState==='legendary') {
     if(legendaryAnim < 88) return; // aguarda revelação completa do barco
+    stopMusic(); // para _presAudio antes de qualquer transição
     if(_ls.get('bleuRevV','0') !== '1') {
       _ls.set('bleuRevV','1');
       nftRevealAnim=0; nftRevealChar=4; gameState='nftReveal';
@@ -6826,6 +6828,7 @@ function flap() {
   }
   else if(gameState==='nftReveal') {
     if(nftRevealAnim < 55) return;
+    stopMusic(); // para _presAudio antes de voltar ao idle
     resetGame();
   }
 }
