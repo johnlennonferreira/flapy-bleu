@@ -191,7 +191,7 @@ const PHASES = [
   { speed: 2.25, gapMin:112, gapMax:124, label:'PHASE 4'  }, // close calls frequentes
   { speed: 2.35, gapMin:106, gapMax:118, label:'PHASE 5'  }, // tensão sobe
   { speed: 2.45, gapMin:102, gapMax:114, label:'PHASE 6'  }, // território Flappy Bird
-  { speed: 2.55, gapMin: 98, gapMax:110, label:'PHASE 7'  }, // difícil de verdade
+  { speed: 2.50, gapMin:110, gapMax:124, label:'PHASE 7'  }, // difícil de verdade (OUTER SPACE — gap +12px)
   { speed: 2.6,  gapMin: 94, gapMax:106, label:'PHASE 8'  }, // muito difícil
   { speed: 2.2,  gapMin:116, gapMax:130, label:'PHASE 9'  }, // respiro — alivia tensão
   { speed: 2.75, gapMin: 90, gapMax:102, label:'PHASE 10' }, // hardcore — poucos chegam
@@ -6685,18 +6685,16 @@ function loop(ts) {
     ctx.fillText(_congMsg, W/2, H/2-100);
     ctx.shadowBlur = 0;
 
-    // ── painel principal — glassy card ──
-    ctx.fillStyle = 'rgba(0,5,20,0.86)';
-    ctx.beginPath(); ctx.roundRect(W/2-120, H/2-88, 240, 320, 16); ctx.fill();
+    // ── painel principal — glassy card (expandido para incluir botões de continue) ──
+    ctx.fillStyle = 'rgba(0,5,20,0.92)';
+    ctx.beginPath(); ctx.roundRect(W/2-120, H/2-88, 240, 358, 16); ctx.fill();
     // border glow — cor muda com performance
     var _bCol = newRecord ? '#FFD700' : score>=10 ? '#0052FF' : '#FF174466';
     ctx.strokeStyle = _bCol+'88'; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.roundRect(W/2-120, H/2-88, 240, 320, 16); ctx.stroke();
-    ctx.strokeStyle = '#ffffff11'; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.roundRect(W/2-118, H/2-86, 236, 268, 15); ctx.stroke();
+    ctx.beginPath(); ctx.roundRect(W/2-120, H/2-88, 240, 358, 16); ctx.stroke();
     // shimmer top edge
     ctx.fillStyle='rgba(255,255,255,0.06)';
-    ctx.beginPath(); ctx.roundRect(W/2-116, H/2-86, 232, 18, 8); ctx.fill();
+    ctx.beginPath(); ctx.roundRect(W/2-118, H/2-86, 236, 18, 8); ctx.fill();
 
     // REKT — big impactful text
     ctx.font = 'bold 34px Courier New';
@@ -6719,153 +6717,101 @@ function loop(ts) {
     ctx.fillStyle = '#00D4FF'; ctx.font = 'bold 11px Courier New';
     ctx.fillText('📍 ' + phaseName, W/2, H/2+10);
 
-    // Melhor fase histórica
-    if(bestPhaseEver > 0 && PHASE_VISUALS[bestPhaseEver]){
-      ctx.fillStyle = '#ffffff44'; ctx.font = '10px Courier New';
-      ctx.fillText('best phase: ' + PHASE_VISUALS[bestPhaseEver].name, W/2, H/2+24);
-    }
+    // Combo + moedas + recorde (compacto)
+    var extraY = H/2+26;
+    if(comboBest >= 2){ ctx.fillStyle=comboBest>=5?'#ff4488':comboBest>=3?'#FFD700':'#00D4FF'; ctx.font='bold 10px Courier New'; ctx.fillText('combo x'+comboBest, W/2, extraY); extraY+=13; }
+    if(coinsThisRun > 0){ ctx.fillStyle='#FFD700'; ctx.font='10px Courier New'; ctx.fillText('🐉 +'+coinsThisRun+' coins', W/2, extraY); extraY+=13; }
+    if(newRecord){ ctx.fillStyle='#FFD700'; ctx.font='bold 11px Courier New'; ctx.shadowColor='#FFD700'; ctx.shadowBlur=10; ctx.fillText('🏆 NEW RECORD!', W/2, extraY); ctx.shadowBlur=0; extraY+=13; }
 
-    // Combo + moedas
-    var extraY = H/2+38;
-    if(comboBest >= 2){
-      ctx.fillStyle = comboBest>=5?'#ff4488':comboBest>=3?'#FFD700':'#00D4FF';
-      ctx.font = 'bold 11px Courier New';
-      ctx.fillText('combo x' + comboBest, W/2, extraY); extraY+=14;
-    }
-    if(coinsThisRun > 0){
-      ctx.fillStyle = '#FFD700'; ctx.font = '11px Courier New';
-      ctx.fillText('🐉 +' + coinsThisRun + ' coins', W/2, extraY); extraY+=14;
-    }
-
-    // Novo recorde
-    if(newRecord){
-      ctx.fillStyle='#FFD700'; ctx.font='bold 12px Courier New';
-      ctx.shadowColor='#FFD700'; ctx.shadowBlur=14;
-      ctx.fillText('🏆 NEW RECORD!', W/2, extraY); extraY+=14;
-      ctx.shadowBlur=0;
-    }
-
-    // Top 5 — usa variável global (mantida por saveTop5) — evita JSON.parse/localStorage a cada frame
-    var medals=['🥇','🥈','🥉','④','⑤'];
+    // Top 3 scores (máximo 3 para caber)
+    var medals=['🥇','🥈','🥉'];
     var t5=top5;
     ctx.font='bold 10px Courier New';
-    for(var ti=0;ti<Math.min(t5.length,5);ti++){
-      ctx.fillStyle = ti===0?'#FFD700': ti===1?'#C0C0C0': ti===2?'#cd7f32':'#ffffff55';
-      ctx.globalAlpha = ti===0?1:0.75-ti*0.1;
+    for(var ti=0;ti<Math.min(t5.length,3);ti++){
+      ctx.fillStyle=ti===0?'#FFD700':ti===1?'#C0C0C0':'#cd7f32';
+      ctx.globalAlpha=ti===0?1:0.80-ti*0.1;
       ctx.fillText(medals[ti]+' '+t5[ti], W/2, extraY+ti*13);
     }
     ctx.globalAlpha=1;
 
-    // ── Botão COMPARTILHAR ──
-    var shareY = H/2+138;
-    var shareCol = shareFlash>0 ? '#00CC66' : '#0052FF';
-    ctx.fillStyle = shareCol+'22';
-    ctx.beginPath(); ctx.roundRect(W/2-74, shareY-16, 148, 30, 8); ctx.fill();
-    ctx.strokeStyle = shareCol+'88'; ctx.lineWidth=1; ctx.stroke();
-    ctx.fillStyle = shareFlash>0 ? '#00FF88' : '#00D4FF';
-    ctx.font = 'bold 12px Courier New'; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText(shareFlash>0 ? '✓ COPIED!' : '🔗 SHARE', W/2, shareY+1);
+    // ── CONTINUE? — separador com botões FIXOS (sem timer) ──
+    // Posições absolutas — usadas também no click handler
+    // _DC_CP = H/2+98 (checkpoint), _DC_HT = H/2+130 (heart), _DC_SH = H/2+174 (share)
+    // _DC_PL = H/2+210 (play again), _DC_MN = H/2+250 (menu)
+    ctx.fillStyle='#ffffff18'; ctx.fillRect(W/2-100, H/2+84, 200, 1);
+    ctx.fillStyle='#ffffff44'; ctx.font='bold 8px Courier New';
+    ctx.fillText('CONTINUE?', W/2, H/2+94);
+
+    // ── Botão CHECKPOINT ──
+    var _hasCp2 = checkpointStock > 0;
+    var _cpDone2 = checkpointUsed;
+    ctx.globalAlpha = _cpDone2 ? 0.32 : 1;
+    ctx.fillStyle = _cpDone2 ? '#ffffff08' : (_hasCp2 ? '#00FF8822' : '#0052FF18');
+    ctx.strokeStyle = _cpDone2 ? '#ffffff22' : (_hasCp2 ? '#00FF88bb' : '#0052FFbb'); ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.roundRect(W/2-110, H/2+98, 220, 28, 8); ctx.fill(); ctx.stroke();
+    ctx.font='bold 10px Courier New'; ctx.textBaseline='middle';
+    ctx.fillStyle=_cpDone2?'#ffffff44':(_hasCp2?'#00FF88':'#66aaff');
+    ctx.fillText(_cpDone2?'🃏  ALREADY USED':(_hasCp2?'🃏  USE CHECKPOINT CARD':'🃏  CHECKPOINT  ·  USDC $0.50'), W/2, H/2+112);
+    ctx.globalAlpha=1; ctx.textBaseline='alphabetic';
+
+    // ── Botão CORAÇÃO — sempre visível (dim se sem wallet) ──
+    ctx.globalAlpha = !walletAddress ? 0.28 : heartUsed ? 0.32 : 1;
+    ctx.fillStyle = heartUsed||!walletAddress ? '#ffffff08' : '#FF174418';
+    ctx.strokeStyle = heartUsed||!walletAddress ? '#ffffff22' : '#FF1744bb'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.roundRect(W/2-110, H/2+130, 220, 28, 8); ctx.fill(); ctx.stroke();
+    ctx.font='bold 10px Courier New'; ctx.textBaseline='middle';
+    ctx.fillStyle = !walletAddress ? '#ffffff33' : heartUsed ? '#ffffff44' : '#FF6680';
+    ctx.fillText(!walletAddress?'♥  CONNECT WALLET TO USE':heartUsed?'♥  HEART ALREADY USED':'♥  +1 EXTRA HEART  ·  USDC $0.25', W/2, H/2+144);
+    ctx.globalAlpha=1; ctx.textBaseline='alphabetic';
+
+    // ── Share ──
+    ctx.fillStyle='#ffffff12'; ctx.fillRect(W/2-100, H/2+164, 200, 1);
+    var _shareCol2 = shareFlash>0 ? '#00CC66' : '#0052FF';
+    ctx.fillStyle=_shareCol2+'22';
+    ctx.beginPath(); ctx.roundRect(W/2-74, H/2+170, 148, 28, 8); ctx.fill();
+    ctx.strokeStyle=_shareCol2+'88'; ctx.lineWidth=1; ctx.stroke();
+    ctx.fillStyle=shareFlash>0?'#00FF88':'#00D4FF';
+    ctx.font='bold 11px Courier New'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(shareFlash>0?'✓ COPIED!':'🔗 SHARE', W/2, H/2+184);
     ctx.textBaseline='alphabetic';
 
-    // ── Botão PLAY AGAIN ──
-    var pulse2 = 0.97 + 0.03*Math.sin(frame*0.12);
-    ctx.save(); ctx.translate(W/2, H/2+178); ctx.scale(pulse2, pulse2);
-    ctx.fillStyle = '#0052FF';
-    ctx.shadowColor = '#0052FF'; ctx.shadowBlur = 0;
-    ctx.beginPath(); ctx.roundRect(-78,-17,156,34,10); ctx.fill();
-    ctx.shadowBlur = 0;
-    ctx.font = 'bold 14px Courier New';
-    ctx.textAlign='center'; ctx.textBaseline='middle';
+    // ── Play Again ──
+    var pulse2 = 0.97+0.03*Math.sin(frame*0.12);
+    ctx.save(); ctx.translate(W/2, H/2+210+14); ctx.scale(pulse2, pulse2);
+    ctx.fillStyle='#0052FF';
+    ctx.beginPath(); ctx.roundRect(-78,-14,156,28,10); ctx.fill();
+    ctx.strokeStyle='#00D4FF55'; ctx.lineWidth=1.5; ctx.stroke();
+    ctx.font='bold 12px Courier New'; ctx.textAlign='center'; ctx.textBaseline='middle';
     ctx.fillStyle='#fff'; ctx.fillText('▶  PLAY AGAIN', 0, 0);
     ctx.textBaseline='alphabetic'; ctx.restore();
 
-    // ── Botão MENU ──
-    ctx.fillStyle='#ffffff14';
-    ctx.beginPath(); ctx.roundRect(W/2-74, H/2+197, 148, 28, 8); ctx.fill();
-    ctx.strokeStyle='#0052FF66'; ctx.lineWidth=1; ctx.stroke();
-    ctx.font='bold 12px Courier New'; ctx.fillStyle='#99bbee';
+    // ── Menu ──
+    ctx.fillStyle='#ffffff0e';
+    ctx.beginPath(); ctx.roundRect(W/2-55, H/2+250, 110, 22, 8); ctx.fill();
+    ctx.strokeStyle='#0052FF44'; ctx.lineWidth=1; ctx.stroke();
+    ctx.font='bold 10px Courier New'; ctx.fillStyle='#99bbee';
     ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText('⌂  MENU', W/2, H/2+211);
+    ctx.fillText('⌂  MENU', W/2, H/2+261);
     ctx.textBaseline='alphabetic';
-    ctx.fillStyle='#ffffff30'; ctx.font='8px Courier New';
-    ctx.fillText('$BLEU never stops', W/2, H/2+240);
 
-    // ── Wallet onchain section ──
-    var wdy = H/2+248;
-    if(walletAddress){
-      // Score saved on Base — green confirmation block
-      var wdPulse = 0.92+0.08*Math.sin(frame*0.08);
-      ctx.save(); ctx.translate(W/2, wdy+14); ctx.scale(wdPulse, wdPulse);
-      ctx.fillStyle='#00FF8818'; ctx.strokeStyle='#00FF8866'; ctx.lineWidth=1.5;
-      ctx.beginPath(); ctx.roundRect(-108,-14,216,30,8); ctx.fill(); ctx.stroke();
-      ctx.fillStyle='#00FF88'; ctx.font='bold 10px Courier New'; ctx.textAlign='center'; ctx.textBaseline='middle';
-      ctx.fillText('⛓  SCORE SAVED ON BASE  ·  '+walletShort, 0, 0);
-      ctx.textBaseline='alphabetic'; ctx.restore();
-    } else {
-      // Connect wallet CTA
-      var wdp2 = 0.97+0.03*Math.sin(frame*0.10);
-      ctx.save(); ctx.translate(W/2, wdy+14); ctx.scale(wdp2,wdp2);
-      ctx.fillStyle='#0052FF22'; ctx.strokeStyle='#0052FF88'; ctx.lineWidth=1.5;
-      ctx.beginPath(); ctx.roundRect(-108,-14,216,30,8); ctx.fill(); ctx.stroke();
-      ctx.fillStyle='#00D4FF'; ctx.font='bold 10px Courier New'; ctx.textAlign='center'; ctx.textBaseline='middle';
-      ctx.fillText('⛓  CONNECT WALLET  →  SAVE ON BASE', 0, 0);
-      ctx.textBaseline='alphabetic'; ctx.restore();
-    }
     if(shareFlash>0) shareFlash--;
 
-    // ── Oferta USDC — desenhada por ÚLTIMO para cobrir PLAY AGAIN visualmente ──
-    // Click handler verifica esta área ANTES de PLAY AGAIN (prioridade correta)
-    if(deathOfferTimer > 0) {
-      deathOfferTimer--;
-      var _dot = deathOfferTimer / 720; // 1.0 → 0.0
-      var _doSecs = Math.ceil(deathOfferTimer / 60);
-      var _doAlpha = _dot < 0.15 ? _dot / 0.15 : 1; // fade out nos últimos 0.15
-      ctx.save(); ctx.globalAlpha = _doAlpha;
-
-      // Painel de oferta — abaixo dos botões principais (não sobrepõe Play Again/Share)
-      var _doY = H/2 + 228;
-      var _doH = walletAddress ? 76 : 46;
-      ctx.fillStyle = 'rgba(0,8,32,0.97)';
-      ctx.beginPath(); ctx.roundRect(W/2-118, _doY, 236, _doH, 12); ctx.fill();
-      ctx.strokeStyle = '#0052FFaa'; ctx.lineWidth = 1.5; ctx.stroke();
-      // Barra de countdown
-      ctx.fillStyle = '#0052FF22';
-      ctx.beginPath(); ctx.roundRect(W/2-118, _doY+_doH-4, 236, 4, 2); ctx.fill();
-      ctx.fillStyle = _dot > 0.3 ? '#0052FF' : '#FF4444';
-      ctx.beginPath(); ctx.roundRect(W/2-118, _doY+_doH-4, 236 * _dot, 4, 2); ctx.fill();
-
-      // Título
-      ctx.textAlign = 'center';
-      ctx.font = 'bold 9px Courier New'; ctx.fillStyle = '#ffffff66';
-      ctx.fillText('CONTINUE?  (' + _doSecs + 's)', W/2, _doY + 11);
-
-      // Botão CHECKPOINT — usar da bolsa ou comprar (1× por run)
-      var _cpY = _doY + 16;
-      var _hasCp = checkpointStock > 0;
-      var _cpDone = checkpointUsed;
-      ctx.globalAlpha = _cpDone ? 0.35 : 1;
-      ctx.fillStyle = _cpDone ? '#ffffff08' : (_hasCp ? '#00FF8822' : '#0052FF18');
-      ctx.strokeStyle = _cpDone ? '#ffffff22' : (_hasCp ? '#00FF88bb' : '#0052FFbb'); ctx.lineWidth = 1.5;
-      ctx.beginPath(); ctx.roundRect(W/2-110, _cpY, 220, 26, 8); ctx.fill(); ctx.stroke();
-      ctx.font = 'bold 10px Courier New'; ctx.textBaseline = 'middle';
-      ctx.fillStyle = _cpDone ? '#ffffff44' : (_hasCp ? '#00FF88' : '#66aaff');
-      ctx.fillText(_cpDone ? '🃏  CHECKPOINT ALREADY USED' : (_hasCp ? '🃏  USE CHECKPOINT CARD' : '🃏  CHECKPOINT  ·  USDC $0.50'), W/2, _cpY + 13);
-      ctx.globalAlpha = 1;
-
-      // Botão CORAÇÃO — só com wallet e 1× por run
-      if(walletAddress) {
-        var _htY = _cpY + 30;
-        ctx.globalAlpha = heartUsed ? 0.35 : 1;
-        ctx.fillStyle = heartUsed ? '#ffffff08' : '#FF174418';
-        ctx.strokeStyle = heartUsed ? '#ffffff22' : '#FF1744bb'; ctx.lineWidth = 1.5;
-        ctx.beginPath(); ctx.roundRect(W/2-110, _htY, 220, 26, 8); ctx.fill(); ctx.stroke();
-        ctx.fillStyle = heartUsed ? '#ffffff44' : '#FF6680'; ctx.font = 'bold 10px Courier New';
-        ctx.fillText(heartUsed ? '♥  HEART ALREADY USED' : '♥  +1 EXTRA HEART  ·  USDC $0.25', W/2, _htY + 13);
-        ctx.globalAlpha = 1;
-      }
-      ctx.textBaseline = 'alphabetic';
-      ctx.restore();
+    // ── Wallet section — abaixo do card ──
+    var wdy = H/2+282;
+    if(walletAddress){
+      ctx.fillStyle='#00FF8814'; ctx.strokeStyle='#00FF8844'; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.roundRect(W/2-108,wdy,216,20,6); ctx.fill(); ctx.stroke();
+      ctx.fillStyle='#00FF88'; ctx.font='bold 8px Courier New'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText('⛓  SCORE SAVED  ·  '+walletShort, W/2, wdy+10);
+      ctx.textBaseline='alphabetic';
+    } else {
+      ctx.fillStyle='#0052FF14'; ctx.strokeStyle='#0052FF44'; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.roundRect(W/2-108,wdy,216,20,6); ctx.fill(); ctx.stroke();
+      ctx.fillStyle='#00D4FF'; ctx.font='bold 8px Courier New'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText('⛓  CONNECT WALLET  →  SAVE ON BASE', W/2, wdy+10);
+      ctx.textBaseline='alphabetic';
     }
+    deathOfferTimer = 0; // timer removido — botões sempre visíveis no card
   }
   ctx.restore();
   if(screenShake>0)screenShake--;
@@ -7035,67 +6981,59 @@ function handleClick(ex, ey) {
     return;
   }
 
-  // ── DEAD screen buttons
+  // ── DEAD screen buttons — posições fixas (espelham o draw: CP=H/2+98, HT=H/2+130, SH=H/2+170, PL=H/2+210, MN=H/2+250)
   if(gameState === 'dead') {
-    // ── Ofertas PRIMEIRO (têm prioridade sobre share/menu na área sobreposta) ──
-    if(deathOfferTimer > 0) {
-      var _doY2 = H/2 + 228;
-      // Botão CHECKPOINT — usar carta (sem wallet) ou comprar USDC (1× por run)
-      if(cx>=W/2-110&&cx<=W/2+110&&cy>=_doY2+16&&cy<=_doY2+42){
-        if(!checkpointUsed) {
-          if(checkpointStock > 0) {
-            // Usa carta já comprada — não requer wallet
-            checkpointStock--; _ls.set('bleuCheckpoint', checkpointStock);
-            checkpointUsed=true; dizzyTimer=90;
-            lives=3; invincible=240; bleu.y=H/2; bleu.vy=0;
-            gameState='playing'; startMusic(getPhaseIdx());
-            screenShake=6; hitFlash=3; deathOfferTimer=0;
-            spawnParticles(W/2,H/2,'#FFD700',18); spawnParticles(W/2,H/2,'#00D4FF',10);
-            beep(440,880,0.3,'sine',0.18);
-            [660,880,1047].forEach(function(f,i){setTimeout(function(){beep(f,f,0.12,'sine',0.1);},i*70);});
-          } else if(walletAddress) {
-            // Compra checkpoint via USDC e já usa
-            sendUSDCPurchase(USDC_CHECKPOINT, function(){
-              checkpointUsed=true; dizzyTimer=90;
-              lives=1; invincible=220; bleu.y=H/2; bleu.vy=0;
-              gameState='playing'; startMusic(getPhaseIdx());
-              screenShake=6; deathOfferTimer=0;
-              spawnParticles(W/2,H/2,'#FFD700',18);
-              beep(440,880,0.3,'sine',0.18);
-            });
-          }
-        }
-        return;
-      }
-      // Botão CORAÇÃO — requer wallet, 1× por run
-      if(walletAddress && !heartUsed && cx>=W/2-110&&cx<=W/2+110&&cy>=_doY2+46&&cy<=_doY2+72){
-        sendUSDCPurchase(USDC_HEART, function(){
-          heartUsed=true;
-          lives=1; invincible=180; bleu.y=H/2; bleu.vy=0;
+    // ── Botão CHECKPOINT (H/2+98 a H/2+126) ──
+    if(cx>=W/2-110&&cx<=W/2+110&&cy>=H/2+98&&cy<=H/2+126){
+      if(!checkpointUsed){
+        if(checkpointStock > 0){
+          checkpointStock--; _ls.set('bleuCheckpoint',checkpointStock);
+          checkpointUsed=true; dizzyTimer=90;
+          lives=3; invincible=240; bleu.y=H/2; bleu.vy=0;
           gameState='playing'; startMusic(getPhaseIdx());
-          deathOfferTimer=0;
-          spawnParticles(W/2,H/2,'#FF6680',14);
-          beep(523,880,0.2,'sine',0.14);
-        });
-        return;
+          screenShake=6; hitFlash=3;
+          spawnParticles(W/2,H/2,'#FFD700',18); spawnParticles(W/2,H/2,'#00D4FF',10);
+          beep(440,880,0.3,'sine',0.18);
+          [660,880,1047].forEach(function(f,i){setTimeout(function(){beep(f,f,0.12,'sine',0.1);},i*70);});
+        } else if(walletAddress){
+          sendUSDCPurchase(USDC_CHECKPOINT, function(){
+            checkpointUsed=true; dizzyTimer=90;
+            lives=1; invincible=220; bleu.y=H/2; bleu.vy=0;
+            gameState='playing'; startMusic(getPhaseIdx());
+            screenShake=6;
+            spawnParticles(W/2,H/2,'#FFD700',18);
+            beep(440,880,0.3,'sine',0.18);
+          });
+        }
       }
+      return;
     }
-
-    // Botão COMPARTILHAR: H/2+122 a H/2+152
-    if(cx>=W/2-74&&cx<=W/2+74&&cy>=H/2+122&&cy<=H/2+152){
-      var pv2 = PHASE_VISUALS[runPhase]||PHASE_VISUALS[0];
-      var shareText = '🎮 Flapy Bleu\nScore: '+score+' | '+pv2.name+'\n🔵 https://flapy-bleu.vercel.app';
-      if(navigator.share){ navigator.share({title:'Flapy Bleu', text:shareText, url:'https://flapy-bleu.vercel.app'}); }
+    // ── Botão CORAÇÃO (H/2+130 a H/2+158) — requer wallet ──
+    if(walletAddress&&!heartUsed&&cx>=W/2-110&&cx<=W/2+110&&cy>=H/2+130&&cy<=H/2+158){
+      sendUSDCPurchase(USDC_HEART, function(){
+        heartUsed=true;
+        lives=1; invincible=180; bleu.y=H/2; bleu.vy=0;
+        gameState='playing'; startMusic(getPhaseIdx());
+        spawnParticles(W/2,H/2,'#FF6680',14);
+        beep(523,880,0.2,'sine',0.14);
+      });
+      return;
+    }
+    // ── Share (H/2+170 a H/2+198) ──
+    if(cx>=W/2-74&&cx<=W/2+74&&cy>=H/2+170&&cy<=H/2+198){
+      var pv2=PHASE_VISUALS[runPhase]||PHASE_VISUALS[0];
+      var shareText='🎮 Flapy Bleu\nScore: '+score+' | '+pv2.name+'\n🔵 https://flapy-bleu.vercel.app';
+      if(navigator.share){ navigator.share({title:'Flapy Bleu',text:shareText,url:'https://flapy-bleu.vercel.app'}); }
       else { try{ navigator.clipboard.writeText(shareText); }catch(e){} }
       shareFlash=90; return;
     }
-    // Wallet line: H/2+248 a H/2+264
-    if(cx>=W/2-160&&cx<=W/2+160&&cy>=H/2+248&&cy<=H/2+264){
+    // ── Wallet connect (H/2+282 a H/2+302) ──
+    if(cx>=W/2-108&&cx<=W/2+108&&cy>=H/2+282&&cy<=H/2+302){
       if(!walletAddress) connectWallet();
       return;
     }
-    // Qualquer outro toque na tela de morte → volta ao menu principal
-    menuTapReady = false; resetGame(); stopMusic();
+    // ── Qualquer outro toque → reset (Play Again / Menu / área do card) ──
+    menuTapReady=false; resetGame(); stopMusic();
     beep(440,660,0.08,'sine',0.1);
     return;
   }
