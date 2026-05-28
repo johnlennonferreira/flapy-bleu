@@ -1656,6 +1656,10 @@ var _legendaryBgGrad=null;            // legendary screen background gradient (c
 var _legendaryP5Grad=null;            // P5 badge gradient (cached once)
 var _legendaryTitleGrad=null;         // LEGENDARY title gradient (cached once)
 var _legendaryBtnGrad=null;           // TAP TO CLAIM button gradient (cached once)
+var _lgBadgeBgGrad=null;              // idle legendary NG+5 badge background gradient (cached once)
+var _lgBadgeSGrad=null;               // idle legendary NG+5 badge stroke gradient (cached once)
+var _lgBadgeTxtGrad=null;             // idle legendary NG+5 badge text gradient (cached once)
+var _lgBadgeW=null;                   // idle legendary NG+5 badge measured width (cached once)
 // ── LIVES + POWER-UPS ──
 var lives=3, invincible=0, starPower=0, stars=[];
 // ── Itens de loja ──────────────────────────────────────────────
@@ -5658,19 +5662,16 @@ function loop(ts) {
         ctx.save(); ctx.translate(W/2, _prBadgeY); ctx.scale(_prGlow, _prGlow);
         ctx.font = 'bold 9px Courier New';
         if(boatUnlocked) {
-          // NG+5: badge lendário — fire colors com ⚓
+          // NG+5: badge lendário — fire colors com ⚓ — gradients cached once
           var _lgLabel = '⚓  NG+5  LEGENDARY  ⚓';
-          var _lgW = ctx.measureText(_lgLabel).width + 24;
-          var _lgG = ctx.createLinearGradient(-_lgW/2,0,_lgW/2,0);
-          _lgG.addColorStop(0,'#FF220022'); _lgG.addColorStop(0.5,'#FFD70022'); _lgG.addColorStop(1,'#FF220022');
-          ctx.fillStyle=_lgG;
-          var _lgSG = ctx.createLinearGradient(-_lgW/2,0,_lgW/2,0);
-          _lgSG.addColorStop(0,'#FF6600cc'); _lgSG.addColorStop(0.5,'#FFD700cc'); _lgSG.addColorStop(1,'#FF6600cc');
-          ctx.strokeStyle=_lgSG; ctx.lineWidth=1.5;
-          ctx.beginPath(); ctx.roundRect(-_lgW/2,-10,_lgW,20,10); ctx.fill(); ctx.stroke();
-          var _lgTG=ctx.createLinearGradient(-60,0,60,0);
-          _lgTG.addColorStop(0,'#FF6600'); _lgTG.addColorStop(0.5,'#FFD700'); _lgTG.addColorStop(1,'#FF6600');
-          ctx.fillStyle=_lgTG; ctx.textAlign='center'; ctx.textBaseline='middle';
+          if(_lgBadgeW===null){ _lgBadgeW = ctx.measureText(_lgLabel).width + 24; }
+          if(!_lgBadgeBgGrad){ _lgBadgeBgGrad=ctx.createLinearGradient(-_lgBadgeW/2,0,_lgBadgeW/2,0); _lgBadgeBgGrad.addColorStop(0,'#FF220022'); _lgBadgeBgGrad.addColorStop(0.5,'#FFD70022'); _lgBadgeBgGrad.addColorStop(1,'#FF220022'); }
+          if(!_lgBadgeSGrad){ _lgBadgeSGrad=ctx.createLinearGradient(-_lgBadgeW/2,0,_lgBadgeW/2,0); _lgBadgeSGrad.addColorStop(0,'#FF6600cc'); _lgBadgeSGrad.addColorStop(0.5,'#FFD700cc'); _lgBadgeSGrad.addColorStop(1,'#FF6600cc'); }
+          if(!_lgBadgeTxtGrad){ _lgBadgeTxtGrad=ctx.createLinearGradient(-60,0,60,0); _lgBadgeTxtGrad.addColorStop(0,'#FF6600'); _lgBadgeTxtGrad.addColorStop(0.5,'#FFD700'); _lgBadgeTxtGrad.addColorStop(1,'#FF6600'); }
+          ctx.fillStyle=_lgBadgeBgGrad;
+          ctx.strokeStyle=_lgBadgeSGrad; ctx.lineWidth=1.5;
+          ctx.beginPath(); ctx.roundRect(-_lgBadgeW/2,-10,_lgBadgeW,20,10); ctx.fill(); ctx.stroke();
+          ctx.fillStyle=_lgBadgeTxtGrad; ctx.textAlign='center'; ctx.textBaseline='middle';
           ctx.shadowColor='#FF8800'; ctx.shadowBlur=12;
           ctx.fillText(_lgLabel, 0, 0);
         } else {
