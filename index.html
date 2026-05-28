@@ -1993,7 +1993,15 @@ function sendUSDCPurchase(usdcAmount6, onSuccess) {
   if(!window.ethereum){ window.open('https://go.cb-w.com/dapp?cb_url='+encodeURIComponent('https://flapy-bleu.vercel.app'),'_blank'); return; }
   // Guard: block payments to zero/burn/placeholder addresses
   var _tw=TREASURY_WALLET.toLowerCase();
-  if(_tw==='0x0000000000000000000000000000000000000000'||_tw==='0x000000000000000000000000000000000000dead'){ beep(220,150,0.12,'sawtooth',0.08); return; }
+  if(_tw==='0x0000000000000000000000000000000000000000'||_tw==='0x000000000000000000000000000000000000dead'){
+    if(TESTNET && walletAddress){
+      // TESTNET SIM — wallet conectada mas sem treasury real: simula compra p/ testar fluxo
+      beep(440,660,0.12,'sine',0.1); spawnParticles(W/2,H/2,'#00D4FF',8);
+      setTimeout(function(){ beep(523,1047,0.22,'sine',0.14); spawnParticles(W/2,H/2,'#00FF88',14); if(typeof onSuccess==='function') onSuccess('[testnet-sim]'); }, 1800);
+      return;
+    }
+    beep(220,150,0.12,'sawtooth',0.08); return;
+  }
   ensureBaseNetwork(function(){
     // ERC-20 transfer(address,uint256) selector = 0xa9059cbb
     var to32  = TREASURY_WALLET.replace('0x','').toLowerCase().padStart(64,'0');
@@ -6717,7 +6725,9 @@ function loop(ts) {
     ctx.beginPath(); ctx.roundRect(-78,-14,156,28,10); ctx.fill();
     ctx.strokeStyle='#00D4FF55'; ctx.lineWidth=1.5; ctx.stroke();
     ctx.font='bold 12px Courier New'; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillStyle='#fff'; ctx.fillText('▶  PLAY AGAIN', 0, 0);
+    ctx.fillStyle='#fff'; ctx.fillText('▶  NEW GAME', 0, -3);
+    ctx.font='7px Courier New'; ctx.fillStyle='#ffffff88';
+    ctx.fillText('starts from the beginning', 0, 9);
     ctx.textBaseline='alphabetic'; ctx.restore();
 
     // ── Menu ──
@@ -6731,19 +6741,21 @@ function loop(ts) {
 
     if(shareFlash>0) shareFlash--;
 
-    // ── Wallet section — abaixo do card ──
+    // ── Wallet section — abaixo do card (clicável: conecta ou desconecta) ──
     var wdy = H/2+282;
     if(walletAddress){
       ctx.fillStyle='#00FF8814'; ctx.strokeStyle='#00FF8844'; ctx.lineWidth=1;
-      ctx.beginPath(); ctx.roundRect(W/2-108,wdy,216,20,6); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.roundRect(W/2-108,wdy,216,28,6); ctx.fill(); ctx.stroke();
       ctx.fillStyle='#00FF88'; ctx.font='bold 8px Courier New'; ctx.textAlign='center'; ctx.textBaseline='middle';
-      ctx.fillText('⛓  SCORE SAVED  ·  '+walletShort, W/2, wdy+10);
+      ctx.fillText('⛓  SCORE SAVED  ·  '+walletShort, W/2, wdy+9);
+      ctx.fillStyle='#00FF8866'; ctx.font='6px Courier New';
+      ctx.fillText('tap to disconnect', W/2, wdy+20);
       ctx.textBaseline='alphabetic';
     } else {
       ctx.fillStyle='#0052FF14'; ctx.strokeStyle='#0052FF44'; ctx.lineWidth=1;
-      ctx.beginPath(); ctx.roundRect(W/2-108,wdy,216,20,6); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.roundRect(W/2-108,wdy,216,28,6); ctx.fill(); ctx.stroke();
       ctx.fillStyle='#00D4FF'; ctx.font='bold 8px Courier New'; ctx.textAlign='center'; ctx.textBaseline='middle';
-      ctx.fillText('⛓  CONNECT WALLET  →  SAVE ON BASE', W/2, wdy+10);
+      ctx.fillText('⛓  CONNECT WALLET  →  SAVE ON BASE', W/2, wdy+14);
       ctx.textBaseline='alphabetic';
     }
     deathOfferTimer = 0; // timer removido — botões sempre visíveis no card
@@ -6965,9 +6977,10 @@ function handleClick(ex, ey) {
       else { try{ navigator.clipboard.writeText(shareText); }catch(e){} }
       shareFlash=90; return;
     }
-    // ── Wallet connect (H/2+282 a H/2+302) ──
-    if(cx>=W/2-108&&cx<=W/2+108&&cy>=H/2+282&&cy<=H/2+302){
-      if(!walletAddress) connectWallet();
+    // ── Wallet section (H/2+282 a H/2+310) — conecta ou desconecta ──
+    if(cx>=W/2-108&&cx<=W/2+108&&cy>=H/2+282&&cy<=H/2+310){
+      if(walletAddress) disconnectWallet();
+      else connectWallet();
       return;
     }
     // ── Qualquer outro toque → reset (Play Again / Menu / área do card) ──
