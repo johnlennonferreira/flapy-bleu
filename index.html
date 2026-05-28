@@ -708,6 +708,191 @@ function drawLegendaryUnlockScreen() {
   ctx.globalAlpha=1; ctx.textBaseline='alphabetic';
 }
 
+// ─── NFT REVEAL SCREEN — unlock dopamine hit ─────────────────────────────────
+function drawNFTRevealScreen() {
+  var _t = nftRevealAnim;
+  var _char = nftRevealChar;
+
+  var _th = _char===1 ? { bg0:'#1E0035',bg1:'#0D0018',bg2:'#000000', accent:'#CC44FF',glow:'#9900FF',glow2:'#FF44CC', name:'PHANTOM', sub:'GHOST OF BASE NETWORK', badge:'RARE' }
+           : _char===2 ? { bg0:'#081C0C',bg1:'#040E06',bg2:'#000000', accent:'#33FF77',glow:'#00CC44',glow2:'#AAFF33', name:'WORM', sub:'MASTER OF THE DEEP EARTH', badge:'UNCOMMON' }
+           : _char===3 ? { bg0:'#001528',bg1:'#000A14',bg2:'#000000', accent:'#00FFDD',glow:'#00BBAA',glow2:'#44AAFF', name:'ALIEN', sub:'VISITOR FROM SECTOR 7', badge:'EPIC' }
+           :             { bg0:'#1A0A00',bg1:'#0D0500',bg2:'#000000', accent:'#FFD700',glow:'#FF8800',glow2:'#FF4400', name:'VIKING BOAT', sub:'RULER OF NORDIC SEAS', badge:'LEGENDARY' };
+
+  var _shk = Math.max(0, 22-_t)*0.5;
+  var _sx = _shk>0?(Math.random()-0.5)*_shk:0;
+  var _sy = _shk>0?(Math.random()-0.5)*_shk:0;
+  var _pulse = 0.5+0.5*Math.sin(_t*0.07);
+
+  // Background gradient
+  var _bg=ctx.createLinearGradient(0,0,0,H);
+  _bg.addColorStop(0,_th.bg0); _bg.addColorStop(0.5,_th.bg1); _bg.addColorStop(1,_th.bg2);
+  ctx.fillStyle=_bg; ctx.fillRect(0,0,W,H);
+
+  // Animated accent color sweep
+  var _sweep=(Math.sin(_t*0.04)+1)/2;
+  var _sweepHex=Math.floor(_sweep*20).toString(16).padStart(2,'0');
+  ctx.fillStyle=_th.accent+_sweepHex; ctx.fillRect(0,0,W,H);
+
+  // Falling confetti sparkles
+  var _nConf=_isMobile?28:52;
+  var _confCols=[_th.accent,_th.glow2,'#FFD700','#FF44BB','#44AAFF','#FFFFFF'];
+  for(var _ci=0;_ci<_nConf;_ci++){
+    var _cp=((_t*1.6+_ci*17)%100)/100;
+    var _cfx=(_ci*79+11)%W;
+    var _cfA=Math.min(1,_cp*3)*Math.max(0,1-_cp*1.2);
+    if(_cfA<0.02)continue;
+    ctx.globalAlpha=_cfA*(0.4+0.4*Math.sin(_ci*1.7));
+    ctx.fillStyle=_confCols[_ci%_confCols.length];
+    ctx.save(); ctx.translate(_cfx,_cp*H); ctx.rotate(_ci*0.8+_t*0.05);
+    var _cs=1.5+(_ci%3)*0.8;
+    if(_ci%3===0){ ctx.fillRect(-_cs,-_cs,_cs*2,_cs*2); }
+    else if(_ci%3===1){ ctx.beginPath(); ctx.arc(0,0,_cs,0,Math.PI*2); ctx.fill(); }
+    else{
+      ctx.beginPath();
+      for(var _sp=0;_sp<5;_sp++){
+        var _sa=(_sp/5)*Math.PI*2-Math.PI/2;
+        var _si=((_sp+0.5)/5)*Math.PI*2-Math.PI/2;
+        ctx.lineTo(Math.cos(_sa)*_cs*1.2,Math.sin(_sa)*_cs*1.2);
+        ctx.lineTo(Math.cos(_si)*_cs*0.5,Math.sin(_si)*_cs*0.5);
+      }
+      ctx.closePath(); ctx.fill();
+    }
+    ctx.restore();
+  }
+  ctx.globalAlpha=1;
+
+  ctx.save(); ctx.translate(W/2+_sx, H/2+_sy);
+
+  // Expanding rings
+  for(var _ri=0;_ri<4;_ri++){
+    var _rAge=_t-_ri*8; if(_rAge<0)continue;
+    var _rR=Math.min(_rAge*4.5,210);
+    var _rA=Math.max(0,1-_rAge/34); if(_rA<0.01)continue;
+    ctx.save(); ctx.globalAlpha=_rA;
+    ctx.strokeStyle=_ri%2===0?_th.accent:_th.glow2;
+    ctx.lineWidth=2.5-_ri*0.4;
+    ctx.beginPath(); ctx.arc(0,0,_rR,0,Math.PI*2); ctx.stroke();
+    ctx.restore();
+  }
+
+  // "NEW CHARACTER UNLOCKED" title — flies in from top
+  var _tIn=Math.min(1,Math.max(0,(_t-8)/18));
+  if(_tIn>0){
+    var _tEase=(1-_tIn)*(1-_tIn);
+    ctx.globalAlpha=_tIn; ctx.save();
+    ctx.scale(0.7+_tIn*0.3,0.7+_tIn*0.3);
+    ctx.font='bold 14px Courier New'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillStyle='#000000AA'; ctx.fillText('✦ NEW CHARACTER UNLOCKED ✦',2,-140+_tEase*(-60)+2);
+    ctx.fillStyle='#FFFFFF'; ctx.shadowColor=_th.accent; ctx.shadowBlur=22;
+    ctx.fillText('✦ NEW CHARACTER UNLOCKED ✦',0,-140+_tEase*(-60));
+    ctx.shadowBlur=0; ctx.restore();
+  }
+
+  // NFT card frame
+  var _cIn=Math.min(1,Math.max(0,(_t-16)/22));
+  if(_cIn>0){
+    ctx.globalAlpha=_cIn;
+    var _cW=148,_cH=188,_cX=-74,_cY=-104;
+    var _cBg=ctx.createLinearGradient(_cX,_cY,_cX+_cW,_cY+_cH);
+    _cBg.addColorStop(0,_th.accent+'20'); _cBg.addColorStop(0.5,_th.bg0+'88'); _cBg.addColorStop(1,'#00000099');
+    ctx.fillStyle=_cBg; ctx.beginPath(); ctx.roundRect(_cX,_cY,_cW,_cH,14); ctx.fill();
+    // Animated shimmer border
+    var _bA=(_t*0.04)%(Math.PI*2);
+    var _bG=ctx.createLinearGradient(
+      _cX+Math.cos(_bA)*_cW*0.6, _cY+Math.sin(_bA)*_cH*0.6,
+      _cX+Math.cos(_bA+Math.PI)*_cW*0.6, _cY+Math.sin(_bA+Math.PI)*_cH*0.6
+    );
+    _bG.addColorStop(0,_th.accent); _bG.addColorStop(0.33,_th.glow2); _bG.addColorStop(0.66,'#FFD700'); _bG.addColorStop(1,_th.accent);
+    ctx.strokeStyle=_bG; ctx.lineWidth=2.5;
+    ctx.beginPath(); ctx.roundRect(_cX,_cY,_cW,_cH,14); ctx.stroke();
+    ctx.strokeStyle='#ffffff18'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.roundRect(_cX+2,_cY+2,_cW-4,_cH-4,12); ctx.stroke();
+    ctx.fillStyle='rgba(255,255,255,0.06)';
+    ctx.beginPath(); ctx.roundRect(_cX+4,_cY+4,_cW-8,18,6); ctx.fill();
+    // Badge tier in top of card
+    var _bdIn=Math.min(1,Math.max(0,(_t-26)/14));
+    if(_bdIn>0){
+      ctx.globalAlpha=_cIn*_bdIn;
+      ctx.font='bold 7px Courier New'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillStyle=_th.accent; ctx.shadowColor=_th.glow; ctx.shadowBlur=10;
+      ctx.fillText('✦ '+_th.badge,0,_cY+11); ctx.shadowBlur=0;
+    }
+  }
+  ctx.globalAlpha=1;
+
+  // Character reveal — scaled up, bobbing, zoom-in from scale 0
+  var _chIn=Math.min(1,Math.max(0,(_t-26)/28));
+  if(_chIn>0){
+    var _chEase=1-(1-_chIn)*(1-_chIn);
+    var _bob=Math.sin(_t*0.05)*3.5;
+    // Halo glow
+    if(!_isMobile){
+      ctx.save(); ctx.globalAlpha=_chIn*0.7*(0.6+0.4*_pulse);
+      var _halo=ctx.createRadialGradient(0,_bob,0,0,_bob,68+_pulse*14);
+      _halo.addColorStop(0,_th.accent+'55'); _halo.addColorStop(0.5,_th.glow+'22'); _halo.addColorStop(1,'#00000000');
+      ctx.fillStyle=_halo; ctx.beginPath(); ctx.ellipse(0,_bob,78,60,0,0,Math.PI*2); ctx.fill();
+      ctx.restore();
+    }
+    // Orbiting particles
+    var _nOrb=_isMobile?8:14;
+    for(var _oi=0;_oi<_nOrb;_oi++){
+      var _oa=(_oi/_nOrb)*Math.PI*2+_t*0.045;
+      var _ox=Math.cos(_oa)*(46+Math.sin(_t*0.07+_oi)*7);
+      var _oy=Math.sin(_oa)*(34+Math.cos(_t*0.07+_oi)*5)+_bob;
+      ctx.globalAlpha=_chIn*(0.3+0.5*Math.abs(Math.sin(_oa*2)));
+      ctx.fillStyle=[_th.accent,_th.glow2,'#FFD700'][_oi%3];
+      ctx.beginPath(); ctx.arc(_ox,_oy,1.5+(_oi%3)*0.4,0,Math.PI*2); ctx.fill();
+    }
+    ctx.globalAlpha=_chEase;
+    var _charScale=2.5*_chEase+(1-_chEase)*0.2;
+    ctx.save(); ctx.translate(0,_bob+(1-_chEase)*(1-_chEase)*50); ctx.scale(_charScale,_charScale);
+    if(_char===1)      drawPhantom(0,0,_t*0.12,0);
+    else if(_char===2) drawWorm(0,0,_t*0.10,0);
+    else if(_char===3) drawAlien(0,0,_t*0.09,0);
+    else if(_char===4) drawBoat(0,0,_t*0.12,0);
+    ctx.restore();
+  }
+  ctx.globalAlpha=1;
+
+  // Character name — scales in
+  var _nIn=Math.min(1,Math.max(0,(_t-44)/18));
+  if(_nIn>0){
+    ctx.globalAlpha=_nIn; ctx.save();
+    ctx.scale(1+0.025*Math.sin(_t*0.1),1+0.025*Math.sin(_t*0.1));
+    ctx.font='bold 22px Courier New'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillStyle='#00000044'; ctx.fillText(_th.name,2,98+2);
+    ctx.fillStyle=_th.accent; ctx.shadowColor=_th.glow; ctx.shadowBlur=30;
+    ctx.fillText(_th.name,0,98); ctx.shadowBlur=0; ctx.restore();
+  }
+
+  // Sub text
+  var _sIn=Math.min(1,Math.max(0,(_t-56)/14));
+  if(_sIn>0){
+    ctx.globalAlpha=_sIn;
+    ctx.font='9px Courier New'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillStyle='#ffffff55'; ctx.fillText(_th.sub,0,114);
+  }
+
+  // TAP TO PLAY button — pulsing
+  var _btIn=Math.min(1,Math.max(0,(_t-70)/16))*(0.8+0.2*Math.sin(_t*0.12));
+  if(_btIn>0){
+    ctx.globalAlpha=_btIn; ctx.save();
+    ctx.scale(0.97+0.03*Math.sin(_t*0.11),0.97+0.03*Math.sin(_t*0.11));
+    var _btnG=ctx.createLinearGradient(-90,0,90,0);
+    _btnG.addColorStop(0,'#000000AA'); _btnG.addColorStop(0.35,_th.accent+'66');
+    _btnG.addColorStop(0.5,_th.glow+'AA'); _btnG.addColorStop(0.65,_th.accent+'66'); _btnG.addColorStop(1,'#000000AA');
+    ctx.fillStyle=_btnG; ctx.strokeStyle=_th.accent+'AA'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.roundRect(-90,-18,180,36,10); ctx.fill(); ctx.stroke();
+    ctx.fillStyle='#FFFFFF'; ctx.font='bold 13px Courier New';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.shadowColor=_th.accent; ctx.shadowBlur=14;
+    ctx.fillText('✦  TAP TO PLAY',0,0); ctx.shadowBlur=0; ctx.restore();
+  }
+
+  ctx.restore(); // translate center
+  ctx.globalAlpha=1; ctx.textBaseline='alphabetic';
+}
+
 function drawAwardScreen() {
   ctx.fillStyle='rgba(0,5,20,.88)'; ctx.fillRect(0,0,W,H);
   var cx=W/2; ctx.textAlign='center';
@@ -1690,6 +1875,9 @@ var prestigeLevel=0; // NG+ prestige — sempre 0 ao iniciar; só sobe dentro da
 var bestPrestige=parseInt(_ls.get('bleuBestPrestige','0')); // máximo histórico (leaderboard)
 var prestigeAnim=0;    // frame counter para tela prestige
 var legendaryAnim=0;   // frame counter para tela legendary unlock (NG+5 secreto)
+var nftRevealAnim=0;   // frame counter para tela NFT reveal de personagem desbloqueado
+var nftRevealChar=-1;  // índice do personagem sendo revelado (1=Phantom,2=Worm,3=Alien,4=Viking)
+var pendingNFTReveal=-1; // personagem aguardando reveal após tela de prestige
 var prestigeCoinsReward=0; // coins ganhos no prestige atual
 const MILESTONES=[5,10,25,50,100];
 var activeChar=parseInt(_ls.get('bleuChar','0'));
@@ -1911,6 +2099,18 @@ function unlockCharWithUSDC(charIdx) {
     }
     activeChar=charIdx; _ls.set('bleuChar',''+charIdx);
     spawnParticles(W/2,H/2,'#FFD700',20);
+    // ── NFT REVEAL: mostra reveal na primeira compra ──
+    var _revKeys={1:'bleuRevP',2:'bleuRevW',3:'bleuRevA'};
+    var _rk=_revKeys[charIdx];
+    if(_rk && _ls.get(_rk,'0') !== '1'){
+      _ls.set(_rk,'1');
+      nftRevealAnim=0; nftRevealChar=charIdx; gameState='nftReveal';
+      spawnParticles(W/2,H/2,charIdx===1?'#CC44FF':charIdx===2?'#33FF77':'#00FFDD',35);
+      spawnParticles(W/2,H/2,'#FFD700',20);
+      if(navigator.vibrate) navigator.vibrate([60,30,60,30,120,50,200]);
+      var _uff=[523,659,784,1047,1319,1047,1568,1319,1568,2093];
+      _uff.forEach(function(f,ii){ setTimeout(function(){ beep(f,f*1.4,0.22,'sine',0.2); },ii*80); });
+    }
   });
 }
 
@@ -3660,12 +3860,10 @@ function drawSkeletonArmObstacle(p) {
       var headW = 10;
 
       // Leaf-shaped spearhead — flat on mobile
-      if(!_isMobile){
-        var shG = ctx.createLinearGradient(cx - headW, 0, cx + headW, 0);
-        shG.addColorStop(0, '#5566aa'); shG.addColorStop(0.35, '#cce0ff');
-        shG.addColorStop(0.55, '#ffffff'); shG.addColorStop(1, '#3a4466');
-        ctx.fillStyle = shG;
-      } else { ctx.fillStyle = '#8899cc'; }
+      var shG = ctx.createLinearGradient(cx - headW, 0, cx + headW, 0);
+      shG.addColorStop(0, '#5566aa'); shG.addColorStop(0.35, '#cce0ff');
+      shG.addColorStop(0.55, '#ffffff'); shG.addColorStop(1, '#3a4466');
+      ctx.fillStyle = shG;
       ctx.beginPath();
       ctx.moveTo(cx, tipY);
       ctx.quadraticCurveTo(cx - headW - 3, tipY + dir * headLen * 0.52, cx - headW * 0.4, headBaseY);
@@ -3747,17 +3945,13 @@ function drawWormObstacle(p) {
       var segY = wallY + (headY - wallY) * t;
       var r = segR * (0.48 + t * 0.52);
       var wobble = Math.sin(frame * 0.07 + si * 0.95) * (4 * (1 - t));
-      if(_isMobile){
-        ctx.fillStyle = '#8a4e20'; // flat mid-tone — skip radialGradient per segment
-      } else {
-        var sg = ctx.createRadialGradient(
+      var sg = ctx.createRadialGradient(
           cx + wobble - r*0.3, segY - dir*r*0.25, r*0.08,
           cx + wobble, segY, r);
         sg.addColorStop(0, '#c8a060');
         sg.addColorStop(0.45, '#8a4e20');
         sg.addColorStop(1, '#3e1a06');
         ctx.fillStyle = sg;
-      }
       ctx.beginPath(); ctx.arc(cx + wobble, segY, r, 0, Math.PI*2); ctx.fill();
       // Segment ring line
       ctx.strokeStyle = '#3e1a0666'; ctx.lineWidth = 1.5;
@@ -3772,13 +3966,9 @@ function drawWormObstacle(p) {
 
     // ── HEAD ──
     var hR = segR * 1.18;
-    if(_isMobile){
-      ctx.fillStyle = '#a05a28';
-    } else {
-      var hg = ctx.createRadialGradient(cx - hR*0.28, headY + dir*hR*0.28, hR*0.1, cx, headY, hR*1.15);
-      hg.addColorStop(0, '#e0b070'); hg.addColorStop(0.4, '#a05a28'); hg.addColorStop(1, '#2e0e02');
-      ctx.fillStyle = hg;
-    }
+    var hg = ctx.createRadialGradient(cx - hR*0.28, headY + dir*hR*0.28, hR*0.1, cx, headY, hR*1.15);
+    hg.addColorStop(0, '#e0b070'); hg.addColorStop(0.4, '#a05a28'); hg.addColorStop(1, '#2e0e02');
+    ctx.fillStyle = hg;
     ctx.beginPath(); ctx.arc(cx, headY, hR, 0, Math.PI*2); ctx.fill();
     ctx.strokeStyle = '#1a0800'; ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.arc(cx, headY, hR, 0, Math.PI*2); ctx.stroke();
@@ -4055,13 +4245,6 @@ function drawBasePipeObstacle(p) {
   }
 
   function drawPipe(bodyY1, bodyY2, rimY, rimDir) {
-    // Body — flat on mobile to skip 4 linearGradient allocations per frame
-    if(_isMobile){
-      ctx.fillStyle = pB;
-      ctx.fillRect(p.x, bodyY1, p.bodyW, bodyY2 - bodyY1);
-      ctx.fillStyle = pL; ctx.fillRect(p.x+4, bodyY1, 8, bodyY2-bodyY1); // shine strip
-      ctx.fillStyle = pD; ctx.fillRect(p.x, rimY, p.bodyW+rimExt*2, rimH); // flat rim
-    } else {
     // Body
     ctx.fillStyle = pipeGrad(p.x, p.bodyW);
     ctx.fillRect(p.x, bodyY1, p.bodyW, bodyY2 - bodyY1);
@@ -4086,7 +4269,6 @@ function drawBasePipeObstacle(p) {
       ctx.shadowBlur = 0;
       ctx.restore();
     }
-    } // end desktop-only gradient branch
   }
 
   drawPipe(0, p.topH - rimH, p.topH - rimH, -1);
@@ -4212,11 +4394,9 @@ function drawVineObstacle(p) {
 
   function drawVineBody(y1, y2) {
     // Main vine body — flat on mobile
-    if(!_isMobile){
-      var vg = ctx.createLinearGradient(p.x, 0, p.x+p.bodyW, 0);
-      vg.addColorStop(0, vD); vg.addColorStop(0.4, vM); vg.addColorStop(0.7, vG); vg.addColorStop(1, vD);
-      ctx.fillStyle = vg;
-    } else { ctx.fillStyle = vM; }
+    var vg = ctx.createLinearGradient(p.x, 0, p.x+p.bodyW, 0);
+    vg.addColorStop(0, vD); vg.addColorStop(0.4, vM); vg.addColorStop(0.7, vG); vg.addColorStop(1, vD);
+    ctx.fillStyle = vg;
     ctx.fillRect(p.x, y1, p.bodyW, y2 - y1);
     // Vine texture lines
     ctx.strokeStyle = vD; ctx.lineWidth = 1;
@@ -5963,8 +6143,6 @@ function loop(ts) {
               if(comboBest<combo) comboBest=combo;
               top5=saveTop5(score); submitWalletScore(score);
               stopMusic(); menuTapReady=false;
-              var _dc=Math.max(2,Math.min(12,Math.floor(score/2)+Math.floor(Math.random()*4)));
-              deadChest={active:true,opened:false,coins:_dc,anim:0,clicks:0};
               deathOfferTimer=720; gameState='dead';
             }
           }
@@ -6098,6 +6276,10 @@ function loop(ts) {
             gengarUnlocked = bestPrestige >= 1 || localStorage.getItem('bleuGengar') === '1';
             wormUnlocked   = bestPrestige >= 2 || localStorage.getItem('bleuWorm')   === '1';
             alienUnlocked  = bestPrestige >= 3 || localStorage.getItem('bleuAlien')  === '1';
+            // ── NFT REVEAL: agenda reveal para o personagem recém-desbloqueado ──
+            if(bestPrestige === 1 && _ls.get('bleuRevP','0') !== '1'){ _ls.set('bleuRevP','1'); pendingNFTReveal=1; }
+            else if(bestPrestige === 2 && _ls.get('bleuRevW','0') !== '1'){ _ls.set('bleuRevW','1'); pendingNFTReveal=2; }
+            else if(bestPrestige === 3 && _ls.get('bleuRevA','0') !== '1'){ _ls.set('bleuRevA','1'); pendingNFTReveal=3; }
           }
           prestigeCoinsReward = 100 + prestigeLevel * 50;
           coinCount += prestigeCoinsReward; if(coinCount>100000)coinCount=100000; _ls.set('bleuCoins', coinCount);
@@ -6376,8 +6558,6 @@ function loop(ts) {
           if(score>0) submitWalletScore(score);
           if(navigator.vibrate) navigator.vibrate([80,30,80]);
           stopMusic(); menuTapReady=false;
-          var _dc2=Math.max(2,Math.min(12,Math.floor(score/2)+Math.floor(Math.random()*4)));
-          deadChest={active:true,opened:false,coins:_dc2,anim:0,clicks:0};
           deathOfferTimer=720; gameState='dead';
         }
       }
@@ -6464,6 +6644,12 @@ function loop(ts) {
     updateParticles();
     legendaryAnim++;
     drawLegendaryUnlockScreen();
+  }
+  // ── NFT REVEAL ──
+  if(gameState === 'nftReveal'){
+    updateParticles();
+    nftRevealAnim++;
+    drawNFTRevealScreen();
   }
   // ── DEAD ──
   if(gameState === 'dead'){
@@ -6598,30 +6784,6 @@ function loop(ts) {
     ctx.fillStyle='#ffffff30'; ctx.font='8px Courier New';
     ctx.fillText('$BLEU never stops', W/2, H/2+240);
 
-    // ── Death chest (consolation prize) ──
-    if(deadChest.active){
-      var dcy=H/2+196;
-      if(!deadChest.opened){
-        // Pulsing small chest
-        var dcp=1+0.06*Math.sin(frame*0.18);
-        ctx.save(); ctx.translate(W/2, dcy); ctx.scale(dcp*0.55,dcp*0.55);
-        drawTreasureChest(0,-20);
-        ctx.restore();
-        ctx.fillStyle='#FFD700aa'; ctx.font='bold 9px Courier New'; ctx.textAlign='center';
-        ctx.fillText('🎁 free chest  —  tap to open!', W/2, dcy+20);
-      } else {
-        if(deadChest.anim<30) deadChest.anim++;
-        var da=Math.min(1,deadChest.anim/15);
-        ctx.globalAlpha=da;
-        ctx.fillStyle='#FFD700'; ctx.font='bold 22px Arial'; ctx.textAlign='center';
-        ctx.fillText('+'+deadChest.coins, W/2, dcy);
-        ctx.fillStyle='#FFD700aa'; ctx.font='9px Courier New';
-        ctx.fillText('🐉 coins collected!', W/2, dcy+16);
-        ctx.globalAlpha=1;
-        spawnParticles(W/2, dcy-10, '#FFD700', 2);
-      }
-    }
-
     // ── Wallet onchain section ──
     var wdy = H/2+248;
     if(walletAddress){
@@ -6654,13 +6816,13 @@ function loop(ts) {
       var _doAlpha = _dot < 0.15 ? _dot / 0.15 : 1; // fade out nos últimos 0.15
       ctx.save(); ctx.globalAlpha = _doAlpha;
 
-      // Painel de oferta — cobre PLAY AGAIN e MENU durante o countdown
-      var _doY = H/2 + 148;
-      var _doH = walletAddress ? 100 : 58; // sem wallet: só mostra checkpoint
+      // Painel de oferta — abaixo dos botões principais (não sobrepõe Play Again/Share)
+      var _doY = H/2 + 228;
+      var _doH = walletAddress ? 76 : 46;
       ctx.fillStyle = 'rgba(0,8,32,0.97)';
       ctx.beginPath(); ctx.roundRect(W/2-118, _doY, 236, _doH, 12); ctx.fill();
       ctx.strokeStyle = '#0052FFaa'; ctx.lineWidth = 1.5; ctx.stroke();
-      // Barra de countdown (posição dinâmica baseada na altura do painel)
+      // Barra de countdown
       ctx.fillStyle = '#0052FF22';
       ctx.beginPath(); ctx.roundRect(W/2-118, _doY+_doH-4, 236, 4, 2); ctx.fill();
       ctx.fillStyle = _dot > 0.3 ? '#0052FF' : '#FF4444';
@@ -6668,31 +6830,31 @@ function loop(ts) {
 
       // Título
       ctx.textAlign = 'center';
-      ctx.font = 'bold 10px Courier New'; ctx.fillStyle = '#ffffff66';
-      ctx.fillText('CONTINUE HERE?  (' + _doSecs + 's)', W/2, _doY + 14);
+      ctx.font = 'bold 9px Courier New'; ctx.fillStyle = '#ffffff66';
+      ctx.fillText('CONTINUE?  (' + _doSecs + 's)', W/2, _doY + 11);
 
       // Botão CHECKPOINT — usar da bolsa ou comprar (1× por run)
-      var _cpY = _doY + 22;
+      var _cpY = _doY + 16;
       var _hasCp = checkpointStock > 0;
-      var _cpDone = checkpointUsed; // já usado nesta run
+      var _cpDone = checkpointUsed;
       ctx.globalAlpha = _cpDone ? 0.35 : 1;
       ctx.fillStyle = _cpDone ? '#ffffff08' : (_hasCp ? '#00FF8822' : '#0052FF18');
       ctx.strokeStyle = _cpDone ? '#ffffff22' : (_hasCp ? '#00FF88bb' : '#0052FFbb'); ctx.lineWidth = 1.5;
-      ctx.beginPath(); ctx.roundRect(W/2-110, _cpY, 220, 30, 8); ctx.fill(); ctx.stroke();
-      ctx.font = 'bold 11px Courier New'; ctx.textBaseline = 'middle';
+      ctx.beginPath(); ctx.roundRect(W/2-110, _cpY, 220, 26, 8); ctx.fill(); ctx.stroke();
+      ctx.font = 'bold 10px Courier New'; ctx.textBaseline = 'middle';
       ctx.fillStyle = _cpDone ? '#ffffff44' : (_hasCp ? '#00FF88' : '#66aaff');
-      ctx.fillText(_cpDone ? '🃏  CHECKPOINT ALREADY USED' : (_hasCp ? '🃏  USE CHECKPOINT CARD' : '🃏  CHECKPOINT  ·  USDC $0.50'), W/2, _cpY + 15);
+      ctx.fillText(_cpDone ? '🃏  CHECKPOINT ALREADY USED' : (_hasCp ? '🃏  USE CHECKPOINT CARD' : '🃏  CHECKPOINT  ·  USDC $0.50'), W/2, _cpY + 13);
       ctx.globalAlpha = 1;
 
       // Botão CORAÇÃO — só com wallet e 1× por run
       if(walletAddress) {
-        var _htY = _cpY + 36;
+        var _htY = _cpY + 30;
         ctx.globalAlpha = heartUsed ? 0.35 : 1;
         ctx.fillStyle = heartUsed ? '#ffffff08' : '#FF174418';
         ctx.strokeStyle = heartUsed ? '#ffffff22' : '#FF1744bb'; ctx.lineWidth = 1.5;
-        ctx.beginPath(); ctx.roundRect(W/2-110, _htY, 220, 30, 8); ctx.fill(); ctx.stroke();
-        ctx.fillStyle = heartUsed ? '#ffffff44' : '#FF6680'; ctx.font = 'bold 11px Courier New';
-        ctx.fillText(heartUsed ? '♥  HEART ALREADY USED' : '♥  +1 EXTRA HEART  ·  USDC $0.25', W/2, _htY + 15);
+        ctx.beginPath(); ctx.roundRect(W/2-110, _htY, 220, 26, 8); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = heartUsed ? '#ffffff44' : '#FF6680'; ctx.font = 'bold 10px Courier New';
+        ctx.fillText(heartUsed ? '♥  HEART ALREADY USED' : '♥  +1 EXTRA HEART  ·  USDC $0.25', W/2, _htY + 13);
         ctx.globalAlpha = 1;
       }
       ctx.textBaseline = 'alphabetic';
@@ -6759,11 +6921,35 @@ function flap() {
   else if(gameState==='dead')    { resetGame(); gameState='playing'; startMusic(0); bleu.vy=-7.5; bleuFlapTimer=18; }
   else if(gameState==='prestige') {
     if(prestigeAnim < 40) return; // aguarda animação mínima
-    resetGame(); // volta ao menu idle com badge de prestígio — jogador clica para começar
+    if(pendingNFTReveal >= 0) {
+      nftRevealAnim=0; nftRevealChar=pendingNFTReveal; pendingNFTReveal=-1;
+      gameState='nftReveal';
+      spawnParticles(W/2,H/2,nftRevealChar===1?'#CC44FF':nftRevealChar===2?'#33FF77':'#00FFDD',35);
+      spawnParticles(W/2,H/2,'#FFD700',20);
+      if(navigator.vibrate) navigator.vibrate([60,30,60,30,120,50,200]);
+      var _nff=[523,659,784,1047,1319,1047,1568,1319,1568,2093];
+      _nff.forEach(function(f,ii){ setTimeout(function(){ beep(f,f*1.4,0.22,'sine',0.2); },ii*80); });
+    } else {
+      resetGame();
+    }
   }
   else if(gameState==='legendary') {
     if(legendaryAnim < 88) return; // aguarda revelação completa do barco
-    resetGame(); // idle com barco equipado
+    if(_ls.get('bleuRevV','0') !== '1') {
+      _ls.set('bleuRevV','1');
+      nftRevealAnim=0; nftRevealChar=4; gameState='nftReveal';
+      spawnParticles(W/2,H/2,'#FFD700',40);
+      spawnParticles(W/2,H/2,'#FF8800',25);
+      if(navigator.vibrate) navigator.vibrate([60,30,60,30,120,50,200]);
+      var _nvf=[196,247,294,392,523,659,784,1047,1319,1568,2093];
+      _nvf.forEach(function(f,ii){ setTimeout(function(){ beep(f,f*1.5,0.22,'sine',0.2); },ii*75); });
+    } else {
+      resetGame();
+    }
+  }
+  else if(gameState==='nftReveal') {
+    if(nftRevealAnim < 55) return;
+    resetGame();
   }
 }
 
@@ -6823,6 +7009,8 @@ function handleClick(ex, ey) {
   if(gameState === 'prestige') { flap(); return; }
   // ── LEGENDARY — toque após revelação completa equipa barco e vai ao idle
   if(gameState === 'legendary') { flap(); return; }
+  // ── NFT REVEAL — toque após animação mínima continua
+  if(gameState === 'nftReveal') { flap(); return; }
 
   // ── HURT — qualquer toque retoma
   if(gameState === 'hurt') { flap(); return; }
@@ -6845,9 +7033,9 @@ function handleClick(ex, ey) {
   if(gameState === 'dead') {
     // ── Ofertas PRIMEIRO (têm prioridade sobre share/menu na área sobreposta) ──
     if(deathOfferTimer > 0) {
-      var _doY2 = H/2 + 148;
+      var _doY2 = H/2 + 228;
       // Botão CHECKPOINT — usar carta (sem wallet) ou comprar USDC (1× por run)
-      if(cx>=W/2-110&&cx<=W/2+110&&cy>=_doY2+22&&cy<=_doY2+52){
+      if(cx>=W/2-110&&cx<=W/2+110&&cy>=_doY2+16&&cy<=_doY2+42){
         if(!checkpointUsed) {
           if(checkpointStock > 0) {
             // Usa carta já comprada — não requer wallet
@@ -6874,7 +7062,7 @@ function handleClick(ex, ey) {
         return;
       }
       // Botão CORAÇÃO — requer wallet, 1× por run
-      if(walletAddress && !heartUsed && cx>=W/2-110&&cx<=W/2+110&&cy>=_doY2+58&&cy<=_doY2+88){
+      if(walletAddress && !heartUsed && cx>=W/2-110&&cx<=W/2+110&&cy>=_doY2+46&&cy<=_doY2+72){
         sendUSDCPurchase(USDC_HEART, function(){
           heartUsed=true;
           lives=1; invincible=180; bleu.y=H/2; bleu.vy=0;
@@ -6887,16 +7075,6 @@ function handleClick(ex, ey) {
       }
     }
 
-    // Death chest tap (área no centro inferior)
-    if(deadChest.active && !deadChest.opened && cy>=H/2+152&&cy<=H/2+224&&cx>=W/2-70&&cx<=W/2+70){
-      deadChest.opened=true;
-      coinCount+=deadChest.coins; _ls.set('bleuCoins',coinCount);
-      beep(523,1047,0.2,'sine',0.14);
-      [659,784,1047].forEach(function(f,i){setTimeout(function(){beep(f,f*1.5,0.12,'sine',0.1);},i*70);});
-      spawnParticles(W/2,H/2+196,'#FFD700',14);
-      if(navigator.vibrate) navigator.vibrate([30,20,60]);
-      return;
-    }
     // Botão COMPARTILHAR: H/2+122 a H/2+152
     if(cx>=W/2-74&&cx<=W/2+74&&cy>=H/2+122&&cy<=H/2+152){
       var pv2 = PHASE_VISUALS[runPhase]||PHASE_VISUALS[0];
