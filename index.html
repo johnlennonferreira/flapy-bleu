@@ -192,9 +192,9 @@ const PHASES = [
   { speed: 2.35, gapMin:106, gapMax:118, label:'PHASE 5'  }, // tensão sobe
   { speed: 2.45, gapMin:102, gapMax:114, label:'PHASE 6'  }, // território Flappy Bird
   { speed: 2.50, gapMin:110, gapMax:124, label:'PHASE 7'  }, // difícil de verdade (OUTER SPACE — gap +12px)
-  { speed: 2.6,  gapMin: 94, gapMax:106, label:'PHASE 8'  }, // muito difícil
+  { speed: 2.58, gapMin:100, gapMax:114, label:'PHASE 8'  }, // muito difícil (gap +6px, curva suave após P7)
   { speed: 2.2,  gapMin:116, gapMax:130, label:'PHASE 9'  }, // respiro — alivia tensão
-  { speed: 2.75, gapMin: 90, gapMax:102, label:'PHASE 10' }, // hardcore — poucos chegam
+  { speed: 2.65, gapMin:102, gapMax:116, label:'PHASE 10' }, // hardcore — justo mas brutal (gap +12px, speed -0.10)
 ];
 function getPhaseIdx() { return Math.min(9, Math.floor(score / 15)); }
 function getPhase() {
@@ -1516,10 +1516,20 @@ function drawMarketTab() {
   if(alienUnlocked){ ctx.font='bold 7px Courier New'; ctx.fillStyle='#44FF88cc'; ctx.textAlign='right'; ctx.fillText('UNLOCKED ✓', W-16, _cy+14); }
   _cy+=_hT+_gap;
 
-  // ── Progresso ──
+  // ── Progresso + teaser do segredo ──
   ctx.textAlign='center';
   ctx.font='8px Courier New'; ctx.fillStyle='#ffffff33';
   ctx.fillText('your best: NG+' + bestPrestige + '  ·  keep looping to unlock more', W/2, _cy+10);
+
+  // Teaser misterioso — pisca lentamente
+  var _tAlpha = 0.35 + 0.25*Math.abs(Math.sin(frame * 0.025));
+  ctx.globalAlpha = _tAlpha;
+  ctx.font = 'bold 9px Courier New'; ctx.fillStyle = '#FFD70088';
+  ctx.fillText('? ? ? ? ?   🤫   ? ? ? ? ?', W/2, _cy + 26);
+  ctx.globalAlpha = 0.22;
+  ctx.font = '7px Courier New'; ctx.fillStyle = '#FFD700';
+  ctx.fillText('there might be something beyond NG+3 . . .', W/2, _cy + 40);
+  ctx.globalAlpha = 1;
 
   ctx.restore();
 }
