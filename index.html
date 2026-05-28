@@ -6564,60 +6564,6 @@ function loop(ts) {
     ctx.fillText(shareFlash>0 ? '✓ COPIED!' : '🔗 SHARE', W/2, shareY+1);
     ctx.textBaseline='alphabetic';
 
-    // ── Oferta USDC — aparece por 12s após morte com wallet conectada ──
-    if(deathOfferTimer > 0) {
-      deathOfferTimer--;
-      var _dot = deathOfferTimer / 720; // 1.0 → 0.0
-      var _doSecs = Math.ceil(deathOfferTimer / 60);
-      var _doAlpha = _dot < 0.15 ? _dot / 0.15 : 1; // fade out nos últimos 0.15
-      ctx.save(); ctx.globalAlpha = _doAlpha;
-
-      // Painel de oferta
-      var _doY = H/2 + 148;
-      var _doH = walletAddress ? 100 : 58; // sem wallet: só mostra checkpoint
-      ctx.fillStyle = 'rgba(0,8,32,0.95)';
-      ctx.beginPath(); ctx.roundRect(W/2-118, _doY, 236, _doH, 12); ctx.fill();
-      ctx.strokeStyle = '#0052FFaa'; ctx.lineWidth = 1.5; ctx.stroke();
-      // Barra de countdown (posição dinâmica baseada na altura do painel)
-      ctx.fillStyle = '#0052FF22';
-      ctx.beginPath(); ctx.roundRect(W/2-118, _doY+_doH-4, 236, 4, 2); ctx.fill();
-      ctx.fillStyle = _dot > 0.3 ? '#0052FF' : '#FF4444';
-      ctx.beginPath(); ctx.roundRect(W/2-118, _doY+_doH-4, 236 * _dot, 4, 2); ctx.fill();
-
-      // Título
-      ctx.textAlign = 'center';
-      ctx.font = 'bold 10px Courier New'; ctx.fillStyle = '#ffffff66';
-      ctx.fillText('CONTINUE HERE?  (' + _doSecs + 's)', W/2, _doY + 14);
-
-      // Botão CHECKPOINT — usar da bolsa ou comprar (1× por run)
-      var _cpY = _doY + 22;
-      var _hasCp = checkpointStock > 0;
-      var _cpDone = checkpointUsed; // já usado nesta run
-      ctx.globalAlpha = _cpDone ? 0.35 : 1;
-      ctx.fillStyle = _cpDone ? '#ffffff08' : (_hasCp ? '#00FF8822' : '#0052FF18');
-      ctx.strokeStyle = _cpDone ? '#ffffff22' : (_hasCp ? '#00FF88bb' : '#0052FFbb'); ctx.lineWidth = 1.5;
-      ctx.beginPath(); ctx.roundRect(W/2-110, _cpY, 220, 30, 8); ctx.fill(); ctx.stroke();
-      ctx.font = 'bold 11px Courier New'; ctx.textBaseline = 'middle';
-      ctx.fillStyle = _cpDone ? '#ffffff44' : (_hasCp ? '#00FF88' : '#66aaff');
-      ctx.fillText(_cpDone ? '🃏  CHECKPOINT ALREADY USED' : (_hasCp ? '🃏  USE CHECKPOINT CARD' : '🃏  CHECKPOINT  ·  USDC $0.50'), W/2, _cpY + 15);
-      ctx.globalAlpha = 1;
-
-      // Botão CORAÇÃO — só com wallet e 1× por run
-      if(walletAddress) {
-        var _htY = _cpY + 36;
-        ctx.globalAlpha = heartUsed ? 0.35 : 1;
-        ctx.fillStyle = heartUsed ? '#ffffff08' : '#FF174418';
-        ctx.strokeStyle = heartUsed ? '#ffffff22' : '#FF1744bb'; ctx.lineWidth = 1.5;
-        ctx.beginPath(); ctx.roundRect(W/2-110, _htY, 220, 30, 8); ctx.fill(); ctx.stroke();
-        ctx.fillStyle = heartUsed ? '#ffffff44' : '#FF6680'; ctx.font = 'bold 11px Courier New';
-        ctx.fillText(heartUsed ? '♥  HEART ALREADY USED' : '♥  +1 EXTRA HEART  ·  USDC $0.25', W/2, _htY + 15);
-        ctx.globalAlpha = 1;
-      }
-      ctx.textBaseline = 'alphabetic';
-
-      ctx.restore();
-    }
-
     // ── Botão PLAY AGAIN ──
     var pulse2 = 0.97 + 0.03*Math.sin(frame*0.12);
     ctx.save(); ctx.translate(W/2, H/2+178); ctx.scale(pulse2, pulse2);
@@ -6687,6 +6633,60 @@ function loop(ts) {
       ctx.textBaseline='alphabetic'; ctx.restore();
     }
     if(shareFlash>0) shareFlash--;
+
+    // ── Oferta USDC — desenhada por ÚLTIMO para cobrir PLAY AGAIN visualmente ──
+    // Click handler verifica esta área ANTES de PLAY AGAIN (prioridade correta)
+    if(deathOfferTimer > 0) {
+      deathOfferTimer--;
+      var _dot = deathOfferTimer / 720; // 1.0 → 0.0
+      var _doSecs = Math.ceil(deathOfferTimer / 60);
+      var _doAlpha = _dot < 0.15 ? _dot / 0.15 : 1; // fade out nos últimos 0.15
+      ctx.save(); ctx.globalAlpha = _doAlpha;
+
+      // Painel de oferta — cobre PLAY AGAIN e MENU durante o countdown
+      var _doY = H/2 + 148;
+      var _doH = walletAddress ? 100 : 58; // sem wallet: só mostra checkpoint
+      ctx.fillStyle = 'rgba(0,8,32,0.97)';
+      ctx.beginPath(); ctx.roundRect(W/2-118, _doY, 236, _doH, 12); ctx.fill();
+      ctx.strokeStyle = '#0052FFaa'; ctx.lineWidth = 1.5; ctx.stroke();
+      // Barra de countdown (posição dinâmica baseada na altura do painel)
+      ctx.fillStyle = '#0052FF22';
+      ctx.beginPath(); ctx.roundRect(W/2-118, _doY+_doH-4, 236, 4, 2); ctx.fill();
+      ctx.fillStyle = _dot > 0.3 ? '#0052FF' : '#FF4444';
+      ctx.beginPath(); ctx.roundRect(W/2-118, _doY+_doH-4, 236 * _dot, 4, 2); ctx.fill();
+
+      // Título
+      ctx.textAlign = 'center';
+      ctx.font = 'bold 10px Courier New'; ctx.fillStyle = '#ffffff66';
+      ctx.fillText('CONTINUE HERE?  (' + _doSecs + 's)', W/2, _doY + 14);
+
+      // Botão CHECKPOINT — usar da bolsa ou comprar (1× por run)
+      var _cpY = _doY + 22;
+      var _hasCp = checkpointStock > 0;
+      var _cpDone = checkpointUsed; // já usado nesta run
+      ctx.globalAlpha = _cpDone ? 0.35 : 1;
+      ctx.fillStyle = _cpDone ? '#ffffff08' : (_hasCp ? '#00FF8822' : '#0052FF18');
+      ctx.strokeStyle = _cpDone ? '#ffffff22' : (_hasCp ? '#00FF88bb' : '#0052FFbb'); ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.roundRect(W/2-110, _cpY, 220, 30, 8); ctx.fill(); ctx.stroke();
+      ctx.font = 'bold 11px Courier New'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = _cpDone ? '#ffffff44' : (_hasCp ? '#00FF88' : '#66aaff');
+      ctx.fillText(_cpDone ? '🃏  CHECKPOINT ALREADY USED' : (_hasCp ? '🃏  USE CHECKPOINT CARD' : '🃏  CHECKPOINT  ·  USDC $0.50'), W/2, _cpY + 15);
+      ctx.globalAlpha = 1;
+
+      // Botão CORAÇÃO — só com wallet e 1× por run
+      if(walletAddress) {
+        var _htY = _cpY + 36;
+        ctx.globalAlpha = heartUsed ? 0.35 : 1;
+        ctx.fillStyle = heartUsed ? '#ffffff08' : '#FF174418';
+        ctx.strokeStyle = heartUsed ? '#ffffff22' : '#FF1744bb'; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.roundRect(W/2-110, _htY, 220, 30, 8); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = heartUsed ? '#ffffff44' : '#FF6680'; ctx.font = 'bold 11px Courier New';
+        ctx.fillText(heartUsed ? '♥  HEART ALREADY USED' : '♥  +1 EXTRA HEART  ·  USDC $0.25', W/2, _htY + 15);
+        ctx.globalAlpha = 1;
+      }
+      ctx.textBaseline = 'alphabetic';
+      ctx.restore();
+    }
   }
   ctx.restore();
   if(screenShake>0)screenShake--;
