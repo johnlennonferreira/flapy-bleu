@@ -1947,7 +1947,7 @@ function resetGame() {
   invincible = 0; starPower = 0; stars = []; firePower = 0; fireStars = [];
   slowMoActive = 0; checkpointUsed = false; heartUsed = false; dizzyTimer = 0; deathOfferTimer = 0; checkpointFlash = 0;
   // slowMoStock e extraHeartStock NÃO são zerados — persistem para próxima run (limite já aplicado na compra)
-  deadChest={active:false,opened:false,coins:0,anim:0,clicks:0};
+  deadChest={active:false,opened:false,coins:0,anim:0};
   shield = 0; shieldPickedUp = 0;
   shieldStock = 0; _ls.set('bleuShieldStock', 0); // reseta ao morrer — compra denovo
   phaseShopPending = false;
