@@ -1476,35 +1476,50 @@ function drawMarketTab() {
   ctx.fillText('USDC $0.50  ·  buy in SHOP', 58, _cy+38);
   _cy+=_h+_gap+6;
 
-  // ══ PERSONAGENS ══
+  // ══ TÍTULOS — o que cada loop completo desbloqueia ══
   ctx.font='bold 8px Courier New'; ctx.fillStyle='#ffffff33'; ctx.textAlign='left';
-  ctx.fillText('── UNLOCKABLE CHARACTERS ──────────────', 10, _cy+9); _cy+=14;
+  ctx.fillText('── PRESTIGE TITLES ─────────────────────', 10, _cy+9); _cy+=12;
 
-  var _chars=[
-    {icon:gengarUnlocked?'✓':'?', col:'#aa44ff', name:'PHANTOM',      req:'Complete all 10 phases once (NG+1)', unlocked:gengarUnlocked},
-    {icon:wormUnlocked  ?'✓':'?', col:'#88dd44', name:'WORM',          req:'Complete 2 full loops (NG+2)',       unlocked:wormUnlocked},
-    {icon:alienUnlocked ?'✓':'?', col:'#44FF88', name:'ALIEN',         req:'Complete 3 full loops (NG+3)',       unlocked:alienUnlocked},
-    {icon:boatUnlocked  ?'⚓':'★', col:'#FFD700', name:'VIKING BOAT ⚓', req:'Complete 5 full loops (NG+5) · secret', unlocked:boatUnlocked},
-  ];
-  for(var _ci=0;_ci<_chars.length;_ci++){
-    var _ch=_chars[_ci];
-    _card(_cy,_h,_ch.icon,_ch.col,_ch.unlocked);
-    ctx.textAlign='left';
-    ctx.font='bold 11px Courier New'; ctx.fillStyle=_ch.unlocked?_ch.col:_ch.col+'cc';
-    ctx.fillText((_ch.unlocked?'✓ ':'')+_ch.name, 58, _cy+15);
-    ctx.font='8px Courier New'; ctx.fillStyle=_ch.unlocked?_ch.col+'aa':'#ffffff55';
-    ctx.fillText(_ch.req, 58, _cy+27);
-    if(_ch.unlocked){
-      ctx.font='bold 7px Courier New'; ctx.fillStyle=_ch.col+'cc'; ctx.textAlign='right';
-      ctx.fillText('UNLOCKED ✓', W-16, _cy+15);
-    }
-    _cy+=_h+_gap;
-  }
+  // Cada título tem altura maior para caber 3 linhas de texto
+  var _hT = 54;
+
+  // NG+1 — PHANTOM
+  _card(_cy,_hT, gengarUnlocked?'✓':'?', '#aa44ff', gengarUnlocked);
+  ctx.textAlign='left';
+  ctx.font='bold 10px Courier New'; ctx.fillStyle=gengarUnlocked?'#aa44ff':'#aa44ffcc';
+  ctx.fillText('NG+1  —  PHANTOM', 58, _cy+14);
+  ctx.font='8px Courier New'; ctx.fillStyle='#ffffff66';
+  ctx.fillText('Complete all 10 phases once.', 58, _cy+26);
+  ctx.fillText('Unlocks: Phantom character + harder mode.', 58, _cy+37);
+  if(gengarUnlocked){ ctx.font='bold 7px Courier New'; ctx.fillStyle='#aa44ffcc'; ctx.textAlign='right'; ctx.fillText('UNLOCKED ✓', W-16, _cy+14); }
+  _cy+=_hT+_gap;
+
+  // NG+2 — WORM
+  _card(_cy,_hT, wormUnlocked?'✓':'?', '#88dd44', wormUnlocked);
+  ctx.textAlign='left';
+  ctx.font='bold 10px Courier New'; ctx.fillStyle=wormUnlocked?'#88dd44':'#88dd44cc';
+  ctx.fillText('NG+2  —  WORM', 58, _cy+14);
+  ctx.font='8px Courier New'; ctx.fillStyle='#ffffff66';
+  ctx.fillText('Complete 2 full loops (NG+1 mode).', 58, _cy+26);
+  ctx.fillText('Unlocks: Worm character + faster speeds.', 58, _cy+37);
+  if(wormUnlocked){ ctx.font='bold 7px Courier New'; ctx.fillStyle='#88dd44cc'; ctx.textAlign='right'; ctx.fillText('UNLOCKED ✓', W-16, _cy+14); }
+  _cy+=_hT+_gap;
+
+  // NG+3 — ALIEN
+  _card(_cy,_hT, alienUnlocked?'✓':'?', '#44FF88', alienUnlocked);
+  ctx.textAlign='left';
+  ctx.font='bold 10px Courier New'; ctx.fillStyle=alienUnlocked?'#44FF88':'#44FF88cc';
+  ctx.fillText('NG+3  —  ALIEN', 58, _cy+14);
+  ctx.font='8px Courier New'; ctx.fillStyle='#ffffff66';
+  ctx.fillText('Complete 3 full loops (NG+2 mode).', 58, _cy+26);
+  ctx.fillText('Unlocks: Alien UFO character + tighter gaps.', 58, _cy+37);
+  if(alienUnlocked){ ctx.font='bold 7px Courier New'; ctx.fillStyle='#44FF88cc'; ctx.textAlign='right'; ctx.fillText('UNLOCKED ✓', W-16, _cy+14); }
+  _cy+=_hT+_gap;
 
   // ── Progresso ──
   ctx.textAlign='center';
   ctx.font='8px Courier New'; ctx.fillStyle='#ffffff33';
-  ctx.fillText('your progress: NG+'+bestPrestige, W/2, _cy+10);
+  ctx.fillText('your best: NG+' + bestPrestige + '  ·  keep looping to unlock more', W/2, _cy+10);
 
   ctx.restore();
 }
@@ -5630,43 +5645,41 @@ function drawPhaseBanner() {
   ctx.fillRect(0, H/2-82, W, 164);
   ctx.globalAlpha = alpha;
 
-  // "NOVA FASE" pequeno acima
+  // Número da fase atual — destaque máximo
+  var pi = getPhaseIdx();
   ctx.textAlign = 'center';
-  ctx.fillStyle = '#ffffff66';
-  ctx.font = 'bold 11px Courier New';
-  ctx.fillText('✦  NEW PHASE  ✦', W/2, H/2-52);
 
-  // Label da fase (PHASE 3) — grande
+  // "ENTERING" pequeno
+  ctx.fillStyle = '#ffffff55';
+  ctx.font = 'bold 10px Courier New';
+  ctx.fillText('✦  ENTERING  ✦', W/2, H/2-62);
+
+  // Número grande: "PHASE 2"
   ctx.fillStyle = '#FFD700';
-  ctx.font = 'bold 15px Courier New';
-  ctx.fillText(ph.label, W/2, H/2-32);
+  ctx.shadowColor = '#FFD700'; ctx.shadowBlur = 22 * alpha;
+  ctx.font = 'bold 38px Courier New';
+  ctx.fillText(ph.label, W/2, H/2-22);
+  ctx.shadowBlur = 0;
 
-  // Nome da fase — fonte prime, uma única camada com glow real
+  // Nome da fase — fonte prime com glow
   ctx.fillStyle = pv.glowColor;
-  ctx.shadowColor = pv.glowColor; ctx.shadowBlur = 18 * alpha;
-  ctx.font = 'bold 26px Georgia, serif';
-  ctx.letterSpacing = '2px';
+  ctx.shadowColor = pv.glowColor; ctx.shadowBlur = 16 * alpha;
+  ctx.font = 'bold 22px Georgia, serif';
   ctx.globalAlpha = alpha;
-  ctx.fillText(pv.name, W/2, H/2+8);
-  ctx.shadowBlur = 0; ctx.letterSpacing = '0px';
-
-  // Velocidade + barra de progresso de fase
-  ctx.fillStyle = '#ffffff88';
-  ctx.font = '11px Courier New';
-  ctx.fillText('speed  ' + ph.speed.toFixed(1) + 'x', W/2, H/2+32);
+  ctx.fillText(pv.name, W/2, H/2+14);
+  ctx.shadowBlur = 0;
 
   // Barra de progresso (fase atual / total)
-  var pi = getPhaseIdx();
-  var barW = 160, barH = 4, barX = W/2 - barW/2, barY = H/2+48;
-  ctx.fillStyle = '#ffffff22';
-  ctx.fillRect(barX, barY, barW, barH);
+  var barW = 160, barH = 5, barX = W/2 - barW/2, barY = H/2+32;
+  ctx.fillStyle = '#ffffff18';
+  ctx.beginPath(); ctx.roundRect(barX, barY, barW, barH, 3); ctx.fill();
   ctx.fillStyle = pv.glowColor;
-  ctx.fillRect(barX, barY, barW * ((pi+1)/PHASES.length), barH);
+  ctx.beginPath(); ctx.roundRect(barX, barY, barW * ((pi+1)/PHASES.length), barH, 3); ctx.fill();
 
-  // Nível em texto abaixo da barra
-  ctx.fillStyle = '#ffffff44';
-  ctx.font = '9px Courier New';
-  ctx.fillText((pi+1) + ' / ' + PHASES.length + ' phases', W/2, H/2+64);
+  // "N/10" abaixo da barra
+  ctx.fillStyle = '#ffffff66';
+  ctx.font = 'bold 10px Courier New';
+  ctx.fillText(ph.label + '  of  ' + PHASES.length, W/2, H/2+52);
 
   ctx.restore();
 }
