@@ -1660,6 +1660,7 @@ var _lgBadgeBgGrad=null;              // idle legendary NG+5 badge background gr
 var _lgBadgeSGrad=null;               // idle legendary NG+5 badge stroke gradient (cached once)
 var _lgBadgeTxtGrad=null;             // idle legendary NG+5 badge text gradient (cached once)
 var _lgBadgeW=null;                   // idle legendary NG+5 badge measured width (cached once)
+var _web3BadgeW=null;                 // WEB3 GAME badge measured width (cached once)
 // ── LIVES + POWER-UPS ──
 var lives=3, invincible=0, starPower=0, stars=[];
 // ── Itens de loja ──────────────────────────────────────────────
@@ -2450,6 +2451,7 @@ function drawGengar(x, y, flapAnim, angle) { drawPhantom(x, y, flapAnim, angle);
 
 // ─── PHANTOM FART particles ───────────────────────────────────────────
 function spawnPhantomFart(bx, by) {
+  if(phantomFartParticles.length > 30) return; // safety cap — max ~2 simultaneous flaps
   for (var _fi = 0; _fi < 7; _fi++) {
     var ang = Math.PI + (Math.random()-0.5)*0.9; // shoots LEFT (backward)
     var spd = 1.2 + Math.random()*2.2;
@@ -5646,7 +5648,8 @@ function loop(ts) {
       var badgePulse = 0.94+0.06*Math.sin(frame*0.07);
       ctx.save(); ctx.translate(W/2, H/2-58); ctx.scale(badgePulse, badgePulse);
       ctx.font='bold 9px Courier New';
-      var _bw = ctx.measureText('⬡  WEB3 GAME  ·  BASE NETWORK').width;
+      if(_web3BadgeW===null) _web3BadgeW = ctx.measureText('⬡  WEB3 GAME  ·  BASE NETWORK').width;
+      var _bw = _web3BadgeW;
       var _bpad = 14;
       ctx.fillStyle='#0052FF44'; ctx.strokeStyle='#00D4FFcc'; ctx.lineWidth=1.5;
       ctx.beginPath(); ctx.roundRect(-_bw/2-_bpad,-11,_bw+_bpad*2,22,11); ctx.fill(); ctx.stroke();
