@@ -6550,9 +6550,9 @@ function loop(ts) {
       ctx.shadowBlur=0;
     }
 
-    // Top 5
+    // Top 5 — usa variável global (mantida por saveTop5) — evita JSON.parse/localStorage a cada frame
     var medals=['🥇','🥈','🥉','④','⑤'];
-    var t5=loadTop5();
+    var t5=top5;
     ctx.font='bold 10px Courier New';
     for(var ti=0;ti<Math.min(t5.length,5);ti++){
       ctx.fillStyle = ti===0?'#FFD700': ti===1?'#C0C0C0': ti===2?'#cd7f32':'#ffffff55';
