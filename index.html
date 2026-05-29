@@ -6758,11 +6758,13 @@ function loop(ts) {
     ctx.fillStyle='rgba(255,255,255,0.06)';
     ctx.beginPath(); ctx.roundRect(W/2-118, H/2-86, 236, 18, 8); ctx.fill();
 
-    // REKT — big impactful text
+    // REKT — big impactful text (dourado em novo recorde!)
+    var _rektColor = newRecord ? '#FFD700' : '#FF1744';
+    var _rektLabel = newRecord ? '★ REKT ★' : 'REKT';
     ctx.font = 'bold 34px Courier New';
-    ctx.shadowColor = '#FF1744'; ctx.shadowBlur = 28;
-    ctx.fillStyle = '#FF1744'; ctx.textAlign = 'center';
-    ctx.fillText('REKT', W/2, H/2-52);
+    ctx.shadowColor = _rektColor; ctx.shadowBlur = 28;
+    ctx.fillStyle = _rektColor; ctx.textAlign = 'center';
+    ctx.fillText(_rektLabel, W/2, H/2-52);
     ctx.shadowBlur = 0;
 
     // Score grande + glow
