@@ -1888,8 +1888,9 @@ var slowMoStock=parseInt(_ls.get('bleuSlowMo','0'));        // elixirs no invent
 var checkpointStock=parseInt(_ls.get('bleuCheckpoint','0')); // cartas de checkpoint — persistido
 var checkpointUsed=false;   // checkpoint card already used this run
 var heartUsed=false;        // paid heart already bought on current death (resets each death)
-var checkpointReady=false;  // checkpoint purchased on death screen but not yet applied
-var heartReady=false;       // heart purchased on death screen but not yet applied
+var checkpointReady=false;    // checkpoint purchased on death screen but not yet applied
+var checkpointFromCard=false; // true when checkpoint was used from stock (can be restored if heart takes priority)
+var heartReady=false;         // heart purchased on death screen but not yet applied
 var _purchasePending=false; // USDC tx in flight — show loading feedback
 var dizzyTimer=0;
 var checkpointFlash=0;
@@ -2190,7 +2191,7 @@ function resetGame() {
   combo = 0; comboFlash = 0; coinsThisRun = 0; milestoneIdx = 0; recFlash = 0;
   lives = 3; // reset base — extraHeartStock é consumido em flap() ao iniciar nova run
   invincible = 0; starPower = 0; stars = []; firePower = 0; fireStars = [];
-  slowMoActive = 0; checkpointUsed = false; heartUsed = false; checkpointReady = false; heartReady = false; _purchasePending = false; dizzyTimer = 0; deathOfferTimer = 0; checkpointFlash = 0;
+  slowMoActive = 0; checkpointUsed = false; heartUsed = false; checkpointReady = false; checkpointFromCard = false; heartReady = false; _purchasePending = false; dizzyTimer = 0; deathOfferTimer = 0; checkpointFlash = 0;
   // slowMoStock e extraHeartStock NÃO são zerados — persistem para próxima run (limite já aplicado na compra)
   deadChest={active:false,opened:false,coins:0,anim:0};
   shield = 0; shieldPickedUp = 0;
@@ -6169,39 +6170,18 @@ function loop(ts) {
       if(frame%2===0){ spawnParticles(bleu.x-12,bleu.y,'#FF4400',3); }
       if(frame%3===0){ spawnParticles(bleu.x-16,bleu.y,'#FFaa00',2); spawnParticles(bleu.x,bleu.y-8,'#FFff00',1); }
 
-      // Fim do firePower — penalidade obrigatória: perde escudo ou coração
+      // Fim do firePower — vida já foi paga ao pegar a estrela (só 1 por efeito)
       if(firePower===0){
         invincible=100;
-        bleu.vx=0; // zera momentum horizontal
+        bleu.vx=0;
         spawnParticles(bleu.x,bleu.y,'#FFaa00',20);
         spawnParticles(bleu.x,bleu.y,'#FF4400',12);
         beep(350,180,0.3,'sawtooth',0.18);
-        // Penalidade
+        // Escudo quebra se tiver, mas nenhuma vida adicional é perdida
         if(shield > 0){
           shield--; shieldBreak=15;
           spawnParticles(bleu.x,bleu.y,'#00D4FF',10);
           beep(220,110,0.2,'sawtooth',0.14);
-        } else {
-          lives = Math.max(0, lives-1);
-          if(navigator.vibrate) navigator.vibrate([80,30,120]);
-          beep(160,80,0.3,'sawtooth',0.18);
-          if(lives === 0){
-            if(checkpointStock>0 && !checkpointUsed){
-              checkpointStock--; _ls.set('bleuCheckpoint',checkpointStock);
-              checkpointUsed=true; dizzyTimer=90; checkpointFlash=150;
-              lives=3; invincible=240; bleu.y=H/2; bleu.vy=0;
-              gameState='playing';
-            } else {
-              totalScore+=score; _ls.set('bleuTotal',totalScore);
-              if(score>highScore){highScore=score;newRecord=true;_ls.set('bleuHS',highScore);}
-              lastScore=score; _ls.set('bleuLastScore',lastScore);
-              if(runPhase>bestPhaseEver){bestPhaseEver=runPhase;_ls.set('bleuBestPhase',bestPhaseEver);}
-              if(comboBest<combo) comboBest=combo;
-              top5=saveTop5(score); submitWalletScore(score);
-              stopMusic(); menuTapReady=false;
-              heartUsed=false; checkpointReady=false; heartReady=false; _purchasePending=false; deathOfferTimer=720; gameState='dead';
-            }
-          }
         }
       }
     }
@@ -6641,7 +6621,7 @@ function loop(ts) {
           if(score>0) submitWalletScore(score);
           if(navigator.vibrate) navigator.vibrate([80,30,80]);
           stopMusic(); menuTapReady=false;
-          heartUsed=false; checkpointReady=false; heartReady=false; _purchasePending=false; deathOfferTimer=720; gameState='dead';
+          heartUsed=false; checkpointReady=false; checkpointFromCard=false; heartReady=false; _purchasePending=false; deathOfferTimer=720; gameState='dead';
         }
       }
       } // fecha else do shield
@@ -7095,14 +7075,14 @@ function handleClick(ex, ey) {
         if(checkpointStock > 0){
           // Use purchased card — no wallet required
           checkpointStock--; _ls.set('bleuCheckpoint',checkpointStock);
-          checkpointReady=true;
+          checkpointReady=true; checkpointFromCard=true;
           beep(523,880,0.18,'sine',0.14); spawnParticles(W/2,H/2,'#00FF88',10);
         } else if(walletAddress){
           // Buy via USDC — wallet connected, show processing state
           if(!_purchasePending){
             _purchasePending=true;
             sendUSDCPurchase(USDC_CHECKPOINT, function(){
-              _purchasePending=false; checkpointReady=true;
+              _purchasePending=false; checkpointReady=true; checkpointFromCard=false;
               beep(523,880,0.18,'sine',0.14); spawnParticles(W/2,H/2,'#00FF88',10);
             });
           }
@@ -7136,11 +7116,21 @@ function handleClick(ex, ey) {
     // ── CONTINUE (items ready) / MENU (no items) — unified button ──
     if(cx>=W/2-110&&cx<=W/2+110&&cy>=H/2+162&&cy<=H/2+206){
       if(checkpointReady||heartReady){
-        // Apply checkpoint: 3 lives + invincibility
-        if(checkpointReady){ checkpointUsed=true; lives=3; invincible=240; dizzyTimer=90; checkpointFlash=90; }
-        // Apply heart on top
-        if(heartReady){ lives=Math.min(lives+1,5); if(!checkpointReady){ invincible=180; } }
-        checkpointReady=false; heartReady=false;
+        if(checkpointReady && heartReady){
+          // Both purchased: heart takes priority, card preserved as run-reserve
+          lives=Math.min(lives+1,5); invincible=180;
+          if(checkpointFromCard){ checkpointStock++; _ls.set('bleuCheckpoint',checkpointStock); }
+          // checkpointUsed stays false → card remains available for next death this run
+          checkpointReady=false; checkpointFromCard=false; heartReady=false;
+        } else if(checkpointReady){
+          // Checkpoint only: 3 lives + full invincibility
+          checkpointUsed=true; lives=3; invincible=240; dizzyTimer=90; checkpointFlash=90;
+          checkpointReady=false; checkpointFromCard=false;
+        } else {
+          // Heart only: +1 life
+          lives=Math.min(lives+1,5); invincible=180;
+          heartReady=false;
+        }
         // Clear all obstacles and center the character in a safe spot
         pipes=[]; stars=[]; shieldItems=[]; fireStars=[]; coins=[];
         lastGapCenter=H/2; firePower=0; starPower=0;
