@@ -3413,12 +3413,6 @@ function drawBoat(x, y, flapAnim, angle) {
   var _pulse = 0.5 + 0.5*Math.sin(frame * 0.06);
   var _bob   = Math.sin(frame * 0.03) * 2;
   var _wobble= (typeof dizzyTimer !== 'undefined' && dizzyTimer > 0) ? Math.sin(frame*0.5)*3 : 0;
-  // ─────────────────────────────────────────────────────────────────────
-  // VIKING LONGSHIP — redesigned to match flat-art reference
-  // Bow (dragon head) faces RIGHT (direction of travel in game)
-  // Stern (curl) faces LEFT
-  // ─────────────────────────────────────────────────────────────────────
-
   ctx.save(); ctx.translate(_wobble, 0);
 
   // ── FLAP BURST (golden spray below on flap) ──
@@ -3427,18 +3421,6 @@ function drawBoat(x, y, flapAnim, angle) {
     ctx.beginPath(); ctx.ellipse(0,15,15*(1-_ftp)+4,4*(1-_ftp)+2,0,0,Math.PI*2); ctx.fill();
     ctx.globalAlpha=1;
   }
-
-  // ══════════════════════════════════════════════
-  //  STERN CURL (left/back — curls upward like reference)
-  // ══════════════════════════════════════════════
-  // Thick post rising from hull left, ending in tight inward curl
-  ctx.beginPath();
-  ctx.moveTo(-24, 0);
-  ctx.bezierCurveTo(-28,-2, -30,-8, -27,-14);
-  ctx.bezierCurveTo(-25,-19,-20,-20,-18,-16);
-  ctx.bezierCurveTo(-16,-13,-18,-10,-21,-11);
-  ctx.strokeStyle='#A06020'; ctx.lineWidth=4; ctx.stroke();
-  ctx.strokeStyle='#6B3C0C'; ctx.lineWidth=2; ctx.stroke();
 
   // ══════════════════════════════════════════════
   //  HULL — wide golden-brown longship crescent
@@ -3579,113 +3561,10 @@ function drawBoat(x, y, flapAnim, angle) {
   // Sail outline
   _sailPath(); ctx.strokeStyle='#881010'; ctx.lineWidth=1.5; ctx.stroke();
 
-  // ══════════════════════════════════════════════
-  //  DRAGON PROW (right/bow) — rising neck + head like reference
-  //  Profile view: neck curves up from right hull edge, head at top facing right
-  // ══════════════════════════════════════════════
-  ctx.save(); ctx.translate(22, 0);
-
-  // Thick neck rising from hull bow, curving upward
-  // Drawn as filled shape (not just stroke) for clean look like reference
-  ctx.beginPath();
-  ctx.moveTo(0,2);                              // hull surface right
-  ctx.quadraticCurveTo(6,-3, 8,-12);
-  ctx.quadraticCurveTo(9,-20, 8,-28);           // neck reaches up
-  ctx.quadraticCurveTo(7,-30, 5,-29);           // back of neck
-  ctx.quadraticCurveTo(5,-22, 4,-14);
-  ctx.quadraticCurveTo(2,-5, 0,-1);
-  ctx.closePath();
-  var _nkg=ctx.createLinearGradient(0,0,9,-28);
-  _nkg.addColorStop(0,'#C47830'); _nkg.addColorStop(1,'#8B4513');
-  ctx.fillStyle=_nkg; ctx.fill();
-  ctx.strokeStyle='#4A2008'; ctx.lineWidth=1.2; ctx.stroke();
-
-  // Dragon head (at top of neck) — profile, facing RIGHT
-  // Reference style: horizontal elongated, open mouth pointing right, eye on side, crest on top
-  ctx.save(); ctx.translate(5,-28);
-  ctx.rotate(_fast ? Math.sin(frame*0.38)*0.1 : 0);
-
-  // Crest / spines on top of head (like reference image 2: leafy crest)
-  var _crestPts=[{x:-2,y:0},{x:0,y:-8},{x:2,y:0},{x:4,y:-6},{x:6,y:0},{x:8,y:-5},{x:10,y:-1}];
-  ctx.beginPath();
-  ctx.moveTo(-2,0);
-  for(var _cr=1;_cr<_crestPts.length;_cr++) ctx.lineTo(_crestPts[_cr].x,_crestPts[_cr].y);
-  ctx.lineTo(10,0); ctx.closePath();
-  ctx.fillStyle='#A06020'; ctx.fill();
-  ctx.strokeStyle='#5A2C08'; ctx.lineWidth=0.8; ctx.stroke();
-  // Crest highlight
-  ctx.beginPath(); ctx.moveTo(-2,0); ctx.lineTo(0,-8); ctx.lineTo(2,0);
-  ctx.lineTo(4,-6); ctx.lineTo(6,0); ctx.lineTo(8,-5); ctx.lineTo(10,-1);
-  ctx.strokeStyle='#CC8030'; ctx.lineWidth=1.2; ctx.stroke();
-
-  // Main head skull (elongated oval, profile)
-  ctx.beginPath();
-  ctx.moveTo(-3, 0);
-  ctx.quadraticCurveTo(-3,-5, 0,-6);
-  ctx.quadraticCurveTo(5,-7, 10,-5);
-  ctx.quadraticCurveTo(15,-4, 17,-1);     // upper snout forward
-  ctx.quadraticCurveTo(17, 3, 13, 4);     // lower snout tip
-  ctx.quadraticCurveTo( 8, 5,  3, 4);
-  ctx.quadraticCurveTo(-1, 3, -3, 0);
-  ctx.closePath();
-  var _hdg=ctx.createLinearGradient(-3,-7,17,5);
-  _hdg.addColorStop(0,'#C47830'); _hdg.addColorStop(1,'#8B4513');
-  ctx.fillStyle=_hdg; ctx.fill();
-  ctx.strokeStyle='#4A2008'; ctx.lineWidth=1.2; ctx.stroke();
-
-  // Eye — round, large, amber/yellow (like reference cartoon style)
-  var _eyeR=_fast?1.8+Math.sin(frame*0.28)*0.3:_rise?0.55:1;
-  ctx.beginPath(); ctx.ellipse(4,-2,4,4*_eyeR,0,0,Math.PI*2);
-  ctx.fillStyle='#FFEE22'; ctx.fill(); // bright yellow like reference
-  ctx.strokeStyle='#4A2008'; ctx.lineWidth=1; ctx.stroke();
-  ctx.beginPath(); ctx.arc(4,-2,2.2,0,Math.PI*2);
-  ctx.fillStyle='#111'; ctx.fill();
-  ctx.beginPath(); ctx.arc(3,-3.2,1,0,Math.PI*2);
-  ctx.fillStyle='#ffffff88'; ctx.fill();
-
-  // Nostril
-  ctx.beginPath(); ctx.ellipse(14,-1,1.2,0.8,0.15,0,Math.PI*2);
-  ctx.fillStyle='#3A1800'; ctx.fill();
-
-  // Open mouth (lower jaw drops down)
-  var _jO=_fast?3.5+Math.sin(frame*0.35)*1.2:_rise?1:1.8;
-  // Lower jaw shape
-  ctx.beginPath();
-  ctx.moveTo(3,4);
-  ctx.quadraticCurveTo(9,4+_jO, 15,3+_jO*0.5);
-  ctx.quadraticCurveTo(17,4+_jO*0.3, 16,6+_jO);
-  ctx.quadraticCurveTo(11,7+_jO, 4,6+_jO);
-  ctx.quadraticCurveTo(1,5+_jO, 3,4);
-  ctx.fillStyle='#9B5520'; ctx.fill();
-  ctx.strokeStyle='#4A2008'; ctx.lineWidth=1; ctx.stroke();
-  // Inner mouth (dark red)
-  ctx.beginPath();
-  ctx.moveTo(4,4); ctx.quadraticCurveTo(10,3+_jO,15,3.5+_jO*0.4);
-  ctx.quadraticCurveTo(14,5+_jO*0.8,4,5+_jO*0.5); ctx.closePath();
-  ctx.fillStyle='#5A0A0A'; ctx.fill();
-  // Upper teeth (pointing down)
-  ctx.fillStyle='#F5EAC8';
-  for(var _tu=0;_tu<4;_tu++){
-    ctx.beginPath();
-    ctx.moveTo(4+_tu*2.8,4); ctx.lineTo(4.7+_tu*2.8,6.5); ctx.lineTo(5.4+_tu*2.8,4);
-    ctx.fill();
-  }
-  // Lower teeth (pointing up, only when open)
-  if(_jO>1.2){
-    for(var _tl=0;_tl<3;_tl++){
-      ctx.beginPath();
-      ctx.moveTo(5+_tl*3,4+_jO*0.5); ctx.lineTo(5.8+_tl*3,2+_jO*0.1); ctx.lineTo(6.6+_tl*3,4+_jO*0.5);
-      ctx.fill();
-    }
-  }
-  // Panic tongue
-  if(_fast){
-    ctx.beginPath(); ctx.ellipse(18,5+_jO*0.3,3.2,1.4,0.15,0,Math.PI*2);
-    ctx.fillStyle='#FF2244'; ctx.fill();
-  }
-
-  ctx.restore(); // head
-  ctx.restore(); // prow group
+  // Bow tip — clean rounded end (no head, no neck)
+  ctx.beginPath(); ctx.arc(26,3,3,0,Math.PI*2);
+  ctx.fillStyle='#CC8030'; ctx.fill();
+  ctx.strokeStyle='#4A2008'; ctx.lineWidth=1.5; ctx.stroke();
 
   // ── WAKE TRAILS (behind boat, decorative) ──
   if(!_fast && !_isMobile){
