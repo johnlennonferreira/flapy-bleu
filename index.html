@@ -3799,18 +3799,6 @@ function drawBoat(x, y, flapAnim, angle) {
   ctx.fillStyle='#CC8030'; ctx.fill();
   ctx.strokeStyle='#4A2008'; ctx.lineWidth=1.5; ctx.stroke();
 
-  // ── WAKE TRAILS (behind boat, decorative) ──
-  if(!_fast && !_isMobile){
-    ctx.globalAlpha=0.22+_pulse*0.07; ctx.strokeStyle='#99ccff'; ctx.lineWidth=1;
-    for(var _wi=0;_wi<3;_wi++){
-      var _wp=Math.sin(frame*0.07+_wi*1.4)*0.8;
-      ctx.beginPath();
-      ctx.moveTo(-25-_wi*7,9+_wp);
-      ctx.quadraticCurveTo(-28-_wi*7,12+_wp,-31-_wi*7,9+_wp);
-      ctx.stroke();
-    }
-    ctx.globalAlpha=1;
-  }
 
   // ── PANIC SWEAT ──
   if(_fast){
