@@ -950,8 +950,8 @@ function drawAwardScreen() {
 
 // ─── IDLE TABS ───────────────────────────────────────────────
 function drawIdleTabs() {
-  var labels=['PLAY','SHOP','RANK','MARKET'], keys=['play','shop','leaderboard','market'];
-  var icons=['▶','🛒','🏆','🐢'];
+  var labels=['PLAY','SHOP','RANK','GUIDE'], keys=['play','shop','leaderboard','market'];
+  var icons=['▶','🛒','🏆','📖'];
   var tw=82, th=44, gap=5, total=labels.length*(tw+gap)-gap;
   var tx0=Math.round(W/2-total/2), ty=H-58;
   ctx.textAlign='center';
@@ -961,9 +961,7 @@ function drawIdleTabs() {
     ctx.fillStyle=act?'#0052FF':'#ffffff18';
     ctx.strokeStyle=act?'#00D4FF':'#ffffff44'; ctx.lineWidth=act?2:1;
     ctx.beginPath(); ctx.roundRect(tx,ty,tw,th,8); ctx.fill(); ctx.stroke();
-    // icone — MARKET mostra item rotativo
     var _icon=icons[ti];
-    if(ti===3){ var _mItems=['🐢','♥','🃏']; _icon=_mItems[Math.floor(frame/60)%3]; }
     ctx.font=act?'16px Arial':'14px Arial';
     ctx.fillStyle=act?'#fff':'#ffffffbb';
     ctx.textBaseline='middle';
@@ -1418,9 +1416,9 @@ function drawMarketTab() {
   ctx.font='bold 16px Courier New';
   if(!_tabHeaderGradRev){ _tabHeaderGradRev=ctx.createLinearGradient(W/2-60,0,W/2+60,0); _tabHeaderGradRev.addColorStop(0,'#00D4FF'); _tabHeaderGradRev.addColorStop(1,'#FFD700'); }
   ctx.fillStyle=_tabHeaderGradRev; ctx.shadowColor='#00D4FF'; ctx.shadowBlur=8;
-  ctx.fillText('MARKET', W/2, 28); ctx.shadowBlur=0;
+  ctx.fillText('📖  GUIDE', W/2, 28); ctx.shadowBlur=0;
   ctx.font='9px Courier New'; ctx.fillStyle='#ffffff44';
-  ctx.fillText('what you can get · buy in the SHOP tab', W/2, 42);
+  ctx.fillText('itens, personagens e como desbloquear', W/2, 42);
 
   // ── Card helper ──
   function _card(cy, h, icon, col, unlocked) {
