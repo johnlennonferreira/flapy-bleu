@@ -1970,15 +1970,20 @@ var chestType='normal';
 //   BASE_CHAIN_ID    → '0x2105'  (Base mainnet, 8453)
 //   USDC_CONTRACT    → '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
 //   TREASURY_WALLET  → sua carteira real
+// ── FLIP PARA MAINNET: trocar as 4 linhas abaixo ──────────────────────────
 //   TESTNET          → false
-var TESTNET = true;
+//   TREASURY_WALLET  → (já configurado abaixo)
+//   USDC_CONTRACT    → '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
+//   BASE_CHAIN_ID    → '0x2105'
+// ─────────────────────────────────────────────────────────────────────────
+var TESTNET = true;                // ← mudar para false no mainnet
 // Builder Code: dashboard.base.org → Builder Codes → copiar hex
 var BUILDER_CODE_HEX = '0x0b62635f3737367a34626939802180218021'; // bc_776z4bi9 (ERC-8021)
-// Tesouraria: na testnet qualquer endereço serve (USDC sem valor)
-var TREASURY_WALLET  = '0x000000000000000000000000000000000000dEaD';
-// Base Sepolia (testnet)
-var USDC_CONTRACT    = '0x036CbD53842c5426634e7929541eC2318f3dCF7e';
-var BASE_CHAIN_ID    = '0x14a34'; // 84532 = Base Sepolia
+// Tesouraria — pagamentos vão direto para este endereço
+var TREASURY_WALLET  = '0x39ccf8C04ad0fd317cD0ee861bb16304Ab62c042'; // Rabby secundária
+// Base Sepolia (testnet) — trocar para mainnet quando pronto
+var USDC_CONTRACT    = '0x036CbD53842c5426634e7929541eC2318f3dCF7e'; // ← mainnet: 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913
+var BASE_CHAIN_ID    = '0x14a34'; // 84532 = Base Sepolia  ← mainnet: 0x2105
 // Preços USDC por slot de cor [Bleu, Phantom, Worm] (6 decimais = 1 USDC)
 var USDC_COLOR_PRICES = [
   [0, 100000, 200000, 250000, 350000],  // Bleu:    free, $0.10, $0.20, $0.25, $0.35
