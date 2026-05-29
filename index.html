@@ -1104,7 +1104,8 @@ function drawShopTab() {
     {idx:0,name:'BLEU',   unlocked:true},
     {idx:1,name:'PHANTOM',unlocked:gengarUnlocked},
     {idx:2,name:'WORM',   unlocked:wormUnlocked},
-    {idx:3,name:'ALIEN',  unlocked:alienUnlocked}
+    {idx:3,name:'ALIEN',  unlocked:alienUnlocked},
+    {idx:4,name:'⚓ BOAT', unlocked:boatUnlocked}
   ];
   var _visChars=_allChars.filter(function(c){return c.unlocked;});
   var ctw=Math.min(110,Math.floor((W-16)/(_visChars.length+0.3*(_visChars.length-1)))-4);
@@ -7377,7 +7378,7 @@ function handleClick(ex, ey) {
       // Wallet toggle top-right
       if(cx>=W-92&&cx<=W-4&&cy>=0&&cy<=44){ walletAddress ? disconnectWallet() : connectWallet(); return; }
       // Char selector tabs — só personagens desbloqueados
-      var _visC=[{idx:0,u:true},{idx:1,u:gengarUnlocked},{idx:2,u:wormUnlocked},{idx:3,u:alienUnlocked}].filter(function(c){return c.u;});
+      var _visC=[{idx:0,u:true},{idx:1,u:gengarUnlocked},{idx:2,u:wormUnlocked},{idx:3,u:alienUnlocked},{idx:4,u:boatUnlocked}].filter(function(c){return c.u;});
       var _ctw=Math.min(110,Math.floor((W-16)/(_visC.length+0.3*(_visC.length-1)))-4), _cgap=6;
       var _ctx0=Math.round(W/2-(_visC.length*(_ctw+_cgap)-_cgap)/2);
       for(var _ci2=0;_ci2<_visC.length;_ci2++){
