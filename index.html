@@ -6857,47 +6857,32 @@ function loop(ts) {
       W/2, H/2+142);
     ctx.globalAlpha=1; ctx.textBaseline='alphabetic';
 
-    // ── CONTINUE (big — pulsing green when items ready) ──
+    // ── CONTINUE (items ready) / MENU (no items) — single unified button ──
     var _anyReady = checkpointReady || heartReady;
     ctx.fillStyle='#ffffff14'; ctx.fillRect(W/2-100, H/2+162, 200, 1);
     var _cPulse = _anyReady ? 0.97+0.03*Math.sin(frame*0.18) : 1;
     ctx.save(); ctx.translate(W/2, H/2+184); ctx.scale(_cPulse, _cPulse);
-    ctx.fillStyle = _anyReady ? '#006633' : '#0a1520';
+    ctx.fillStyle = _anyReady ? '#006633' : '#0052FF20';
     ctx.beginPath(); ctx.roundRect(-108,-18,216,36,12); ctx.fill();
-    ctx.strokeStyle = _anyReady ? '#00FF88' : '#ffffff22'; ctx.lineWidth = _anyReady ? 2 : 1;
+    ctx.strokeStyle = _anyReady ? '#00FF88' : '#0052FF77'; ctx.lineWidth = _anyReady ? 2 : 1.5;
     ctx.stroke();
     if(_anyReady){ ctx.shadowColor='#00FF88'; ctx.shadowBlur=14; }
-    ctx.font='bold 14px Courier New'; ctx.fillStyle = _anyReady ? '#ffffff' : '#ffffff44';
+    ctx.font='bold 14px Courier New'; ctx.fillStyle = _anyReady ? '#ffffff' : '#aaccff';
     ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText(_anyReady ? '▶▶  CONTINUE WITH ITEMS' : '▶▶  CONTINUE', 0, 0);
+    ctx.fillText(_anyReady ? '▶▶  CONTINUE WITH ITEMS' : '⌂  MENU', 0, 0);
     ctx.shadowBlur=0; ctx.textBaseline='alphabetic'; ctx.restore();
 
-    // ── SHARE (compact) ──
-    ctx.fillStyle='#ffffff10'; ctx.fillRect(W/2-100, H/2+208, 200, 1);
-    var _shareCol2 = shareFlash>0 ? '#00CC66' : '#335588';
-    ctx.fillStyle=_shareCol2+'18';
-    ctx.beginPath(); ctx.roundRect(W/2-74, H/2+212, 148, 22, 8); ctx.fill();
-    ctx.strokeStyle=_shareCol2+'55'; ctx.lineWidth=1; ctx.stroke();
-    ctx.fillStyle=shareFlash>0?'#00FF88':'#7799bb';
-    ctx.font='bold 10px Courier New'; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText(shareFlash>0?'✓ COPIED!':'🔗 SHARE', W/2, H/2+223);
-    ctx.textBaseline='alphabetic';
-
-    // ── MENU button (single — replaces NEW GAME + MENU) ──
-    // Hidden when items purchased so the player can't lose what they paid for.
+    // ── SHARE (hidden when items purchased — only CONTINUE matters then) ──
     if(!_anyReady){
-      ctx.fillStyle='#0052FF20';
-      ctx.beginPath(); ctx.roundRect(W/2-80, H/2+240, 160, 28, 10); ctx.fill();
-      ctx.strokeStyle='#0052FF77'; ctx.lineWidth=1.5; ctx.stroke();
-      ctx.font='bold 12px Courier New'; ctx.fillStyle='#aaccff';
-      ctx.textAlign='center'; ctx.textBaseline='middle';
-      ctx.fillText('⌂  MENU', W/2, H/2+254);
+      ctx.fillStyle='#ffffff10'; ctx.fillRect(W/2-100, H/2+208, 200, 1);
+      var _shareCol2 = shareFlash>0 ? '#00CC66' : '#335588';
+      ctx.fillStyle=_shareCol2+'18';
+      ctx.beginPath(); ctx.roundRect(W/2-74, H/2+212, 148, 22, 8); ctx.fill();
+      ctx.strokeStyle=_shareCol2+'55'; ctx.lineWidth=1; ctx.stroke();
+      ctx.fillStyle=shareFlash>0?'#00FF88':'#7799bb';
+      ctx.font='bold 10px Courier New'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(shareFlash>0?'✓ COPIED!':'🔗 SHARE', W/2, H/2+223);
       ctx.textBaseline='alphabetic';
-    } else {
-      // Items purchased — gently remind player to continue
-      ctx.fillStyle='#00FF8866'; ctx.font='bold 9px Courier New';
-      ctx.textAlign='center';
-      ctx.fillText('▲ tap CONTINUE to use your items', W/2, H/2+252);
     }
 
     if(shareFlash>0) shareFlash--;
@@ -7148,7 +7133,7 @@ function handleClick(ex, ey) {
       }
       return; // always consume this zone — never fall to resetGame
     }
-    // ── CONTINUE button — applies all purchased items and resumes ──
+    // ── CONTINUE (items ready) / MENU (no items) — unified button ──
     if(cx>=W/2-110&&cx<=W/2+110&&cy>=H/2+162&&cy<=H/2+206){
       if(checkpointReady||heartReady){
         // Apply checkpoint: 3 lives + invincibility
@@ -7156,18 +7141,21 @@ function handleClick(ex, ey) {
         // Apply heart on top
         if(heartReady){ lives=Math.min(lives+1,5); if(!checkpointReady){ invincible=180; } }
         checkpointReady=false; heartReady=false;
-        // Clear all obstacles so the player respawns in a SAFE centered spot
+        // Clear all obstacles and center the character in a safe spot
         pipes=[]; stars=[]; shieldItems=[]; fireStars=[]; coins=[];
         lastGapCenter=H/2; firePower=0; starPower=0;
-        bleu.y=H/2; bleu.vy=0; bleu.vx=0;
+        bleu.x=W/2; bleu.y=H/2; bleu.vy=0; bleu.vx=0;
         gameState='playing'; startMusic(getPhaseIdx());
         screenShake=8; hitFlash=4;
         spawnParticles(W/2,H/2,'#FFD700',20); spawnParticles(W/2,H/2,'#00D4FF',12); spawnParticles(W/2,H/2,'#ffffff',8);
         beep(440,880,0.3,'sine',0.18);
         [660,880,1047].forEach(function(f,i){setTimeout(function(){beep(f,f,0.12,'sine',0.1);},i*70);});
         if(navigator.vibrate) navigator.vibrate([20,10,60,10,120]);
+      } else {
+        // No items purchased: button acts as MENU → back to idle
+        menuTapReady=false; resetGame(); stopMusic();
+        beep(330,220,0.08,'sine',0.08);
       }
-      // If nothing purchased: CONTINUE is dormant (player should buy something first)
       return;
     }
     // ── SHARE ──
