@@ -3437,8 +3437,7 @@ function drawBoat(x, y, flapAnim, angle) {
   var _ftp   = _ft > 0 ? (1 - _ft/18) : 0;
   var _pulse = 0.5 + 0.5*Math.sin(frame * 0.06);
   var _bob   = Math.sin(frame * 0.03) * 2;
-  var _wobble= (typeof dizzyTimer !== 'undefined' && dizzyTimer > 0) ? Math.sin(frame*0.5)*3 : 0;
-  ctx.save(); ctx.translate(_wobble, 0);
+  ctx.save();
 
   // ── FLAP BURST (golden spray below on flap) ──
   if(_ft > 0){
@@ -6444,6 +6443,7 @@ function loop(ts) {
     }
     if(invincible>0) invincible--;
     if(shieldBreak>0) shieldBreak--;
+    if(dizzyTimer>0) dizzyTimer--; // decrement here so all characters benefit, not just drawBleu
     // Estrela E invencibilidade: quica nos limites em vez de cair fora da tela
     if(starPower>0 || invincible>0){
       if(bleu.y+14 > H-80){ bleu.y = H-80-14; bleu.vy = -Math.abs(bleu.vy)*0.6; }
