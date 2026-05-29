@@ -7569,12 +7569,21 @@ window.addEventListener('focus', function() {
 checkDailyLogin();
 loop();
 
+// ─── RESET MODE (?reset=1) — limpa localStorage de desbloqueios indevidos ──
+if(location.search.indexOf('reset=1')!==-1){
+  localStorage.removeItem('bleuBoat');
+  localStorage.removeItem('bleuGengar');
+  localStorage.removeItem('bleuWorm');
+  localStorage.removeItem('bleuAlien');
+  localStorage.setItem('bleuChar','0');
+  window.location.href = window.location.pathname; // redireciona sem parâmetros
+}
+
 // ─── PREVIEW MODE (?preview=1) ──────────────────────────────────────────────
 if(location.search.indexOf('preview')!==-1){
-  // Unlock all characters silently
+  // Unlock ALL in memory only — NEVER write to localStorage to avoid polluting real game state
   boatUnlocked=true; gengarUnlocked=true; wormUnlocked=true; alienUnlocked=true;
   bestPrestige=5;
-  try{ _ls.set('bleuBoat','1'); _ls.set('bleuChar','0'); }catch(e){}
 
   // Inject overlay UI
   var _pvStyle=document.createElement('style');
