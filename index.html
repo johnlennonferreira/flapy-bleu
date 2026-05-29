@@ -47,17 +47,30 @@
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html { height: 100%; }
-  body { background: #00050f; display: flex; align-items: center; justify-content: center; min-height: 100dvh; font-family: 'Courier New', monospace; overflow: hidden; }
+  body {
+    background: #00050f;
+    display: flex; align-items: center; justify-content: center;
+    min-height: 100dvh;
+    font-family: 'Courier New', monospace;
+    overflow: hidden;
+    /* safe area for notch / Dynamic Island */
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
   canvas {
-    border: 2px solid #0052FF;
-    border-radius: 8px;
-    box-shadow: 0 0 40px #0052FF66, 0 0 80px #0052FF22;
-    width: min(400px, 100vw, calc(100dvh * 2 / 3));
-    height: min(600px, 100dvh, calc(100vw * 3 / 2));
+    /* Sem borda visível — glow sutil dá profundidade sem box visual */
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 0 60px #0052FF55, 0 0 120px #0052FF18, 0 8px 32px rgba(0,0,0,0.7);
+    /* Ocupa toda a tela em portrait, mantém proporção 2:3 */
+    width: min(400px, 100svw, calc(100svh * 2 / 3));
+    height: min(600px, 100svh, calc(100svw * 3 / 2));
     touch-action: none;
     display: block;
+    /* Suaviza transições de tamanho em rotação */
+    transition: width 0.2s, height 0.2s;
   }
-  #ui { position: fixed; top: 8px; left: 50%; transform: translateX(-50%); color: #0052FF; font-size: clamp(10px, 3vw, 13px); text-align: center; text-shadow: 0 0 10px #0052FF; white-space: nowrap; pointer-events: none; z-index: 10; }
+  /* #ui removido — redundante com título no canvas */
+  #ui { display: none; }
   #mute { display: none; }
 </style>
 </head>
@@ -813,7 +826,7 @@ function drawNFTRevealScreen() {
     var _bdIn=Math.min(1,Math.max(0,(_t-26)/14));
     if(_bdIn>0){
       ctx.globalAlpha=_cIn*_bdIn;
-      ctx.font='bold 7px Courier New'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.font='bold 8px Courier New'; ctx.textAlign='center'; ctx.textBaseline='middle';
       ctx.fillStyle=_th.accent; ctx.shadowColor=_th.glow; ctx.shadowBlur=10;
       ctx.fillText('✦ '+_th.badge,0,_cY+11); ctx.shadowBlur=0;
     }
@@ -1044,12 +1057,12 @@ function drawShopTab() {
   if(walletAddress){
     ctx.fillStyle='#00FF8822'; ctx.strokeStyle='#00FF8855'; ctx.lineWidth=1;
     ctx.beginPath(); ctx.roundRect(W-84,6,80,20,6); ctx.fill(); ctx.stroke();
-    ctx.fillStyle='#00FF88'; ctx.font='bold 7px Courier New'; ctx.textAlign='right'; ctx.textBaseline='middle';
+    ctx.fillStyle='#00FF88'; ctx.font='bold 8px Courier New'; ctx.textAlign='right'; ctx.textBaseline='middle';
     ctx.fillText('⛓ '+walletShort, W-7, 16);
   } else {
     ctx.fillStyle='#0052FF18'; ctx.strokeStyle='#0052FF55'; ctx.lineWidth=1;
     ctx.beginPath(); ctx.roundRect(W-84,6,80,20,6); ctx.fill(); ctx.stroke();
-    ctx.fillStyle='#6699cc'; ctx.font='bold 7px Courier New'; ctx.textAlign='right'; ctx.textBaseline='middle';
+    ctx.fillStyle='#6699cc'; ctx.font='bold 8px Courier New'; ctx.textAlign='right'; ctx.textBaseline='middle';
     ctx.fillText('⛓ CONNECT', W-7, 16);
   }
   ctx.textBaseline='alphabetic'; ctx.textAlign='center';
@@ -1337,7 +1350,7 @@ function drawShopTab() {
         ctx.beginPath(); ctx.roundRect(_bX, _bY, _bW, _bH, 8); ctx.fill();
         ctx.strokeStyle='#ffffff22'; ctx.lineWidth=1;
         ctx.beginPath(); ctx.roundRect(_bX, _bY, _bW, _bH, 8); ctx.stroke();
-        ctx.font='7px Courier New'; ctx.fillStyle='#ffffff33';
+        ctx.font='8px Courier New'; ctx.fillStyle='#ffffff33';
         ctx.textBaseline='middle'; ctx.fillText('connect wallet', _mid, _bY+_bH/2); ctx.textBaseline='alphabetic';
       } else {
         // Botão ativo — glow triplo
@@ -1479,7 +1492,7 @@ function drawMarketTab() {
   ctx.font='bold 8px Courier New'; ctx.fillStyle='#ffffff33'; ctx.textAlign='left';
   ctx.fillText('── NG+ (NEW GAME PLUS) ─────────────────', 10, _cy+9); _cy+=12;
   // Explicação do conceito
-  ctx.font='7px Courier New'; ctx.fillStyle='#ffffff44'; ctx.textAlign='center';
+  ctx.font='8px Courier New'; ctx.fillStyle='#ffffff44'; ctx.textAlign='center';
   ctx.fillText('Zerar as 10 fases = 1 loop completo. Cada loop sobe 1 nível NG+.', W/2, _cy+8);
   ctx.fillText('A cada nível os gaps ficam menores e a velocidade aumenta.', W/2, _cy+18);
   _cy+=24;
@@ -1497,7 +1510,7 @@ function drawMarketTab() {
   ctx.fillText('Efeito: próximos loops ficam +difíceis.', 58, _cy+37);
   ctx.fillStyle='#aa44ffaa';
   ctx.fillText('Prêmio: personagem PHANTOM desbloqueado.', 58, _cy+48);
-  if(gengarUnlocked){ ctx.font='bold 7px Courier New'; ctx.fillStyle='#aa44ffcc'; ctx.textAlign='right'; ctx.fillText('UNLOCKED ✓', W-16, _cy+13); }
+  if(gengarUnlocked){ ctx.font='bold 8px Courier New'; ctx.fillStyle='#aa44ffcc'; ctx.textAlign='right'; ctx.fillText('UNLOCKED ✓', W-16, _cy+13); }
   _cy+=_hT+_gap;
 
   // NG+2 — WORM
@@ -1511,7 +1524,7 @@ function drawMarketTab() {
   ctx.fillText('Efeito: dificuldade aumenta novamente.', 58, _cy+37);
   ctx.fillStyle='#88dd44aa';
   ctx.fillText('Prêmio: personagem WORM desbloqueado.', 58, _cy+48);
-  if(wormUnlocked){ ctx.font='bold 7px Courier New'; ctx.fillStyle='#88dd44cc'; ctx.textAlign='right'; ctx.fillText('UNLOCKED ✓', W-16, _cy+13); }
+  if(wormUnlocked){ ctx.font='bold 8px Courier New'; ctx.fillStyle='#88dd44cc'; ctx.textAlign='right'; ctx.fillText('UNLOCKED ✓', W-16, _cy+13); }
   _cy+=_hT+_gap;
 
   // NG+3 — ALIEN
@@ -1525,7 +1538,7 @@ function drawMarketTab() {
   ctx.fillText('Efeito: desafio máximo, gaps curtíssimos.', 58, _cy+37);
   ctx.fillStyle='#44FF88aa';
   ctx.fillText('Prêmio: personagem ALIEN UFO desbloqueado.', 58, _cy+48);
-  if(alienUnlocked){ ctx.font='bold 7px Courier New'; ctx.fillStyle='#44FF88cc'; ctx.textAlign='right'; ctx.fillText('UNLOCKED ✓', W-16, _cy+13); }
+  if(alienUnlocked){ ctx.font='bold 8px Courier New'; ctx.fillStyle='#44FF88cc'; ctx.textAlign='right'; ctx.fillText('UNLOCKED ✓', W-16, _cy+13); }
   _cy+=_hT+_gap;
 
   // ── Progresso + teaser do segredo ──
@@ -1539,7 +1552,7 @@ function drawMarketTab() {
   ctx.font = 'bold 9px Courier New'; ctx.fillStyle = '#FFD70088';
   ctx.fillText('? ? ? ? ?   🤫   ? ? ? ? ?', W/2, _cy + 26);
   ctx.globalAlpha = 0.22;
-  ctx.font = '7px Courier New'; ctx.fillStyle = '#FFD700';
+  ctx.font = '8px Courier New'; ctx.fillStyle = '#FFD700';
   ctx.fillText('there might be something beyond NG+3 . . .', W/2, _cy + 40);
   ctx.globalAlpha = 1;
 
@@ -1566,7 +1579,7 @@ function drawLeaderboardTab() {
     ctx.fillStyle='#00FF88'; ctx.font='bold 10px Courier New'; ctx.textAlign='center'; ctx.textBaseline='middle';
     ctx.fillText('⛓ '+walletShort+' · Base Network', W/2, wy+13);
     ctx.textBaseline='alphabetic';
-    ctx.fillStyle='#00FF8844'; ctx.font='7px Courier New'; ctx.textAlign='center';
+    ctx.fillStyle='#00FF8844'; ctx.font='8px Courier New'; ctx.textAlign='center';
     ctx.fillText('tap to disconnect', W/2, wy+30);
   } else {
     var wbp=0.97+0.03*Math.sin(frame*0.1);
@@ -5389,7 +5402,7 @@ function drawLivesHUD() {
     ctx.globalAlpha = 0.7 + 0.3*Math.sin(frame*0.05);
     ctx.fillStyle='#00FF8833'; ctx.strokeStyle='#00FF8877'; ctx.lineWidth=1;
     ctx.beginPath(); ctx.roundRect(W-110, 6, 82, 16, 5); ctx.fill(); ctx.stroke();
-    ctx.fillStyle='#00FF88'; ctx.font='bold 7px Courier New'; ctx.textAlign='right'; ctx.textBaseline='middle';
+    ctx.fillStyle='#00FF88'; ctx.font='bold 8px Courier New'; ctx.textAlign='right'; ctx.textBaseline='middle';
     ctx.fillText('⛓ '+walletShort, W-32, 14);
     ctx.textBaseline='alphabetic'; ctx.globalAlpha=1;
     ctx.restore();
@@ -6389,7 +6402,7 @@ function loop(ts) {
     ctx.restore();
     if(scorePop>0) scorePop--;
     // Phase label below score
-    ctx.fillStyle = pv.glowColor+'aa'; ctx.font = 'bold 7px Courier New';
+    ctx.fillStyle = pv.glowColor+'aa'; ctx.font = 'bold 8px Courier New';
     ctx.fillText(ph.label, W/2, 68);
     // Pause button — bottom-left, large circle, semi-transparent
     var pbx=34, pby=H-108, pbr=22;
@@ -6738,7 +6751,7 @@ function loop(ts) {
     ctx.strokeStyle='#00D4FF55'; ctx.lineWidth=1.5; ctx.stroke();
     ctx.font='bold 12px Courier New'; ctx.textAlign='center'; ctx.textBaseline='middle';
     ctx.fillStyle='#fff'; ctx.fillText('▶  NEW GAME', 0, -3);
-    ctx.font='7px Courier New'; ctx.fillStyle='#ffffff88';
+    ctx.font='8px Courier New'; ctx.fillStyle='#ffffff88';
     ctx.fillText('starts from the beginning', 0, 9);
     ctx.textBaseline='alphabetic'; ctx.restore();
 
@@ -6760,7 +6773,7 @@ function loop(ts) {
       ctx.beginPath(); ctx.roundRect(W/2-108,wdy,216,28,6); ctx.fill(); ctx.stroke();
       ctx.fillStyle='#00FF88'; ctx.font='bold 8px Courier New'; ctx.textAlign='center'; ctx.textBaseline='middle';
       ctx.fillText('⛓  SCORE SAVED  ·  '+walletShort, W/2, wdy+9);
-      ctx.fillStyle='#00FF8866'; ctx.font='6px Courier New';
+      ctx.fillStyle='#00FF8866'; ctx.font='8px Courier New';
       ctx.fillText('tap to disconnect', W/2, wdy+20);
       ctx.textBaseline='alphabetic';
     } else {
