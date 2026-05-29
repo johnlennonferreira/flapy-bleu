@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Flapy Bleu — Preview de Personagens</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #07000f;
+      font-family: 'Courier New', monospace;
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px 16px;
+      gap: 14px;
+    }
+    h1 { color: #FFD700; font-size: 20px; letter-spacing: 4px; }
+    .sub { color: #ffffff44; font-size: 10px; margin-top: -8px; }
+
+    .section-label {
+      color: #ffffff33;
+      font-size: 9px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: -4px;
+      align-self: flex-start;
+      padding-left: 4px;
+    }
+    .controls { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; max-width: 520px; }
+
+    button {
+      padding: 7px 14px;
+      border-radius: 9px;
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.15s;
+      background: transparent;
+      border: 1.5px solid;
+    }
+    button:hover { transform: scale(1.06); }
+
+    button.char  { border-color: #0052FFaa; color: #88aaff; }
+    button.char:hover,  button.char.active  { background: #0052FF20; border-color: #0052FF; color: #fff; box-shadow: 0 0 10px #0052FF44; }
+
+    button.legendary { border-color: #FF8800aa; color: #FFD700; }
+    button.legendary:hover, button.legendary.active { background: #FF880020; border-color: #FFD700; color: #fff; box-shadow: 0 0 12px #FFD70044; }
+
+    button.nft { border-color: #CC44FFaa; color: #CC88FF; }
+    button.nft:hover, button.nft.active { background: #CC44FF20; border-color: #CC44FF; color: #fff; box-shadow: 0 0 10px #CC44FF44; }
+
+    button.boat-btn { border-color: #FF8800aa; color: #FFD700; }
+    button.boat-btn:hover, button.boat-btn.active { background: #FF880020; border-color: #FF8800; color: #fff; box-shadow: 0 0 12px #FF880044; }
+
+    .current-label {
+      font-size: 11px;
+      color: #FFD700cc;
+      letter-spacing: 1px;
+      min-height: 16px;
+      text-align: center;
+    }
+
+    .frame-wrap {
+      border: 2px solid #ffffff18;
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 0 40px #0000CC22, 0 0 80px #00000088;
+    }
+    iframe { display: block; border: none; }
+  </style>
+</head>
+<body>
+
+  <h1>⚓ FLAPY BLEU</h1>
+  <p class="sub">Preview de personagens &amp; telas de desbloqueio</p>
+
+  <p class="section-label">── personagens ──</p>
+  <div class="controls">
+    <button class="char active" id="btn-0" onclick="showChar(0, this)">🐦&nbsp; Bleu</button>
+    <button class="char" id="btn-1" onclick="showChar(1, this)">👻&nbsp; Phantom</button>
+    <button class="char" id="btn-2" onclick="showChar(2, this)">🐛&nbsp; Worm</button>
+    <button class="char" id="btn-3" onclick="showChar(3, this)">👽&nbsp; Alien</button>
+    <button class="boat-btn" id="btn-4" onclick="showChar(4, this)">⚓&nbsp; Viking Boat</button>
+  </div>
+
+  <p class="section-label">── telas de desbloqueio ──</p>
+  <div class="controls">
+    <button class="legendary" onclick="showLegendary(this)">🏆&nbsp; Legendary Unlock (NG+5)</button>
+  </div>
+  <div class="controls">
+    <button class="nft" onclick="showNFT(1, this)">NFT · Phantom</button>
+    <button class="nft" onclick="showNFT(2, this)">NFT · Worm</button>
+    <button class="nft" onclick="showNFT(3, this)">NFT · Alien</button>
+    <button class="nft boat-btn" onclick="showNFT(4, this)">NFT · Viking ⚓</button>
+  </div>
+
+  <p class="current-label" id="label">BLEU · personagem padrão · tela idle</p>
+
+  <div class="frame-wrap">
+    <iframe id="gf" src="index.html" width="400" height="600" scrolling="no"></iframe>
+  </div>
+
+  <script>
+    var gf = document.getElementById('gf');
+    var gw = null;
+
+    var charNames = [
+      'BLEU · padrão · sempre disponível',
+      'PHANTOM · NG+1 ou USDC $0.50',
+      'WORM · NG+2 ou USDC $0.50',
+      'ALIEN · NG+3 ou USDC $0.50',
+      'VIKING BOAT ⚓ · NG+5 SECRETO · sem USDC unlock'
+    ];
+
+    gf.onload = function() {
+      gw = gf.contentWindow;
+      setTimeout(function() {
+        try {
+          unlockAll();
+          showChar(0, document.getElementById('btn-0'));
+        } catch(e) { console.warn('init error:', e); }
+      }, 900);
+    };
+
+    function unlockAll() {
+      if(!gw) return;
+      gw.boatUnlocked   = true;
+      gw.gengarUnlocked = true;
+      gw.wormUnlocked   = true;
+      gw.alienUnlocked  = true;
+      gw.bestPrestige   = 5;
+      try { gw._ls.set('bleuBoat','1'); } catch(e){}
+    }
+
+    function clearActive() {
+      document.querySelectorAll('button').forEach(function(b){ b.classList.remove('active'); });
+    }
+
+    function showChar(idx, btn) {
+      clearActive();
+      if(btn) btn.classList.add('active');
+      document.getElementById('label').textContent = charNames[idx];
+      if(!gw) return;
+      try {
+        unlockAll();
+        gw.activeChar = idx;
+        try { gw._ls.set('bleuChar', String(idx)); } catch(e){}
+        // Reset to idle so the character shows animated
+        gw.resetGame();
+        // Reapply after reset (resetGame may reload from localStorage)
+        unlockAll();
+        gw.activeChar = idx;
+        // Keep idle state running — don't start music
+        if(gw.gameState !== 'idle') gw.gameState = 'idle';
+      } catch(e) { console.warn(e); }
+    }
+
+    function showLegendary(btn) {
+      clearActive();
+      if(btn) btn.classList.add('active');
+      document.getElementById('label').textContent = 'LEGENDARY UNLOCK ⚓ · alcance NG+5 para ver esta tela';
+      if(!gw) return;
+      try {
+        unlockAll();
+        gw.legendaryAnim = 0;
+        gw.gameState = 'legendary';
+        try { if(gw.stopMusic) gw.stopMusic(); } catch(e){}
+      } catch(e) { console.warn(e); }
+    }
+
+    function showNFT(charIdx, btn) {
+      clearActive();
+      if(btn) btn.classList.add('active');
+      var nftNames = {1:'PHANTOM · RARE', 2:'WORM · UNCOMMON', 3:'ALIEN · EPIC', 4:'VIKING BOAT · LEGENDARY'};
+      document.getElementById('label').textContent = 'NFT REVEAL · ' + nftNames[charIdx];
+      if(!gw) return;
+      try {
+        unlockAll();
+        gw.nftRevealChar = charIdx;
+        gw.nftRevealAnim = 0;
+        gw.gameState = 'nftReveal';
+        try { if(gw.stopMusic) gw.stopMusic(); } catch(e){}
+      } catch(e) { console.warn(e); }
+    }
+  </script>
+</body>
+</html>

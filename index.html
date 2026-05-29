@@ -7351,6 +7351,92 @@ window.addEventListener('focus', function() {
 
 checkDailyLogin();
 loop();
+
+// ─── PREVIEW MODE (?preview=1) ──────────────────────────────────────────────
+if(location.search.indexOf('preview')!==-1){
+  // Unlock all characters silently
+  boatUnlocked=true; gengarUnlocked=true; wormUnlocked=true; alienUnlocked=true;
+  bestPrestige=5;
+  try{ _ls.set('bleuBoat','1'); _ls.set('bleuChar','0'); }catch(e){}
+
+  // Inject overlay UI
+  var _pvStyle=document.createElement('style');
+  _pvStyle.textContent=[
+    '#pvUI{position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:9999;',
+    'background:rgba(4,0,12,0.92);border-bottom:1px solid #ffffff18;',
+    'backdrop-filter:blur(8px);padding:8px 10px 6px;display:flex;flex-direction:column;',
+    'align-items:center;gap:6px;width:100%;max-width:420px;box-sizing:border-box;}',
+    '#pvUI .pvRow{display:flex;flex-wrap:wrap;gap:5px;justify-content:center;}',
+    '#pvUI button{padding:5px 10px;border-radius:7px;font:bold 10px "Courier New";cursor:pointer;',
+    'background:transparent;transition:all .15s;}',
+    '#pvUI .c{border:1.5px solid #0052FFaa;color:#88aaff;}',
+    '#pvUI .c:hover,#pvUI .c.on{background:#0052FF22;border-color:#0052FF;color:#fff;}',
+    '#pvUI .g{border:1.5px solid #FFD700aa;color:#FFD700;}',
+    '#pvUI .g:hover,#pvUI .g.on{background:#FFD70022;border-color:#FFD700;color:#fff;}',
+    '#pvUI .n{border:1.5px solid #CC44FFaa;color:#CC88FF;}',
+    '#pvUI .n:hover,#pvUI .n.on{background:#CC44FF22;border-color:#CC44FF;color:#fff;}',
+    '#pvLbl{font:10px "Courier New";color:#FFD700bb;letter-spacing:1px;}'
+  ].join('');
+  document.head.appendChild(_pvStyle);
+
+  var _pvDiv=document.createElement('div');
+  _pvDiv.id='pvUI';
+  _pvDiv.innerHTML=[
+    '<div class="pvRow">',
+    '<button class="c on" onclick="_pvChar(0,this)">🐦 BLEU</button>',
+    '<button class="c" onclick="_pvChar(1,this)">👻 PHANTOM</button>',
+    '<button class="c" onclick="_pvChar(2,this)">🐛 WORM</button>',
+    '<button class="c" onclick="_pvChar(3,this)">👽 ALIEN</button>',
+    '<button class="g" onclick="_pvChar(4,this)">⚓ VIKING BOAT</button>',
+    '</div>',
+    '<div class="pvRow">',
+    '<button class="g" onclick="_pvLegendary(this)">🏆 LEGENDARY UNLOCK</button>',
+    '<button class="n" onclick="_pvNFT(1,this)">NFT PHANTOM</button>',
+    '<button class="n" onclick="_pvNFT(2,this)">NFT WORM</button>',
+    '<button class="n" onclick="_pvNFT(3,this)">NFT ALIEN</button>',
+    '<button class="g n" onclick="_pvNFT(4,this)">NFT ⚓ VIKING</button>',
+    '</div>',
+    '<span id="pvLbl">BLEU · padrão · tela idle</span>'
+  ].join('');
+  document.body.appendChild(_pvDiv);
+
+  // Adjust canvas top margin so UI doesn't overlap
+  var _pvCanvasWrap=document.getElementById('ui');
+  if(_pvCanvasWrap){ _pvCanvasWrap.style.paddingTop='80px'; }
+  var _pvCanvas=document.getElementById('canvas')||document.querySelector('canvas');
+  if(_pvCanvas){ _pvCanvas.style.marginTop='80px'; }
+
+  function _pvClearOn(){ document.querySelectorAll('#pvUI button').forEach(function(b){b.classList.remove('on');}); }
+  function _pvSetLabel(t){ var el=document.getElementById('pvLbl'); if(el) el.textContent=t; }
+
+  window._pvChar=function(idx,btn){
+    _pvClearOn(); if(btn) btn.classList.add('on');
+    var names=['BLEU · padrão','PHANTOM · NG+1 / $0.50','WORM · NG+2 / $0.50','ALIEN · NG+3 / $0.50','VIKING BOAT ⚓ · NG+5 SECRETO'];
+    _pvSetLabel(names[idx]);
+    activeChar=idx;
+    try{ _ls.set('bleuChar',String(idx)); }catch(e){}
+    resetGame();
+    boatUnlocked=true; gengarUnlocked=true; wormUnlocked=true; alienUnlocked=true; bestPrestige=5;
+    activeChar=idx;
+    gameState='idle';
+  };
+
+  window._pvLegendary=function(btn){
+    _pvClearOn(); if(btn) btn.classList.add('on');
+    _pvSetLabel('LEGENDARY UNLOCK ⚓ · NG+5 · Viking Boat desbloqueado pela 1ª vez');
+    boatUnlocked=true; legendaryAnim=0; gameState='legendary';
+    try{ stopMusic(); }catch(e){}
+  };
+
+  window._pvNFT=function(charIdx,btn){
+    _pvClearOn(); if(btn) btn.classList.add('on');
+    var nm={1:'PHANTOM · RARE',2:'WORM · UNCOMMON',3:'ALIEN · EPIC',4:'VIKING BOAT · LEGENDARY'};
+    _pvSetLabel('NFT REVEAL · '+nm[charIdx]);
+    boatUnlocked=true; nftRevealChar=charIdx; nftRevealAnim=0; gameState='nftReveal';
+    try{ stopMusic(); }catch(e){}
+  };
+}
+// ─── END PREVIEW MODE ────────────────────────────────────────────────────────
 </script>
 </body>
 </html>
