@@ -7,11 +7,11 @@
   "miniapp": {
     "version":              "1",
     "name":                 "Flapy Bleu",
-    "iconUrl":              "https://flapy-bleu.vercel.app/icon.png",
+    "iconUrl":              "https://flapy-bleu.vercel.app/icon.png?v=2",
     "homeUrl":              "https://flapy-bleu.vercel.app",
-    "imageUrl":             "https://flapy-bleu.vercel.app/splash.png",
+    "imageUrl":             "https://flapy-bleu.vercel.app/splash.png?v=2",
     "buttonTitle":          "🐦 Play Flapy Bleu",
-    "splashImageUrl":       "https://flapy-bleu.vercel.app/splash.png",
+    "splashImageUrl":       "https://flapy-bleu.vercel.app/splash.png?v=2",
     "splashBackgroundColor":"#00050f",
     "subtitle":             "Flap through Base blockchain",
     "description":          "A Flappy Bird game built on Base. Fly through 10 unique crypto phases, collect power-ups, compete on-chain and earn USDC rewards.",
@@ -19,13 +19,13 @@
     "primaryCategory":      "games",
     "tags":                 ["game", "base", "crypto", "arcade", "flappy"],
     "screenshotUrls": [
-      "https://flapy-bleu.vercel.app/screenshots/phase1.png",
-      "https://flapy-bleu.vercel.app/screenshots/phase2.png",
-      "https://flapy-bleu.vercel.app/screenshots/phase3.png"
+      "https://flapy-bleu.vercel.app/screenshots/phase1.png?v=2",
+      "https://flapy-bleu.vercel.app/screenshots/phase2.png?v=2",
+      "https://flapy-bleu.vercel.app/screenshots/phase3.png?v=2"
     ],
     "ogTitle":              "Flapy Bleu — Play on Base",
     "ogDescription":        "10 phases, 4 characters, USDC power-ups. The crypto Flappy Bird on Base blockchain.",
-    "ogImageUrl":           "https://flapy-bleu.vercel.app/splash.png",
+    "ogImageUrl":           "https://flapy-bleu.vercel.app/splash.png?v=2",
     "requiredChains":       ["eip155:8453"],
     "noindex":              false
   }
