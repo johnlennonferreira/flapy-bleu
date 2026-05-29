@@ -1413,12 +1413,13 @@ const BLEU_COLORS = [
   { name:'BASE',     price:300, body:'#0052FF', bodyLt:'#4488ff', shadow:'#002299', belly:'#cce0ff', outline:'#001a99', glow:'#0052FF' },
 ];
 // ─── PHANTOM COLOR PALETTES (5 colors) ─────────────────────────────
+// shadow brightened so wisps/depth remain visible on dark phase backgrounds
 const PHANTOM_COLORS = [
-  { name:'CLASSIC', price:0,   body:'#7B62A3', bodyLt:'#A98FCC', shadow:'#3D2A6A', belly:'#C4AADF', outline:'#2D1A5A', glow:'#9966CC', eyeColor:'#FF1493' },
-  { name:'SHADOW',  price:100, body:'#2a1a3a', bodyLt:'#4a3a5a', shadow:'#150d1e', belly:'#6a5a7a', outline:'#0d0814', glow:'#6622aa', eyeColor:'#cc00ff' },
-  { name:'SHINY',   price:180, body:'#008fcc', bodyLt:'#44ccee', shadow:'#005577', belly:'#aaddff', outline:'#003d5a', glow:'#00ccff', eyeColor:'#FF5500' },
-  { name:'NEON',    price:220, body:'#cc00ff', bodyLt:'#ee66ff', shadow:'#880099', belly:'#f0ccff', outline:'#550077', glow:'#dd00ff', eyeColor:'#FFFF00' },
-  { name:'GOLDEN',  price:350, body:'#c8a020', bodyLt:'#f0c840', shadow:'#8a6800', belly:'#f5e098', outline:'#5a4400', glow:'#FFD700', eyeColor:'#FF0044' },
+  { name:'CLASSIC', price:0,   body:'#7B62A3', bodyLt:'#A98FCC', shadow:'#5a3d88', belly:'#C4AADF', outline:'#3a2266', glow:'#9966CC', eyeColor:'#FF1493' },
+  { name:'SHADOW',  price:100, body:'#2a1a3a', bodyLt:'#5a4a6a', shadow:'#3d2a58', belly:'#7a6a8a', outline:'#1a0e2e', glow:'#7733cc', eyeColor:'#cc00ff' },
+  { name:'SHINY',   price:180, body:'#008fcc', bodyLt:'#44ccee', shadow:'#006699', belly:'#aaddff', outline:'#004466', glow:'#00ccff', eyeColor:'#FF5500' },
+  { name:'NEON',    price:220, body:'#cc00ff', bodyLt:'#ee66ff', shadow:'#aa00dd', belly:'#f0ccff', outline:'#770099', glow:'#dd00ff', eyeColor:'#FFFF00' },
+  { name:'GOLDEN',  price:350, body:'#c8a020', bodyLt:'#f0c840', shadow:'#b08800', belly:'#f5e098', outline:'#7a5c00', glow:'#FFD700', eyeColor:'#FF0044' },
 ];
 // backward-compat alias
 var GENGAR_COLORS = PHANTOM_COLORS;
@@ -1456,7 +1457,7 @@ function drawMarketTab() {
   ctx.fillStyle=_tabHeaderGradRev; ctx.shadowColor='#00D4FF'; ctx.shadowBlur=8;
   ctx.fillText('📖  GUIDE', W/2, 28); ctx.shadowBlur=0;
   ctx.font='9px Courier New'; ctx.fillStyle='#ffffff44';
-  ctx.fillText('itens, personagens e como desbloquear', W/2, 42);
+  ctx.fillText('items, characters & how to unlock', W/2, 42);
 
   // ── Card helper ──
   function _card(cy, h, icon, col, unlocked) {
@@ -1518,8 +1519,8 @@ function drawMarketTab() {
   ctx.fillText('── NG+ (NEW GAME PLUS) ─────────────────', 10, _cy+9); _cy+=12;
   // Explicação do conceito
   ctx.font='8px Courier New'; ctx.fillStyle='#ffffff44'; ctx.textAlign='center';
-  ctx.fillText('Zerar as 10 fases = 1 loop completo. Cada loop sobe 1 nível NG+.', W/2, _cy+8);
-  ctx.fillText('A cada nível os gaps ficam menores e a velocidade aumenta.', W/2, _cy+18);
+  ctx.fillText('Clear all 10 phases = 1 loop. Each loop earns you +1 NG+ level.', W/2, _cy+8);
+  ctx.fillText('Each level tightens the gaps and raises the speed.', W/2, _cy+18);
   _cy+=24;
 
   var _hT = 66; // altura maior para caber 4 linhas
@@ -1530,11 +1531,11 @@ function drawMarketTab() {
   ctx.font='bold 10px Courier New'; ctx.fillStyle=gengarUnlocked?'#aa44ff':'#aa44ffcc';
   ctx.fillText('NG+1  —  PHANTOM', 58, _cy+13);
   ctx.font='8px Courier New'; ctx.fillStyle='#ffffff88';
-  ctx.fillText('Como: zere as 10 fases no modo normal.', 58, _cy+26);
+  ctx.fillText('How: clear all 10 phases once (normal mode).', 58, _cy+26);
   ctx.fillStyle='#ffffff55';
-  ctx.fillText('Efeito: próximos loops ficam +difíceis.', 58, _cy+37);
+  ctx.fillText('Effect: each new loop gets harder — tighter gaps, faster.', 58, _cy+37);
   ctx.fillStyle='#aa44ffaa';
-  ctx.fillText('Prêmio: personagem PHANTOM desbloqueado.', 58, _cy+48);
+  ctx.fillText('Reward: PHANTOM character unlocked.', 58, _cy+48);
   if(gengarUnlocked){ ctx.font='bold 8px Courier New'; ctx.fillStyle='#aa44ffcc'; ctx.textAlign='right'; ctx.fillText('UNLOCKED ✓', W-16, _cy+13); }
   _cy+=_hT+_gap;
 
@@ -1544,11 +1545,11 @@ function drawMarketTab() {
   ctx.font='bold 10px Courier New'; ctx.fillStyle=wormUnlocked?'#88dd44':'#88dd44cc';
   ctx.fillText('NG+2  —  WORM', 58, _cy+13);
   ctx.font='8px Courier New'; ctx.fillStyle='#ffffff88';
-  ctx.fillText('Como: zere as 10 fases no modo NG+1.', 58, _cy+26);
+  ctx.fillText('How: clear all 10 phases in NG+1 mode.', 58, _cy+26);
   ctx.fillStyle='#ffffff55';
-  ctx.fillText('Efeito: dificuldade aumenta novamente.', 58, _cy+37);
+  ctx.fillText('Effect: difficulty increases again beyond NG+1.', 58, _cy+37);
   ctx.fillStyle='#88dd44aa';
-  ctx.fillText('Prêmio: personagem WORM desbloqueado.', 58, _cy+48);
+  ctx.fillText('Reward: WORM character unlocked.', 58, _cy+48);
   if(wormUnlocked){ ctx.font='bold 8px Courier New'; ctx.fillStyle='#88dd44cc'; ctx.textAlign='right'; ctx.fillText('UNLOCKED ✓', W-16, _cy+13); }
   _cy+=_hT+_gap;
 
@@ -1558,11 +1559,11 @@ function drawMarketTab() {
   ctx.font='bold 10px Courier New'; ctx.fillStyle=alienUnlocked?'#44FF88':'#44FF88cc';
   ctx.fillText('NG+3  —  ALIEN', 58, _cy+13);
   ctx.font='8px Courier New'; ctx.fillStyle='#ffffff88';
-  ctx.fillText('Como: zere as 10 fases no modo NG+2.', 58, _cy+26);
+  ctx.fillText('How: clear all 10 phases in NG+2 mode.', 58, _cy+26);
   ctx.fillStyle='#ffffff55';
-  ctx.fillText('Efeito: desafio máximo, gaps curtíssimos.', 58, _cy+37);
+  ctx.fillText('Effect: maximum challenge — tightest gaps in the game.', 58, _cy+37);
   ctx.fillStyle='#44FF88aa';
-  ctx.fillText('Prêmio: personagem ALIEN UFO desbloqueado.', 58, _cy+48);
+  ctx.fillText('Reward: ALIEN UFO character unlocked.', 58, _cy+48);
   if(alienUnlocked){ ctx.font='bold 8px Courier New'; ctx.fillStyle='#44FF88cc'; ctx.textAlign='right'; ctx.fillText('UNLOCKED ✓', W-16, _cy+13); }
   _cy+=_hT+_gap;
 
@@ -1879,12 +1880,14 @@ var lives=3, invincible=0, starPower=0, stars=[];
 var slowMoActive=0;       // frames restantes de slow-mo (2700=45s)
 var slowMoStock=parseInt(_ls.get('bleuSlowMo','0'));        // elixirs no inventário — persistido
 var checkpointStock=parseInt(_ls.get('bleuCheckpoint','0')); // cartas de checkpoint — persistido
-var checkpointUsed=false;   // carta já usada nesta run
-var heartUsed=false;        // coração USDC já comprado na morte nesta run
-var dizzyTimer=0;           // frames de estrelinhas de tontura após colisão
-var checkpointFlash=0;      // frames de overlay "CHECKPOINT!" após uso automático
-var extraHeartStock=parseInt(_ls.get('bleuExtraHeart','0')); // corações extras — persistido
-var deathOfferTimer=0;    // countdown de oferta na tela de morte (frames)
+var checkpointUsed=false;   // checkpoint card already used this run
+var heartUsed=false;        // paid heart already bought on current death (resets each death)
+var checkpointReady=false;  // checkpoint purchased on death screen but not yet applied
+var heartReady=false;       // heart purchased on death screen but not yet applied
+var dizzyTimer=0;
+var checkpointFlash=0;
+var extraHeartStock=parseInt(_ls.get('bleuExtraHeart','0'));
+var deathOfferTimer=0;
 var shield=0, shieldItems=[], shieldBreak=0; // escudo power-up
 var fireStars=[]; var firePower=0;            // estrela vermelha — modo bola de fogo
 var shieldPickedUp=0; // escudos pegos em jogo nesta fase (só valem até fim da fase)
@@ -2180,7 +2183,7 @@ function resetGame() {
   combo = 0; comboFlash = 0; coinsThisRun = 0; milestoneIdx = 0; recFlash = 0;
   lives = 3; // reset base — extraHeartStock é consumido em flap() ao iniciar nova run
   invincible = 0; starPower = 0; stars = []; firePower = 0; fireStars = [];
-  slowMoActive = 0; checkpointUsed = false; heartUsed = false; dizzyTimer = 0; deathOfferTimer = 0; checkpointFlash = 0;
+  slowMoActive = 0; checkpointUsed = false; heartUsed = false; checkpointReady = false; heartReady = false; dizzyTimer = 0; deathOfferTimer = 0; checkpointFlash = 0;
   // slowMoStock e extraHeartStock NÃO são zerados — persistem para próxima run (limite já aplicado na compra)
   deadChest={active:false,opened:false,coins:0,anim:0};
   shield = 0; shieldPickedUp = 0;
@@ -5912,7 +5915,7 @@ function loop(ts) {
 
       // ── Tagline ──
       ctx.fillStyle = '#ffffff55'; ctx.font = '11px Courier New';
-      ctx.fillText('tap to flap  ·  dodge the candles', W/2, H/2-26);
+      ctx.fillText('tap to flap  ·  dodge the pipes', W/2, H/2-26);
 
       // ── BEST score (above the button so it's not covered) ──
       if(highScore > 0){
@@ -6184,7 +6187,7 @@ function loop(ts) {
               if(comboBest<combo) comboBest=combo;
               top5=saveTop5(score); submitWalletScore(score);
               stopMusic(); menuTapReady=false;
-              deathOfferTimer=720; gameState='dead';
+              heartUsed=false; checkpointReady=false; heartReady=false; deathOfferTimer=720; gameState='dead';
             }
           }
         }
@@ -6626,7 +6629,7 @@ function loop(ts) {
           if(score>0) submitWalletScore(score);
           if(navigator.vibrate) navigator.vibrate([80,30,80]);
           stopMusic(); menuTapReady=false;
-          deathOfferTimer=720; gameState='dead';
+          heartUsed=false; checkpointReady=false; heartReady=false; deathOfferTimer=720; gameState='dead';
         }
       }
       } // fecha else do shield
@@ -6680,9 +6683,9 @@ function loop(ts) {
     ctx.fillText('💔', W/2, H/2-50);
     // texto
     ctx.font='bold 18px Courier New'; ctx.fillStyle='#FF4466';
-    ctx.fillText('YOU LOST A LIFE!', W/2, H/2+2);
+    ctx.fillText('LIFE LOST!', W/2, H/2+2);
     ctx.font='bold 13px Courier New'; ctx.fillStyle='#ffffff99';
-    ctx.fillText('lives remaining: '+lives, W/2, H/2+26);
+    ctx.fillText('lives: '+lives, W/2, H/2+26);
     // botão continuar pulsando
     var _hp = 1 + 0.06*Math.sin(frame*0.12);
     ctx.save(); ctx.translate(W/2, H/2+72); ctx.scale(_hp,_hp);
@@ -6798,86 +6801,85 @@ function loop(ts) {
     }
     ctx.globalAlpha=1;
 
-    // ── CONTINUE? — separador com botões FIXOS (sem timer) ──
-    // Posições absolutas — usadas também no click handler
-    // _DC_CP = H/2+98 (checkpoint), _DC_HT = H/2+130 (heart), _DC_SH = H/2+174 (share)
-    // _DC_PL = H/2+210 (play again), _DC_MN = H/2+250 (menu)
-    ctx.fillStyle='#ffffff18'; ctx.fillRect(W/2-100, H/2+84, 200, 1);
-    ctx.fillStyle='#ffffff44'; ctx.font='bold 8px Courier New';
-    ctx.fillText('CONTINUE?', W/2, H/2+94);
+    // ── WHAT'S NEXT? ── positions mirrored in click handler
+    // CP=H/2+96, HT=H/2+128, CONT=H/2+164, SH=H/2+208, NG=H/2+234, MN=H/2+260
+    ctx.fillStyle='#ffffff18'; ctx.fillRect(W/2-100, H/2+82, 200, 1);
+    ctx.fillStyle='#ffffff55'; ctx.font='bold 8px Courier New';
+    ctx.fillText("WHAT'S NEXT?", W/2, H/2+91);
 
-    // ── Botão CHECKPOINT ──
+    // ── CHECKPOINT ──
     var _hasCp2 = checkpointStock > 0;
-    var _cpDone2 = checkpointUsed;
-    ctx.globalAlpha = _cpDone2 ? 0.32 : 1;
-    ctx.fillStyle = _cpDone2 ? '#ffffff08' : (_hasCp2 ? '#00FF8822' : '#0052FF18');
-    ctx.strokeStyle = _cpDone2 ? '#ffffff22' : (_hasCp2 ? '#00FF88bb' : '#0052FFbb'); ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.roundRect(W/2-110, H/2+98, 220, 28, 8); ctx.fill(); ctx.stroke();
+    var _cpDone2 = checkpointUsed && !checkpointReady;
+    ctx.globalAlpha = _cpDone2 ? 0.38 : 1;
+    ctx.fillStyle = checkpointReady ? '#00FF8828' : _cpDone2 ? '#ffffff08' : (_hasCp2 ? '#00FF8820' : '#0052FF18');
+    ctx.strokeStyle = checkpointReady ? '#00FF88' : _cpDone2 ? '#ffffff22' : (_hasCp2 ? '#00FF88bb' : '#0052FFbb');
+    ctx.lineWidth = checkpointReady ? 2 : 1.5;
+    ctx.beginPath(); ctx.roundRect(W/2-112, H/2+96, 224, 28, 8); ctx.fill(); ctx.stroke();
     ctx.font='bold 10px Courier New'; ctx.textBaseline='middle';
-    ctx.fillStyle=_cpDone2?'#ffffff44':(_hasCp2?'#00FF88':'#66aaff');
-    ctx.fillText(_cpDone2?'🃏  ALREADY USED':(_hasCp2?'🃏  USE CHECKPOINT CARD':'🃏  CHECKPOINT  ·  USDC $0.50'), W/2, H/2+112);
+    ctx.fillStyle = checkpointReady ? '#00FF88' : _cpDone2 ? '#ffffff44' : (_hasCp2 ? '#00FF88' : '#66aaff');
+    ctx.fillText(checkpointReady ? '🃏  CHECKPOINT READY ✓' : _cpDone2 ? '🃏  ALREADY USED' : (_hasCp2 ? '🃏  USE CHECKPOINT CARD' : '🃏  CHECKPOINT  ·  USDC $0.50'), W/2, H/2+110);
     ctx.globalAlpha=1; ctx.textBaseline='alphabetic';
 
-    // ── Botão CORAÇÃO — sempre visível (dim se sem wallet) ──
-    ctx.globalAlpha = !walletAddress ? 0.28 : heartUsed ? 0.32 : 1;
-    ctx.fillStyle = heartUsed||!walletAddress ? '#ffffff08' : '#FF174418';
-    ctx.strokeStyle = heartUsed||!walletAddress ? '#ffffff22' : '#FF1744bb'; ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.roundRect(W/2-110, H/2+130, 220, 28, 8); ctx.fill(); ctx.stroke();
+    // ── HEART (1 per death, wallet) ──
+    ctx.globalAlpha = heartReady ? 0.45 : !walletAddress ? 0.28 : heartUsed ? 0.35 : 1;
+    ctx.fillStyle = heartReady ? '#FF174428' : heartUsed||!walletAddress ? '#ffffff08' : '#FF174418';
+    ctx.strokeStyle = heartReady ? '#FF6680' : heartUsed||!walletAddress ? '#ffffff22' : '#FF1744bb';
+    ctx.lineWidth = heartReady ? 2 : 1.5;
+    ctx.beginPath(); ctx.roundRect(W/2-112, H/2+128, 224, 28, 8); ctx.fill(); ctx.stroke();
     ctx.font='bold 10px Courier New'; ctx.textBaseline='middle';
-    ctx.fillStyle = !walletAddress ? '#ffffff33' : heartUsed ? '#ffffff44' : '#FF6680';
-    ctx.fillText(!walletAddress?'♥  CONNECT WALLET TO USE':heartUsed?'♥  HEART ALREADY USED':'♥  +1 EXTRA HEART  ·  USDC $0.25', W/2, H/2+144);
+    ctx.fillStyle = heartReady ? '#FF6680' : !walletAddress ? '#ffffff33' : heartUsed ? '#ffffff44' : '#FF6680';
+    ctx.fillText(heartReady ? '♥  +1 HEART READY ✓' : !walletAddress ? '♥  CONNECT WALLET TO USE' : heartUsed ? '♥  ALREADY BOUGHT' : '♥  +1 EXTRA HEART  ·  USDC $0.25', W/2, H/2+142);
     ctx.globalAlpha=1; ctx.textBaseline='alphabetic';
 
-    // ── Share ──
-    ctx.fillStyle='#ffffff12'; ctx.fillRect(W/2-100, H/2+164, 200, 1);
-    var _shareCol2 = shareFlash>0 ? '#00CC66' : '#0052FF';
-    ctx.fillStyle=_shareCol2+'22';
-    ctx.beginPath(); ctx.roundRect(W/2-74, H/2+170, 148, 28, 8); ctx.fill();
-    ctx.strokeStyle=_shareCol2+'88'; ctx.lineWidth=1; ctx.stroke();
-    ctx.fillStyle=shareFlash>0?'#00FF88':'#00D4FF';
-    ctx.font='bold 11px Courier New'; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText(shareFlash>0?'✓ COPIED!':'🔗 SHARE', W/2, H/2+184);
-    ctx.textBaseline='alphabetic';
-
-    // ── Play Again ──
-    var pulse2 = 0.97+0.03*Math.sin(frame*0.12);
-    ctx.save(); ctx.translate(W/2, H/2+210+14); ctx.scale(pulse2, pulse2);
-    ctx.fillStyle='#0052FF';
-    ctx.beginPath(); ctx.roundRect(-78,-14,156,28,10); ctx.fill();
-    ctx.strokeStyle='#00D4FF55'; ctx.lineWidth=1.5; ctx.stroke();
-    ctx.font='bold 12px Courier New'; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillStyle='#fff'; ctx.fillText('▶  NEW GAME', 0, -3);
-    ctx.font='8px Courier New'; ctx.fillStyle='#ffffff88';
-    ctx.fillText('starts from the beginning', 0, 9);
-    ctx.textBaseline='alphabetic'; ctx.restore();
-
-    // ── Menu ──
-    ctx.fillStyle='#ffffff0e';
-    ctx.beginPath(); ctx.roundRect(W/2-55, H/2+250, 110, 22, 8); ctx.fill();
-    ctx.strokeStyle='#0052FF44'; ctx.lineWidth=1; ctx.stroke();
-    ctx.font='bold 10px Courier New'; ctx.fillStyle='#99bbee';
+    // ── CONTINUE (big — pulsing green when items ready) ──
+    var _anyReady = checkpointReady || heartReady;
+    ctx.fillStyle='#ffffff14'; ctx.fillRect(W/2-100, H/2+162, 200, 1);
+    var _cPulse = _anyReady ? 0.97+0.03*Math.sin(frame*0.18) : 1;
+    ctx.save(); ctx.translate(W/2, H/2+184); ctx.scale(_cPulse, _cPulse);
+    ctx.fillStyle = _anyReady ? '#006633' : '#0a1520';
+    ctx.beginPath(); ctx.roundRect(-108,-18,216,36,12); ctx.fill();
+    ctx.strokeStyle = _anyReady ? '#00FF88' : '#ffffff22'; ctx.lineWidth = _anyReady ? 2 : 1;
+    ctx.stroke();
+    if(_anyReady){ ctx.shadowColor='#00FF88'; ctx.shadowBlur=14; }
+    ctx.font='bold 14px Courier New'; ctx.fillStyle = _anyReady ? '#ffffff' : '#ffffff44';
     ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText('⌂  MENU', W/2, H/2+261);
+    ctx.fillText(_anyReady ? '▶▶  CONTINUE WITH ITEMS' : '▶▶  CONTINUE', 0, 0);
+    ctx.shadowBlur=0; ctx.textBaseline='alphabetic'; ctx.restore();
+
+    // ── SHARE (compact) ──
+    ctx.fillStyle='#ffffff10'; ctx.fillRect(W/2-100, H/2+208, 200, 1);
+    var _shareCol2 = shareFlash>0 ? '#00CC66' : '#335588';
+    ctx.fillStyle=_shareCol2+'18';
+    ctx.beginPath(); ctx.roundRect(W/2-74, H/2+212, 148, 22, 8); ctx.fill();
+    ctx.strokeStyle=_shareCol2+'55'; ctx.lineWidth=1; ctx.stroke();
+    ctx.fillStyle=shareFlash>0?'#00FF88':'#7799bb';
+    ctx.font='bold 10px Courier New'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(shareFlash>0?'✓ COPIED!':'🔗 SHARE', W/2, H/2+223);
     ctx.textBaseline='alphabetic';
+
+    // ── NEW GAME ──
+    ctx.fillStyle='#0052FF20';
+    ctx.beginPath(); ctx.roundRect(W/2-80, H/2+238, 160, 26, 10); ctx.fill();
+    ctx.strokeStyle='#0052FF66'; ctx.lineWidth=1.5; ctx.stroke();
+    ctx.font='bold 11px Courier New'; ctx.fillStyle='#88aadd';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('▶  NEW GAME', W/2, H/2+251);
+    ctx.textBaseline='alphabetic';
+
+    // ── MENU (small, close to NEW GAME) ──
+    ctx.font='9px Courier New'; ctx.fillStyle='#ffffff30';
+    ctx.fillText('⌂  MENU', W/2, H/2+272);
 
     if(shareFlash>0) shareFlash--;
-
-    // ── Wallet section — dentro do canvas (H/2+272=572, ends at 592, canvas=600) ──
-    var wdy = H/2+272;
+    // Wallet info
     if(walletAddress){
-      ctx.fillStyle='#00FF8814'; ctx.strokeStyle='#00FF8844'; ctx.lineWidth=1;
-      ctx.beginPath(); ctx.roundRect(W/2-108,wdy,216,22,6); ctx.fill(); ctx.stroke();
-      ctx.fillStyle='#00FF88'; ctx.font='bold 8px Courier New'; ctx.textAlign='center'; ctx.textBaseline='middle';
-      ctx.fillText('⛓  '+walletShort+'  ·  tap to disconnect', W/2, wdy+11);
-      ctx.textBaseline='alphabetic';
-    } else {
-      ctx.fillStyle='#0052FF14'; ctx.strokeStyle='#0052FF44'; ctx.lineWidth=1;
-      ctx.beginPath(); ctx.roundRect(W/2-108,wdy,216,22,6); ctx.fill(); ctx.stroke();
-      ctx.fillStyle='#00D4FF'; ctx.font='bold 8px Courier New'; ctx.textAlign='center'; ctx.textBaseline='middle';
-      ctx.fillText('⛓  CONNECT WALLET  →  SAVE ON BASE', W/2, wdy+11);
+      ctx.fillStyle='#00FF8815'; ctx.strokeStyle='#00FF8830'; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.roundRect(W/2-108,H/2+278,216,16,5); ctx.fill(); ctx.stroke();
+      ctx.fillStyle='#00FF8866'; ctx.font='8px Courier New'; ctx.textBaseline='middle';
+      ctx.fillText('⛓ '+walletShort+' · tap to disconnect', W/2, H/2+286);
       ctx.textBaseline='alphabetic';
     }
-    deathOfferTimer = 0; // timer removido — botões sempre visíveis no card
+    deathOfferTimer = 0;
   }
   ctx.restore();
   if(screenShake>0)screenShake--;
@@ -6893,7 +6895,7 @@ function loop(ts) {
     ctx.fillText('PAUSED', W/2, H/2+22); ctx.shadowBlur=0;
     // Hint
     ctx.font='11px Courier New'; ctx.fillStyle='#ffffff66';
-    ctx.fillText('tap anywhere to continue', W/2, H/2+46);
+    ctx.fillText('tap anywhere to resume', W/2, H/2+46);
     ctx.textBaseline='alphabetic';
   }
   if(hitFlash>0){ctx.globalAlpha=(hitFlash/8)*.38;ctx.fillStyle='#ff1133';ctx.fillRect(0,0,W,H);ctx.globalAlpha=1;hitFlash--;}
@@ -7068,60 +7070,65 @@ function handleClick(ex, ey) {
     return;
   }
 
-  // ── DEAD screen buttons — tap zones expandidas para 44px (Apple HIG)
-  // Visuais mantidos em 28px; zones de toque alargadas simetricamente
+  // ── DEAD screen — new flow: buy items THEN press CONTINUE
+  // CP=H/2+96..124  HT=H/2+128..156  CONT=H/2+166..202  SH=H/2+208..234  NG=H/2+234..264  MN=H/2+260..278
   if(gameState === 'dead') {
-    // ── CHECKPOINT — zona 48px centrada no botão visual ──
-    if(cx>=W/2-112&&cx<=W/2+112&&cy>=H/2+88&&cy<=H/2+136){
-      if(!checkpointUsed){
+    // ── CHECKPOINT button ──
+    if(cx>=W/2-114&&cx<=W/2+114&&cy>=H/2+88&&cy<=H/2+128){
+      if(!checkpointReady && !checkpointUsed){
         if(checkpointStock > 0){
           checkpointStock--; _ls.set('bleuCheckpoint',checkpointStock);
-          checkpointUsed=true; dizzyTimer=90;
-          lives=3; invincible=240; bleu.y=H/2; bleu.vy=0;
-          gameState='playing'; startMusic(getPhaseIdx());
-          screenShake=6; hitFlash=3;
-          spawnParticles(W/2,H/2,'#FFD700',18); spawnParticles(W/2,H/2,'#00D4FF',10);
-          beep(440,880,0.3,'sine',0.18);
-          [660,880,1047].forEach(function(f,i){setTimeout(function(){beep(f,f,0.12,'sine',0.1);},i*70);});
+          checkpointReady=true;
+          beep(523,880,0.18,'sine',0.14); spawnParticles(W/2,H/2,'#00FF88',10);
         } else if(walletAddress){
           sendUSDCPurchase(USDC_CHECKPOINT, function(){
-            checkpointUsed=true; dizzyTimer=90;
-            lives=1; invincible=220; bleu.y=H/2; bleu.vy=0;
-            gameState='playing'; startMusic(getPhaseIdx());
-            screenShake=6;
-            spawnParticles(W/2,H/2,'#FFD700',18);
-            beep(440,880,0.3,'sine',0.18);
+            checkpointReady=true;
+            beep(523,880,0.18,'sine',0.14); spawnParticles(W/2,H/2,'#00FF88',10);
           });
         }
       }
       return;
     }
-    // ── CORAÇÃO — zona 48px, requer wallet ──
-    if(walletAddress&&!heartUsed&&cx>=W/2-112&&cx<=W/2+112&&cy>=H/2+120&&cy<=H/2+168){
+    // ── HEART button (1 per death, wallet required) ──
+    if(walletAddress&&!heartUsed&&!heartReady&&cx>=W/2-114&&cx<=W/2+114&&cy>=H/2+120&&cy<=H/2+162){
       sendUSDCPurchase(USDC_HEART, function(){
-        heartUsed=true;
-        lives=1; invincible=180; bleu.y=H/2; bleu.vy=0;
-        gameState='playing'; startMusic(getPhaseIdx());
-        spawnParticles(W/2,H/2,'#FF6680',14);
-        beep(523,880,0.2,'sine',0.14);
+        heartReady=true; heartUsed=true;
+        beep(523,880,0.18,'sine',0.14); spawnParticles(W/2,H/2,'#FF6680',10);
       });
       return;
     }
-    // ── SHARE — zona 44px ──
-    if(cx>=W/2-80&&cx<=W/2+80&&cy>=H/2+160&&cy<=H/2+210){
+    // ── CONTINUE button — applies all purchased items and resumes ──
+    if(cx>=W/2-110&&cx<=W/2+110&&cy>=H/2+162&&cy<=H/2+206){
+      if(checkpointReady||heartReady){
+        // Apply checkpoint: 3 lives + invincibility
+        if(checkpointReady){ checkpointUsed=true; lives=3; invincible=240; dizzyTimer=90; checkpointFlash=90; }
+        // Apply heart on top
+        if(heartReady){ lives=Math.min(lives+1,5); if(!checkpointReady){ invincible=180; } }
+        checkpointReady=false; heartReady=false;
+        bleu.y=H/2; bleu.vy=0; bleu.vx=0;
+        gameState='playing'; startMusic(getPhaseIdx());
+        screenShake=8; hitFlash=4;
+        spawnParticles(W/2,H/2,'#FFD700',20); spawnParticles(W/2,H/2,'#00D4FF',12); spawnParticles(W/2,H/2,'#ffffff',8);
+        beep(440,880,0.3,'sine',0.18);
+        [660,880,1047].forEach(function(f,i){setTimeout(function(){beep(f,f,0.12,'sine',0.1);},i*70);});
+        if(navigator.vibrate) navigator.vibrate([20,10,60,10,120]);
+      }
+      // If nothing purchased: CONTINUE is dormant (player should buy something first)
+      return;
+    }
+    // ── SHARE ──
+    if(cx>=W/2-78&&cx<=W/2+78&&cy>=H/2+206&&cy<=H/2+236){
       var pv2=PHASE_VISUALS[runPhase]||PHASE_VISUALS[0];
       var shareText='🎮 Flapy Bleu\nScore: '+score+' | '+pv2.name+'\n🔵 https://flapy-bleu.vercel.app';
       if(navigator.share){ navigator.share({title:'Flapy Bleu',text:shareText,url:'https://flapy-bleu.vercel.app'}); }
       else { try{ navigator.clipboard.writeText(shareText); }catch(e){} }
       shareFlash=90; return;
     }
-    // ── WALLET — H/2+272 a H/2+294 (dentro do canvas) ──
-    if(cx>=W/2-112&&cx<=W/2+112&&cy>=H/2+264&&cy<=H/2+300){
-      if(walletAddress) disconnectWallet();
-      else connectWallet();
-      return;
+    // ── WALLET disconnect/connect ──
+    if(walletAddress&&cx>=W/2-110&&cx<=W/2+110&&cy>=H/2+274&&cy<=H/2+296){
+      disconnectWallet(); return;
     }
-    // ── Qualquer outro toque → NEW GAME ──
+    // ── NEW GAME / MENU / any other tap → reset ──
     menuTapReady=false; resetGame(); stopMusic();
     beep(440,660,0.08,'sine',0.1);
     return;
