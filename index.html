@@ -1234,19 +1234,7 @@ function drawShopTab() {
     ctx.fillStyle=_bStroke; ctx.font='bold 13px Courier New';
     ctx.textAlign='center'; ctx.textBaseline='middle';
     ctx.fillText(_bLabel, W/2, _btnY+17); ctx.textBaseline='alphabetic';
-    // ── USDC button — ACIMA do botão coins (evita sobreposição com items row em y=414) ──
-    // Posição: _btnY-38 (333px com CHAR_PREVIEW_Y=225), click handler usa mesma constante
-    if(walletAddress && !_selOwned && shopSelColor>0){
-      var _up=USDC_COLOR_PRICES[shopChar]&&USDC_COLOR_PRICES[shopChar][shopSelColor];
-      if(_up){
-        var _uY=_btnY-38; // acima do botão de coins
-        ctx.fillStyle='#0052FF1a'; ctx.strokeStyle='#0052FFaa'; ctx.lineWidth=1.5;
-        ctx.beginPath(); ctx.roundRect(W/2-76,_uY,152,32,10); ctx.fill(); ctx.stroke();
-        ctx.fillStyle='#4499ff'; ctx.font='bold 11px Courier New';
-        ctx.textAlign='center'; ctx.textBaseline='middle';
-        ctx.fillText('⛓ PAY USDC '+fmtUSDC(_up), W/2, _uY+16); ctx.textBaseline='alphabetic';
-      }
-    }
+    // Skins unlockáveis apenas com moedas do jogo (sem USDC)
   }
 
   // ── Função de overlay de personagem bloqueado ──
@@ -1291,20 +1279,15 @@ function drawShopTab() {
     ctx.font = '9px Courier New'; ctx.fillStyle = '#ffffff33';
     ctx.fillText('your best: NG+' + bestPrestige + ' / NG+' + _need + ' required', W/2, 366);
 
-    // Botão USDC (caminho alternativo — skip do requisito)
-    if(walletAddress){
-      ctx.fillStyle = '#0052FF18'; ctx.strokeStyle = '#0052FFaa'; ctx.lineWidth = 1.5;
-      ctx.beginPath(); ctx.roundRect(W/2-90, 382, 180, 36, 10); ctx.fill(); ctx.stroke();
-      ctx.fillStyle = '#66aaff'; ctx.font = 'bold 11px Courier New';
-      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText('⛓  UNLOCK · USDC $0.50', W/2, 400);
-      ctx.textBaseline = 'alphabetic';
-      ctx.font = '8px Courier New'; ctx.fillStyle = '#ffffff33';
-      ctx.fillText('permanent unlock via Base Network', W/2, 424);
-    } else {
-      ctx.font = '8px Courier New'; ctx.fillStyle = '#ffffff22';
-      ctx.fillText('connect wallet to unlock via USDC', W/2, 400);
-    }
+    // Dica de gameplay — sem USDC, só conquista
+    ctx.fillStyle = '#FFD70022'; ctx.strokeStyle = '#FFD70055'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.roundRect(W/2-90, 382, 180, 36, 10); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#FFD700aa'; ctx.font = 'bold 11px Courier New';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('🏆  EARN IN GAMEPLAY', W/2, 396);
+    ctx.textBaseline = 'alphabetic';
+    ctx.font = '8px Courier New'; ctx.fillStyle = '#ffffff33';
+    ctx.fillText('complete loops to unlock · no purchase needed', W/2, 424);
   }
 
   // ── Overlays de personagens bloqueados ──
@@ -7431,15 +7414,7 @@ function handleClick(ex, ey) {
       // Action button
       var _btnY2=CHAR_PREVIEW_Y+146;
       if(cx>=W/2-76&&cx<=W/2+76&&cy>=_btnY2&&cy<=_btnY2+34){ shopBuyOrEquip(); return; }
-      // USDC color buy button
-      if(walletAddress){
-        var _uBtnY=_btnY2-38; // espelha o draw — botão ACIMA do coins BUY
-        var _upC=USDC_COLOR_PRICES[shopChar]&&USDC_COLOR_PRICES[shopChar][shopSelColor];
-        if(_upC&&cx>=W/2-76&&cx<=W/2+76&&cy>=_uBtnY&&cy<=_uBtnY+32){
-          var _ownedC=isColorOwned(shopChar,shopSelColor);
-          if(!_ownedC&&shopSelColor>0){ buyColorWithUSDC(shopChar,shopSelColor); return; }
-        }
-      }
+      // Skins compradas só com moedas — sem USDC
       // ── ITEMS ROW — 4 cards (shield/slowmo/heart/checkpoint) — só se char desbloqueado ──
       var _charLockedClick=(shopChar===1&&!gengarUnlocked)||(shopChar===2&&!wormUnlocked)||(shopChar===3&&!alienUnlocked);
       var _ir2={y:414,w:94,h:112,gap:5};
@@ -7477,10 +7452,7 @@ function handleClick(ex, ey) {
           return;
         }
       }
-      // ── USDC unlock — área do botão (y 382-418, x ±90 do centro) ──
-      if(!gengarUnlocked && shopChar===1 && walletAddress && cx>=W/2-90 && cx<=W/2+90 && cy>=382 && cy<=418){ unlockCharWithUSDC(1); return; }
-      if(!wormUnlocked   && shopChar===2 && walletAddress && cx>=W/2-90 && cx<=W/2+90 && cy>=382 && cy<=418){ unlockCharWithUSDC(2); return; }
-      if(!alienUnlocked  && shopChar===3 && walletAddress && cx>=W/2-90 && cx<=W/2+90 && cy>=382 && cy<=418){ unlockCharWithUSDC(3); return; }
+      // Personagens só desbloqueáveis por gameplay (NG+) — sem USDC
     }
     // Market tab: somente informações — sem compras aqui
     // Leaderboard tab: badge wallet toggle (conecta ou desconecta com 1 toque)
