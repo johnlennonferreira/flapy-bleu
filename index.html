@@ -4561,22 +4561,24 @@ function drawCastleObstacle(p) {
   var spkC = '#707090';
   var bw = p.bodyW;
 
-  // All brick lines in ONE stroke call per section
   function drawBricks(x, y, w, h) {
     ctx.fillStyle = stM; ctx.fillRect(x, y, w, h);
-    ctx.strokeStyle = mortar; ctx.lineWidth = 0.8;
-    ctx.beginPath();
-    var bH = 14; // bigger bricks = fewer lines
-    for(var r=0; r*bH<h; r++){
-      var rowY=y+r*bH, offX=r%2===0?0:10;
-      ctx.moveTo(x,rowY); ctx.lineTo(x+w,rowY);
-      for(var bx4=x+offX; bx4<x+w; bx4+=20){
-        ctx.moveTo(bx4,rowY); ctx.lineTo(bx4,Math.min(rowY+bH,y+h));
+    if(!_isMobile){
+      // Brick lines — batch into single stroke call
+      ctx.strokeStyle = mortar; ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      var bH = 14;
+      for(var r=0; r*bH<h; r++){
+        var rowY=y+r*bH, offX=r%2===0?0:10;
+        ctx.moveTo(x,rowY); ctx.lineTo(x+w,rowY);
+        for(var bx4=x+offX; bx4<x+w; bx4+=20){
+          ctx.moveTo(bx4,rowY); ctx.lineTo(bx4,Math.min(rowY+bH,y+h));
+        }
       }
+      ctx.stroke();
+      ctx.fillStyle=stD+'aa';
+      ctx.fillRect(x,y,3,h); ctx.fillRect(x+w-3,y,3,h);
     }
-    ctx.stroke(); // single call for ALL lines
-    ctx.fillStyle=stD+'aa';
-    ctx.fillRect(x,y,3,h); ctx.fillRect(x+w-3,y,3,h);
   }
 
   // Chains → simple flat bars (no ellipses, no shadowBlur)
@@ -4610,18 +4612,15 @@ function drawCastleObstacle(p) {
     ctx.fill();
   }
 
-  // TOP obstacle
   drawBricks(p.x, 0, bw, p.topH);
   drawSideBars(2, p.topH-14);
   drawSpikeBattlement(p.x, p.topH, -1);
-  ctx.strokeStyle='#9966cc66'; ctx.lineWidth=1.5;
-  ctx.strokeRect(p.x, 0, bw, p.topH);
+  if(!_isMobile){ ctx.strokeStyle='#9966cc66'; ctx.lineWidth=1.5; ctx.strokeRect(p.x,0,bw,p.topH); }
 
-  // BOTTOM obstacle
   drawBricks(p.x, p.botY, bw, H-80-p.botY);
   drawSideBars(p.botY+14, H-82);
   drawSpikeBattlement(p.x, p.botY, 1);
-  ctx.strokeRect(p.x, p.botY, bw, H-80-p.botY);
+  if(!_isMobile){ ctx.strokeRect(p.x, p.botY, bw, H-80-p.botY); }
 }
 
 // ─── DRAW LASER OBSTACLE (phase 6) — energy beam ──
@@ -4633,34 +4632,24 @@ function drawLaserObstacle(p) {
 
   function drawBeam(y1, y2) {
     var h = y2 - y1;
-    // Dark energy conduit behind beam
     ctx.fillStyle = '#080814';
     ctx.fillRect(p.x, y1, p.bodyW, h);
-    // Outer soft glow
-    ctx.shadowColor = lc; ctx.shadowBlur = 24 * pulse;
-    ctx.fillStyle = lc + '28';
-    ctx.fillRect(p.x, y1, p.bodyW, h);
-    // Mid glow
-    ctx.fillStyle = lc + '66';
-    ctx.fillRect(cx - 12, y1, 24, h);
-    // Inner bright core
-    ctx.fillStyle = lc + 'cc';
-    ctx.fillRect(cx - 5, y1, 10, h);
-    // White hot center
-    ctx.fillStyle = '#ffffffcc';
-    ctx.fillRect(cx - 2, y1, 4, h);
-    ctx.shadowBlur = 0;
-    // Moving scan line
-    var scanPos = y1 + ((frame * 4 + y1) % h);
-    ctx.fillStyle = '#ffffff33';
-    ctx.fillRect(p.x, scanPos, p.bodyW, 2);
-    // Energy emitter cap
-    ctx.shadowColor = lc; ctx.shadowBlur = 30 * pulse;
-    ctx.fillStyle = '#ffffff';
-    ctx.beginPath(); ctx.arc(cx, y1 === 0 ? 6 : y2 - 6, 7, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle = lc;
-    ctx.beginPath(); ctx.arc(cx, y1 === 0 ? 6 : y2 - 6, 4, 0, Math.PI*2); ctx.fill();
-    ctx.shadowBlur = 0;
+    if(!_isMobile){ ctx.shadowColor=lc; ctx.shadowBlur=24*pulse; }
+    ctx.fillStyle = lc + '28'; ctx.fillRect(p.x, y1, p.bodyW, h);
+    ctx.fillStyle = lc + '66'; ctx.fillRect(cx-12, y1, 24, h);
+    ctx.fillStyle = lc + 'cc'; ctx.fillRect(cx-5, y1, 10, h);
+    ctx.fillStyle = '#ffffffcc'; ctx.fillRect(cx-2, y1, 4, h);
+    if(!_isMobile){ ctx.shadowBlur=0; }
+    if(!_isMobile){
+      var scanPos = y1 + ((frame*4+y1) % h);
+      ctx.fillStyle='#ffffff33'; ctx.fillRect(p.x, scanPos, p.bodyW, 2);
+    }
+    if(!_isMobile){ ctx.shadowColor=lc; ctx.shadowBlur=30*pulse; }
+    ctx.fillStyle='#ffffff';
+    ctx.beginPath(); ctx.arc(cx, y1===0?6:y2-6, 7, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle=lc;
+    ctx.beginPath(); ctx.arc(cx, y1===0?6:y2-6, 4, 0, Math.PI*2); ctx.fill();
+    if(!_isMobile){ ctx.shadowBlur=0; }
   }
 
   drawBeam(0, p.topH);
@@ -5193,9 +5182,9 @@ function drawAsteroids() {
                : ctx.lineTo(Math.cos(aang)*ar, Math.sin(aang)*ar);
     }
     ctx.closePath();
-    ctx.fillStyle = _astGrads[ai3]; // cached gradient
+    ctx.fillStyle = _astGrads[ai3];
     ctx.fill();
-    ctx.strokeStyle = '#998877'; ctx.lineWidth = 1; ctx.stroke();
+    if(!_isMobile){ ctx.strokeStyle='#998877'; ctx.lineWidth=1; ctx.stroke(); }
     // Crater marks — skip on mobile
     if(!_isMobile) {
       ctx.fillStyle = '#443322aa';
@@ -5410,18 +5399,18 @@ function drawSpacePlanetsBg() {
       ctx.fillStyle = plg;
     }
     ctx.beginPath(); ctx.arc(plx, pl.y, pl.r, 0, Math.PI*2); ctx.fill();
-    if(pl.ring) {
-      ctx.strokeStyle = '#aa886655'; ctx.lineWidth = 5;
-      ctx.save();
-      ctx.translate(plx, pl.y);
-      ctx.scale(1, 0.3);
-      ctx.beginPath(); ctx.arc(0, 0, pl.r*1.85, 0, Math.PI*2); ctx.stroke();
-      ctx.restore();
+    if(!_isMobile){
+      if(pl.ring){
+        ctx.strokeStyle='#aa886655'; ctx.lineWidth=5;
+        ctx.save(); ctx.translate(plx,pl.y); ctx.scale(1,0.3);
+        ctx.beginPath(); ctx.arc(0,0,pl.r*1.85,0,Math.PI*2); ctx.stroke();
+        ctx.restore();
+      }
+      ctx.shadowColor=pl.c2; ctx.shadowBlur=12;
+      ctx.strokeStyle=pl.c2+'55'; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.arc(plx,pl.y,pl.r,0,Math.PI*2); ctx.stroke();
+      ctx.shadowBlur=0;
     }
-    ctx.shadowColor = pl.c2; ctx.shadowBlur = 12;
-    ctx.strokeStyle = pl.c2 + '55'; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.arc(plx, pl.y, pl.r, 0, Math.PI*2); ctx.stroke();
-    ctx.shadowBlur = 0;
   }
 }
 
