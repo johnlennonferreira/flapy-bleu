@@ -1167,14 +1167,15 @@ function drawShopTab() {
     ctx.fillStyle=_bStroke; ctx.font='bold 13px Courier New';
     ctx.textAlign='center'; ctx.textBaseline='middle';
     ctx.fillText(_bLabel, W/2, _btnY+17); ctx.textBaseline='alphabetic';
-    // ── USDC button (wallet conectada + item não comprado) ──
+    // ── USDC button — ACIMA do botão coins (evita sobreposição com items row em y=414) ──
+    // Posição: _btnY-38 (333px com CHAR_PREVIEW_Y=225), click handler usa mesma constante
     if(walletAddress && !_selOwned && shopSelColor>0){
       var _up=USDC_COLOR_PRICES[shopChar]&&USDC_COLOR_PRICES[shopChar][shopSelColor];
       if(_up){
-        var _uY=_btnY+40;
-        ctx.fillStyle='#0052FF1a'; ctx.strokeStyle='#0052FF'; ctx.lineWidth=1.5;
+        var _uY=_btnY-38; // acima do botão de coins
+        ctx.fillStyle='#0052FF1a'; ctx.strokeStyle='#0052FFaa'; ctx.lineWidth=1.5;
         ctx.beginPath(); ctx.roundRect(W/2-76,_uY,152,32,10); ctx.fill(); ctx.stroke();
-        ctx.fillStyle='#4499ff'; ctx.font='bold 12px Courier New';
+        ctx.fillStyle='#4499ff'; ctx.font='bold 11px Courier New';
         ctx.textAlign='center'; ctx.textBaseline='middle';
         ctx.fillText('⛓ PAY USDC '+fmtUSDC(_up), W/2, _uY+16); ctx.textBaseline='alphabetic';
       }
@@ -1814,7 +1815,7 @@ var bestPhaseEver=parseInt(_ls.get('bleuBestPhase','0'));
 var shareFlash=0; // feedback do botão compartilhar
 var deadTapCount=0; // exige 3 toques para reiniciar (anti-acidente)
 var menuTapReady=true; // false após morte definitiva — exige 2 toques para iniciar (anti-acidente)
-var prestigeLevel=0; // NG+ prestige — sempre 0 ao iniciar; só sobe dentro da run ao completar prestige
+var prestigeLevel=0; // NG+ prestige — herdado de bestPrestige em resetGame(); incrementa ao completar loop
 var bestPrestige=parseInt(_ls.get('bleuBestPrestige','0')); // máximo histórico (leaderboard)
 var prestigeAnim=0;    // frame counter para tela prestige
 var legendaryAnim=0;   // frame counter para tela legendary unlock (NG+5 secreto)
@@ -2104,7 +2105,7 @@ function resetGame() {
   phaseShopPending = false;
   shieldItems = []; shieldBreak = 0;
   runPhase = 0; shareFlash = 0; bleuAngle = 0; bleuFlapTimer = 0; phantomFartParticles = []; deadTapCount = 0;
-  prestigeLevel = 0; // cada run começa do zero — sem NG+ herdado
+  prestigeLevel = bestPrestige; // run herda bestPrestige — completar loop dá bestPrestige+1
   // lastScore mantido — rank tab mostra última pontuação da run anterior
 }
 resetGame();
@@ -7013,7 +7014,7 @@ function handleClick(ex, ey) {
       if(cx>=W/2-76&&cx<=W/2+76&&cy>=_btnY2&&cy<=_btnY2+34){ shopBuyOrEquip(); return; }
       // USDC color buy button
       if(walletAddress){
-        var _uBtnY=_btnY2+40;
+        var _uBtnY=_btnY2-38; // espelha o draw — botão ACIMA do coins BUY
         var _upC=USDC_COLOR_PRICES[shopChar]&&USDC_COLOR_PRICES[shopChar][shopSelColor];
         if(_upC&&cx>=W/2-76&&cx<=W/2+76&&cy>=_uBtnY&&cy<=_uBtnY+32){
           var _ownedC=isColorOwned(shopChar,shopSelColor);
