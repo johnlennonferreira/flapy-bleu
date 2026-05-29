@@ -1338,13 +1338,13 @@ function drawShopTab() {
       { label:'SHIELD',     price:'🐉 80 coins', col:'#00FF88',
         canBuy: coinCount>=80 && shieldStock<3,
         maxed: shieldStock>=3, stock: shieldStock+'/3' },
-      { label:'SLOW-MO',    price:'USDC $0.25',  col:'#00D4FF',
+      { label:'SLOW-MO',    price:'USDC $0.10',  col:'#00D4FF',
         canBuy: !!walletAddress && slowMoStock < 5,
         maxed: slowMoStock >= 5, stock: slowMoStock>0?'x'+slowMoStock+'/5':'' },
-      { label:'+HEART',      price:'USDC $0.25',  col:'#FF6680',
+      { label:'+HEART',      price:'USDC $0.19',  col:'#FF6680',
         canBuy: !!walletAddress && extraHeartStock<2,
         maxed: extraHeartStock>=2, stock: extraHeartStock>0?'x'+extraHeartStock:'' },
-      { label:'CHECKPOINT', price:'USDC $0.50',  col:'#FFD700',
+      { label:'CHECKPOINT', price:'USDC $0.35',  col:'#FFD700',
         canBuy: !!walletAddress && checkpointStock<1,
         maxed: checkpointStock>=1, stock: checkpointStock>0?'✓':'' }
     ];
@@ -1987,9 +1987,9 @@ var USDC_COLOR_PRICES = [
   [0, 130000, 190000, 270000, 380000],  // Alien:   free, $0.13, $0.19, $0.27, $0.38
 ];
 var USDC_CHAR_UNLOCK  = 500000; // $0.50 para desbloquear personagem
-var USDC_SLOWMO       = 250000; // $0.25 elixir slow-mo
-var USDC_HEART        = 250000; // $0.25 coração extra
-var USDC_CHECKPOINT   = 500000; // $0.50 carta de checkpoint
+var USDC_SLOWMO       =  99000; // $0.099 ≈ $0.10 elixir slow-mo (impulso rápido, acessível)
+var USDC_HEART        = 190000; // $0.19 coração extra (salva uma run)
+var USDC_CHECKPOINT   = 350000; // $0.35 carta de checkpoint (mais poderosa, 3 vidas)
 function fmtUSDC(a6){ return (TESTNET?'[TEST] ':'')+'$'+(a6/1e6).toFixed(2); }
 
 // ─── WALLET ──────────────────────────────────────────────────
