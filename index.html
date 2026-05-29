@@ -2128,28 +2128,34 @@ function sendUSDCPurchase(usdcAmount6, onSuccess) {
     }
     beep(220,150,0.12,'sawtooth',0.08); return;
   }
+  var _done = false; // guard: onSuccess/onErr fire only once
   var _onTxErr = function(err){
-    console.warn('USDC tx failed:', err);
-    _purchasePending=false;  // sempre reseta — nunca fica preso em PROCESSING
+    if(_done) return; _done=true;
+    console.warn('USDC tx cancelled/failed:', err);
+    _purchasePending=false;
     beep(220,150,0.12,'sawtooth',0.08);
   };
+  // Safety timeout: if wallet hangs (common on mobile) auto-reset after 30s
+  var _safetyTimer = setTimeout(function(){
+    if(!_done){ _done=true; _purchasePending=false; beep(220,150,0.08,'sawtooth',0.05); }
+  }, 30000);
   ensureBaseNetwork(function(){
-    // ERC-20 transfer(address,uint256) selector = 0xa9059cbb
     var to32  = TREASURY_WALLET.replace('0x','').toLowerCase().padStart(64,'0');
     var amt32 = usdcAmount6.toString(16).padStart(64,'0');
     var data  = '0xa9059cbb'+to32+amt32;
-    // Append Builder Code suffix para o leaderboard
     if(BUILDER_CODE_HEX) data += BUILDER_CODE_HEX.replace(/^0x/,'');
     window.ethereum.request({method:'eth_sendTransaction',params:[{
       from:walletAddress, to:USDC_CONTRACT, data:data
     }]}).then(function(txHash){
+      if(_done) return; _done=true;
+      clearTimeout(_safetyTimer);
       beep(523,1047,0.28,'sine',0.15);
       [659,784,1047].forEach(function(f,i){setTimeout(function(){beep(f,f,0.12,'sine',0.1);},i*70);});
       spawnParticles(W/2,H/2,'#00FF88',18); spawnParticles(W/2,H/2,'#0052FF',8);
       if(navigator.vibrate) navigator.vibrate([30,15,80]);
       onSuccess(txHash);
-    }).catch(_onTxErr);
-  }, _onTxErr);
+    }).catch(function(err){ clearTimeout(_safetyTimer); _onTxErr(err); });
+  }, function(err){ clearTimeout(_safetyTimer); _onTxErr(err); });
 }
 
 function buyColorWithUSDC(charIdx, colorIdx) {
