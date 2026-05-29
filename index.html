@@ -6055,8 +6055,8 @@ function loop(ts) {
         if(navigator.vibrate) navigator.vibrate([30,20,60]);
       }
     }
-    // ─── FIRE STAR — extremamente rara (≈25× mais rara que a azul) ──────
-    if(frame % 1260 === 630 && Math.random() < 0.04 && firePower===0 && starPower===0 && fireStars.length===0 && stars.length===0){
+    // ─── FIRE STAR — only spawns when player has 2+ lives (costs 1 life on pickup) ──
+    if(frame % 1260 === 630 && Math.random() < 0.04 && firePower===0 && starPower===0 && fireStars.length===0 && stars.length===0 && lives >= 2){
       var fsy2 = lastGapCenter + (Math.random()-0.5)*70;
       fsy2 = Math.max(80, Math.min(H-110, fsy2));
       fireStars.push({x: W+18, y: fsy2});
@@ -6067,15 +6067,20 @@ function loop(ts) {
       drawFireStarItem(fireStars[fsi].x, fireStars[fsi].y);
       var fsdx=fireStars[fsi].x-bleu.x, fsdy=fireStars[fsi].y-bleu.y;
       if(Math.sqrt(fsdx*fsdx+fsdy*fsdy) < 26){
-        firePower = 390; // ~6.5s de caos (maior que estrela azul 300f)
+        // Costs 1 life — advantage is longer duration + bouncing off walls
+        lives = Math.max(1, lives - 1);
+        firePower = 540; // 9s of chaos (longer than blue star's 5s)
         fireStars.splice(fsi,1); fireStars=[]; stars=[];
-        spawnParticles(bleu.x,bleu.y,'#FF4400',20);
-        spawnParticles(bleu.x,bleu.y,'#FFaa00',14);
-        spawnParticles(bleu.x,bleu.y,'#ffffff',8);
+        spawnParticles(bleu.x,bleu.y,'#FF4400',24);
+        spawnParticles(bleu.x,bleu.y,'#FFaa00',16);
+        spawnParticles(bleu.x,bleu.y,'#ffffff',10);
         beep(180,360,0.45,'sawtooth',0.22);
-        [280,220,160].forEach(function(f,i){setTimeout(function(){beep(f,f*0.85,0.25,'sawtooth',0.14);},i*90);});
-        if(navigator.vibrate) navigator.vibrate([60,20,100,20,140]);
-        screenShake=10;
+        [280,220,160,120].forEach(function(f,i){setTimeout(function(){beep(f,f*0.85,0.25,'sawtooth',0.14);},i*90);});
+        if(navigator.vibrate) navigator.vibrate([60,20,100,20,140,30,200]);
+        screenShake=14; hitFlash=8;
+        // Show "BERSERK! -1 life" popup
+        spawnScorePopup(bleu.x, bleu.y-50, '🔥 BERSERK!');
+        spawnScorePopup(bleu.x, bleu.y-70, '-1 life');
       }
     }
     // ─── FIRE POWER — bola de fogo desgovernada ──────────────────────
@@ -6750,13 +6755,13 @@ function loop(ts) {
     ctx.fillText(_congMsg, W/2, H/2-100);
     ctx.shadowBlur = 0;
 
-    // ── painel principal — glassy card (expandido para incluir botões de continue) ──
+    // ── painel principal — card 388px (H/2-88 to H/2+300=600, full canvas) ──
     ctx.fillStyle = 'rgba(0,5,20,0.92)';
-    ctx.beginPath(); ctx.roundRect(W/2-120, H/2-88, 240, 358, 16); ctx.fill();
+    ctx.beginPath(); ctx.roundRect(W/2-120, H/2-88, 240, 388, 16); ctx.fill();
     // border glow — cor muda com performance
     var _bCol = newRecord ? '#FFD700' : score>=10 ? '#0052FF' : '#FF174466';
     ctx.strokeStyle = _bCol+'88'; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.roundRect(W/2-120, H/2-88, 240, 358, 16); ctx.stroke();
+    ctx.beginPath(); ctx.roundRect(W/2-120, H/2-88, 240, 388, 16); ctx.stroke();
     // shimmer top edge
     ctx.fillStyle='rgba(255,255,255,0.06)';
     ctx.beginPath(); ctx.roundRect(W/2-118, H/2-86, 236, 18, 8); ctx.fill();
@@ -6859,24 +6864,30 @@ function loop(ts) {
 
     // ── NEW GAME ──
     ctx.fillStyle='#0052FF20';
-    ctx.beginPath(); ctx.roundRect(W/2-80, H/2+238, 160, 26, 10); ctx.fill();
-    ctx.strokeStyle='#0052FF66'; ctx.lineWidth=1.5; ctx.stroke();
-    ctx.font='bold 11px Courier New'; ctx.fillStyle='#88aadd';
+    ctx.beginPath(); ctx.roundRect(W/2-80, H/2+238, 160, 28, 10); ctx.fill();
+    ctx.strokeStyle='#0052FF77'; ctx.lineWidth=1.5; ctx.stroke();
+    ctx.font='bold 12px Courier New'; ctx.fillStyle='#aaccff';
     ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText('▶  NEW GAME', W/2, H/2+251);
+    ctx.fillText('▶  NEW GAME', W/2, H/2+252);
     ctx.textBaseline='alphabetic';
 
-    // ── MENU (small, close to NEW GAME) ──
-    ctx.font='9px Courier New'; ctx.fillStyle='#ffffff30';
-    ctx.fillText('⌂  MENU', W/2, H/2+272);
+    // ── MENU button — visible with border ──
+    ctx.fillStyle='#ffffff10';
+    ctx.beginPath(); ctx.roundRect(W/2-60, H/2+272, 120, 24, 8); ctx.fill();
+    ctx.strokeStyle='#ffffff30'; ctx.lineWidth=1; ctx.stroke();
+    ctx.font='bold 10px Courier New'; ctx.fillStyle='#aabbcc';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('⌂  MENU', W/2, H/2+284);
+    ctx.textBaseline='alphabetic';
 
     if(shareFlash>0) shareFlash--;
-    // Wallet info
+
+    // ── Wallet info (inside card) ──
     if(walletAddress){
-      ctx.fillStyle='#00FF8815'; ctx.strokeStyle='#00FF8830'; ctx.lineWidth=1;
-      ctx.beginPath(); ctx.roundRect(W/2-108,H/2+278,216,16,5); ctx.fill(); ctx.stroke();
+      ctx.fillStyle='#00FF8818'; ctx.strokeStyle='#00FF8833'; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.roundRect(W/2-108,H/2+302,216,16,5); ctx.fill(); ctx.stroke();
       ctx.fillStyle='#00FF8866'; ctx.font='8px Courier New'; ctx.textBaseline='middle';
-      ctx.fillText('⛓ '+walletShort+' · tap to disconnect', W/2, H/2+286);
+      ctx.fillText('⛓ '+walletShort+' · tap to disconnect', W/2, H/2+310);
       ctx.textBaseline='alphabetic';
     }
     deathOfferTimer = 0;
@@ -6955,7 +6966,7 @@ function flap() {
     }
   }
   else if(gameState==='hurt')    { gameState='playing'; invincible=140; bleu.vy=-5; beep(440,880,0.1,'sine',0.15); }
-  else if(gameState==='dead')    { resetGame(); gameState='playing'; startMusic(0); bleu.vy=-7.5; bleuFlapTimer=18; }
+  else if(gameState==='dead')    { /* dead: handled by handleClick only — never auto-start */ }
   else if(gameState==='prestige') {
     if(prestigeAnim < 40) return; // aguarda animação mínima
     stopMusic(); // para _presAudio antes de qualquer transição
@@ -7124,11 +7135,17 @@ function handleClick(ex, ey) {
       else { try{ navigator.clipboard.writeText(shareText); }catch(e){} }
       shareFlash=90; return;
     }
-    // ── WALLET disconnect/connect ──
-    if(walletAddress&&cx>=W/2-110&&cx<=W/2+110&&cy>=H/2+274&&cy<=H/2+296){
+    // ── WALLET disconnect ──
+    if(walletAddress&&cx>=W/2-110&&cx<=W/2+110&&cy>=H/2+298&&cy<=H/2+322){
       disconnectWallet(); return;
     }
-    // ── NEW GAME / MENU / any other tap → reset ──
+    // ── MENU button (H/2+272 to H/2+296) → go to idle menu ──
+    if(cx>=W/2-64&&cx<=W/2+64&&cy>=H/2+268&&cy<=H/2+300){
+      menuTapReady=false; resetGame(); stopMusic();
+      beep(330,220,0.08,'sine',0.08);
+      return;
+    }
+    // ── NEW GAME (H/2+238..266) OR any other tap → reset to idle ──
     menuTapReady=false; resetGame(); stopMusic();
     beep(440,660,0.08,'sine',0.1);
     return;
