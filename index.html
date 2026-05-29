@@ -192,9 +192,9 @@ const PHASES = [
   { speed: 2.35, gapMin:106, gapMax:118, label:'PHASE 5'  }, // tensão sobe
   { speed: 2.45, gapMin:102, gapMax:114, label:'PHASE 6'  }, // território Flappy Bird
   { speed: 2.50, gapMin:110, gapMax:124, label:'PHASE 7'  }, // difícil de verdade (OUTER SPACE — gap +12px)
-  { speed: 2.58, gapMin:100, gapMax:114, label:'PHASE 8'  }, // muito difícil (gap +6px, curva suave após P7)
+  { speed: 2.55, gapMin:104, gapMax:116, label:'PHASE 8'  }, // muito difícil
   { speed: 2.2,  gapMin:116, gapMax:130, label:'PHASE 9'  }, // respiro — alivia tensão
-  { speed: 2.65, gapMin:102, gapMax:116, label:'PHASE 10' }, // hardcore — justo mas brutal (gap +12px, speed -0.10)
+  { speed: 2.60, gapMin:114, gapMax:128, label:'PHASE 10' }, // hardcore — desafiador mas justo (gap 114-128)
 ];
 function getPhaseIdx() { return Math.min(9, Math.floor(score / 15)); }
 function getPhase() {
