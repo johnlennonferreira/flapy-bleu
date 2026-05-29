@@ -1052,18 +1052,22 @@ function drawShopTab() {
   ctx.font='11px Courier New'; ctx.fillStyle='#FFD700';
   ctx.fillText('🐉 '+coinCount.toLocaleString()+' / 100,000', W/2, 50);
 
-  // ── Wallet toggle — top right ──
+  // ── Wallet toggle — top right (32px visual, tap zone 44px) ──
   ctx.save();
   if(walletAddress){
-    ctx.fillStyle='#00FF8822'; ctx.strokeStyle='#00FF8855'; ctx.lineWidth=1;
-    ctx.beginPath(); ctx.roundRect(W-84,6,80,20,6); ctx.fill(); ctx.stroke();
-    ctx.fillStyle='#00FF88'; ctx.font='bold 8px Courier New'; ctx.textAlign='right'; ctx.textBaseline='middle';
-    ctx.fillText('⛓ '+walletShort, W-7, 16);
+    ctx.fillStyle='#00FF8822'; ctx.strokeStyle='#00FF8866'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.roundRect(W-92,4,88,32,8); ctx.fill(); ctx.stroke();
+    ctx.fillStyle='#00FF88'; ctx.font='bold 9px Courier New'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('⛓ '+walletShort, W-48, 14);
+    ctx.font='8px Courier New'; ctx.fillStyle='#00FF8866';
+    ctx.fillText('tap to disconnect', W-48, 26);
   } else {
-    ctx.fillStyle='#0052FF18'; ctx.strokeStyle='#0052FF55'; ctx.lineWidth=1;
-    ctx.beginPath(); ctx.roundRect(W-84,6,80,20,6); ctx.fill(); ctx.stroke();
-    ctx.fillStyle='#6699cc'; ctx.font='bold 8px Courier New'; ctx.textAlign='right'; ctx.textBaseline='middle';
-    ctx.fillText('⛓ CONNECT', W-7, 16);
+    ctx.fillStyle='#0052FF18'; ctx.strokeStyle='#0052FF66'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.roundRect(W-92,4,88,32,8); ctx.fill(); ctx.stroke();
+    ctx.fillStyle='#00D4FF'; ctx.font='bold 9px Courier New'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('⛓ CONNECT', W-48, 14);
+    ctx.font='8px Courier New'; ctx.fillStyle='#00D4FF55';
+    ctx.fillText('save scores', W-48, 26);
   }
   ctx.textBaseline='alphabetic'; ctx.textAlign='center';
   ctx.restore();
@@ -6242,13 +6246,26 @@ function loop(ts) {
         if(combo===5){ beep(880, 1760, 0.22, 'square', 0.08); screenShake=6; spawnScorePopup(bleu.x,bleu.y-55,'🔥 FEVER!'); }
         if(combo===10){ beep(1047, 2093, 0.28, 'square', 0.1); screenShake=8; spawnScorePopup(bleu.x,bleu.y-55,'💎 x10 ULTRA!'); }
         spawnScorePopup(bleu.x, bleu.y-25);
-        // milestone visual only (no coin bonus)
+        // milestone — intensidade escala com o marco
         if(MILESTONES[milestoneIdx] && score>=MILESTONES[milestoneIdx]){
-          spawnScorePopup(bleu.x, bleu.y-55, '🏆 MILESTONE '+MILESTONES[milestoneIdx]+'!');
-          beep(880,1760,0.35,'sine',0.18);
-          screenShake=8;
+          var _ms = MILESTONES[milestoneIdx];
+          var _mlabel = _ms>=100?'💎 ULTRA x100!':_ms>=50?'🔥 x50 LEGEND!':_ms>=25?'⚡ x25 INSANE!':_ms>=10?'🏆 x10 GREAT!':'✦ x5 NICE!';
+          spawnScorePopup(bleu.x, bleu.y-55, _mlabel);
+          // som escala: mais notas e volume em marcos maiores
+          var _mvol = _ms>=50?0.28:_ms>=25?0.22:0.18;
+          beep(880,1760,0.35,'sine',_mvol);
+          if(_ms>=10) setTimeout(function(){ beep(1047,2093,0.28,'sine',_mvol); }, 80);
+          if(_ms>=25) setTimeout(function(){ beep(1319,2637,0.22,'sine',_mvol*0.8); }, 160);
+          if(_ms>=50) setTimeout(function(){ beep(1568,3136,0.18,'square',0.12); }, 240);
+          // shake e partículas escalam
+          screenShake = _ms>=50?14:_ms>=25?10:_ms>=10?8:6;
+          spawnParticles(bleu.x,bleu.y,_ms>=50?'#FF44FF':_ms>=25?'#FFD700':'#00D4FF', _ms>=50?20:_ms>=25?14:10);
+          if(_ms>=25) spawnParticles(bleu.x,bleu.y,'#ffffff',6);
+          if(navigator.vibrate) navigator.vibrate(_ms>=50?[80,30,80,30,120,30,200]:_ms>=10?[50,20,50,20,80]:[40,20,60]);
+          // Bonus de coins em marcos maiores
+          if(_ms>=50){ coinCount+=5; _ls.set('bleuCoins',coinCount); spawnScorePopup(bleu.x-30,bleu.y-70,'+5🐉'); }
+          else if(_ms>=25){ coinCount+=2; _ls.set('bleuCoins',coinCount); spawnScorePopup(bleu.x-30,bleu.y-70,'+2🐉'); }
           milestoneIdx++;
-          if(navigator.vibrate) navigator.vibrate([50,20,50,20,80]);
         }
         // record mid-game flash
         if(score>highScore && !newRecord) recFlash=55;
@@ -7068,7 +7085,7 @@ function handleClick(ex, ey) {
   if(gameState === 'idle') {
     if(idleTab==='shop'){
       // Wallet toggle top-right
-      if(cx>=W-84&&cx<=W-4&&cy>=6&&cy<=26){ walletAddress ? disconnectWallet() : connectWallet(); return; }
+      if(cx>=W-92&&cx<=W-4&&cy>=0&&cy<=44){ walletAddress ? disconnectWallet() : connectWallet(); return; }
       // Char selector tabs — só personagens desbloqueados
       var _visC=[{idx:0,u:true},{idx:1,u:gengarUnlocked},{idx:2,u:wormUnlocked},{idx:3,u:alienUnlocked}].filter(function(c){return c.u;});
       var _ctw=Math.min(110,Math.floor((W-16)/(_visC.length+0.3*(_visC.length-1)))-4), _cgap=6;
