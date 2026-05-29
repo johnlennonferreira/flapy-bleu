@@ -6818,17 +6818,24 @@ function loop(ts) {
     ctx.fillStyle='#ffffff55'; ctx.font='bold 8px Courier New';
     ctx.fillText("WHAT'S NEXT?", W/2, H/2+91);
 
-    // ── CHECKPOINT ──
+    // ── CHECKPOINT — wallet required for USDC purchase ──
     var _hasCp2 = checkpointStock > 0;
     var _cpDone2 = checkpointUsed && !checkpointReady;
-    ctx.globalAlpha = _cpDone2 ? 0.38 : 1;
-    ctx.fillStyle = checkpointReady ? '#00FF8828' : _cpDone2 ? '#ffffff08' : (_hasCp2 ? '#00FF8820' : '#0052FF18');
-    ctx.strokeStyle = checkpointReady ? '#00FF88' : _cpDone2 ? '#ffffff22' : (_hasCp2 ? '#00FF88bb' : '#0052FFbb');
+    var _cpNeedWallet = !_hasCp2 && !walletAddress; // no card AND no wallet
+    ctx.globalAlpha = _cpDone2 ? 0.38 : _cpNeedWallet ? 0.28 : 1;
+    ctx.fillStyle = checkpointReady ? '#00FF8828' : _cpDone2 ? '#ffffff08' : _cpNeedWallet ? '#ffffff08' : (_hasCp2 ? '#00FF8820' : '#0052FF18');
+    ctx.strokeStyle = checkpointReady ? '#00FF88' : _cpDone2||_cpNeedWallet ? '#ffffff22' : (_hasCp2 ? '#00FF88bb' : '#0052FFbb');
     ctx.lineWidth = checkpointReady ? 2 : 1.5;
     ctx.beginPath(); ctx.roundRect(W/2-112, H/2+96, 224, 28, 8); ctx.fill(); ctx.stroke();
     ctx.font='bold 10px Courier New'; ctx.textBaseline='middle';
-    ctx.fillStyle = checkpointReady ? '#00FF88' : _cpDone2 ? '#ffffff44' : (_hasCp2 ? '#00FF88' : '#66aaff');
-    ctx.fillText(checkpointReady ? '🃏  CHECKPOINT READY ✓' : _cpDone2 ? '🃏  ALREADY USED' : (_hasCp2 ? '🃏  USE CHECKPOINT CARD' : '🃏  CHECKPOINT  ·  USDC $0.50'), W/2, H/2+110);
+    ctx.fillStyle = checkpointReady ? '#00FF88' : _cpDone2 ? '#ffffff44' : _cpNeedWallet ? '#ffffff33' : (_hasCp2 ? '#00FF88' : '#66aaff');
+    ctx.fillText(
+      checkpointReady ? '🃏  CHECKPOINT READY ✓' :
+      _cpDone2        ? '🃏  ALREADY USED' :
+      _cpNeedWallet   ? '🃏  CONNECT WALLET TO BUY  ·  $0.50' :
+      _hasCp2         ? '🃏  USE CHECKPOINT CARD' :
+                        '🃏  CHECKPOINT  ·  USDC $0.50',
+      W/2, H/2+110);
     ctx.globalAlpha=1; ctx.textBaseline='alphabetic';
 
     // ── HEART (1 per death, wallet) ──
@@ -7090,18 +7097,24 @@ function handleClick(ex, ey) {
   // ── DEAD screen — new flow: buy items THEN press CONTINUE
   // CP=H/2+96..124  HT=H/2+128..156  CONT=H/2+166..202  SH=H/2+208..234  NG=H/2+234..264  MN=H/2+260..278
   if(gameState === 'dead') {
-    // ── CHECKPOINT button ──
+    // ── CHECKPOINT button — card: no wallet needed / USDC: wallet required ──
     if(cx>=W/2-114&&cx<=W/2+114&&cy>=H/2+88&&cy<=H/2+128){
       if(!checkpointReady && !checkpointUsed){
         if(checkpointStock > 0){
+          // Use purchased card — no wallet required
           checkpointStock--; _ls.set('bleuCheckpoint',checkpointStock);
           checkpointReady=true;
           beep(523,880,0.18,'sine',0.14); spawnParticles(W/2,H/2,'#00FF88',10);
         } else if(walletAddress){
+          // Buy via USDC — wallet already connected
           sendUSDCPurchase(USDC_CHECKPOINT, function(){
             checkpointReady=true;
             beep(523,880,0.18,'sine',0.14); spawnParticles(W/2,H/2,'#00FF88',10);
           });
+        } else {
+          // No card, no wallet — prompt to connect
+          connectWallet();
+          beep(220,150,0.1,'sawtooth',0.06);
         }
       }
       return;
