@@ -6467,7 +6467,8 @@ function loop(ts) {
     }
     if(invincible>0) invincible--;
     if(shieldBreak>0) shieldBreak--;
-    if(dizzyTimer>0) dizzyTimer--; // decrement here so all characters benefit, not just drawBleu
+    if(dizzyTimer>0) dizzyTimer--;
+    if(deathOfferTimer>0) deathOfferTimer--;
     // Estrela E invencibilidade: quica nos limites em vez de cair fora da tela
     if(starPower>0 || invincible>0){
       if(bleu.y+14 > H-80){ bleu.y = H-80-14; bleu.vy = -Math.abs(bleu.vy)*0.6; }
@@ -7111,7 +7112,6 @@ function loop(ts) {
       ctx.fillText('⛓ '+walletShort+' · tap to disconnect', W/2, H/2+310);
       ctx.textBaseline='alphabetic';
     }
-    deathOfferTimer = 0;
   }
   ctx.restore();
   if(screenShake>0)screenShake--;
@@ -7303,8 +7303,10 @@ function handleClick(ex, ey) {
   }
 
   // ── DEAD screen — new flow: buy items THEN press CONTINUE
-  // CP=H/2+96..124  HT=H/2+128..156  CONT=H/2+166..202  SH=H/2+208..234  NG=H/2+234..264  MN=H/2+260..278
   if(gameState === 'dead') {
+    // Block all clicks for the first 45 frames (~750ms) after dying.
+    // Prevents the tap that killed the character from immediately dismissing the screen.
+    if(deathOfferTimer > 675) return;
     // ── CHECKPOINT button — card: no wallet needed / USDC: wallet required ──
     if(cx>=W/2-114&&cx<=W/2+114&&cy>=H/2+88&&cy<=H/2+128){
       if(!checkpointReady && !checkpointUsed){
