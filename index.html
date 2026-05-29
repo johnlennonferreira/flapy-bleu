@@ -1669,7 +1669,15 @@ function checkDailyLogin() {
 }
 function claimDailyReward() {
   if(dailyReward==='coins') { coinCount+=dailyRewardVal; if(coinCount>100000)coinCount=100000; _ls.set('bleuCoins',coinCount); }
-  else if(dailyReward==='chest') { /* chest disabled for now */ }
+  else if(dailyReward==='chest') {
+    // Chest abre e dá moedas surpresa: 30–60 coins (como um baú de consolação)
+    var _chCoins = 30 + Math.floor(Math.random()*31);
+    coinCount += _chCoins; if(coinCount>100000)coinCount=100000; _ls.set('bleuCoins',coinCount);
+    dailyRewardVal = _chCoins; // para mostrar no modal após claim
+    beep(523,1047,0.2,'sine',0.14);
+    [659,784,1047].forEach(function(f,i){setTimeout(function(){beep(f,f*1.5,0.1,'sine',0.1);},i*70);});
+    spawnParticles(W/2,H/2,'#FFD700',16); spawnParticles(W/2,H/2,'#C8960C',10);
+  }
   else if(dailyReward==='skin') {
     // Unlock a random Bleu color as daily reward
     var _lockedB=BLEU_COLORS.map(function(_,i){return i;}).filter(function(i){return unlockedColorsBleu.indexOf(i)<0;});
@@ -6511,13 +6519,22 @@ function loop(ts) {
     // recFlash — mid-game "NOVO RECORDE!" 
     if(recFlash > 0){
       var ra = Math.min(1, recFlash/18) * (recFlash>8?1:recFlash/8);
+      // Escala pulsante para chamar atenção
+      var _rsc = 1 + 0.06*Math.sin(recFlash*0.5);
       ctx.save();
       ctx.globalAlpha = ra;
       ctx.textAlign = 'center';
-      ctx.font = 'bold 13px Courier New';
+      ctx.translate(W/2, H/2-68);
+      ctx.scale(_rsc, _rsc);
+      // Fundo semi-transparente
+      ctx.fillStyle = '#FFD70018';
+      ctx.beginPath(); ctx.roundRect(-90,-16,180,32,8); ctx.fill();
+      ctx.strokeStyle = '#FFD70088'; ctx.lineWidth=1.5; ctx.stroke();
+      // Texto
+      ctx.font = 'bold 16px Courier New';
       ctx.fillStyle = '#FFD700';
-      ctx.shadowColor = '#FFD700'; ctx.shadowBlur = 20;
-      ctx.fillText('🏆 NEW RECORD!', W/2, H/2-70);
+      ctx.shadowColor = '#FFD700'; ctx.shadowBlur = 24;
+      ctx.fillText('🏆  NEW RECORD!', 0, 8);
       ctx.shadowBlur = 0;
       ctx.restore();
       recFlash--;
