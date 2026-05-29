@@ -6883,23 +6883,22 @@ function loop(ts) {
     ctx.fillText(shareFlash>0?'✓ COPIED!':'🔗 SHARE', W/2, H/2+223);
     ctx.textBaseline='alphabetic';
 
-    // ── NEW GAME ──
-    ctx.fillStyle='#0052FF20';
-    ctx.beginPath(); ctx.roundRect(W/2-80, H/2+238, 160, 28, 10); ctx.fill();
-    ctx.strokeStyle='#0052FF77'; ctx.lineWidth=1.5; ctx.stroke();
-    ctx.font='bold 12px Courier New'; ctx.fillStyle='#aaccff';
-    ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText('▶  NEW GAME', W/2, H/2+252);
-    ctx.textBaseline='alphabetic';
-
-    // ── MENU button — visible with border ──
-    ctx.fillStyle='#ffffff10';
-    ctx.beginPath(); ctx.roundRect(W/2-60, H/2+272, 120, 24, 8); ctx.fill();
-    ctx.strokeStyle='#ffffff30'; ctx.lineWidth=1; ctx.stroke();
-    ctx.font='bold 10px Courier New'; ctx.fillStyle='#aabbcc';
-    ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText('⌂  MENU', W/2, H/2+284);
-    ctx.textBaseline='alphabetic';
+    // ── MENU button (single — replaces NEW GAME + MENU) ──
+    // Hidden when items purchased so the player can't lose what they paid for.
+    if(!_anyReady){
+      ctx.fillStyle='#0052FF20';
+      ctx.beginPath(); ctx.roundRect(W/2-80, H/2+240, 160, 28, 10); ctx.fill();
+      ctx.strokeStyle='#0052FF77'; ctx.lineWidth=1.5; ctx.stroke();
+      ctx.font='bold 12px Courier New'; ctx.fillStyle='#aaccff';
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText('⌂  MENU', W/2, H/2+254);
+      ctx.textBaseline='alphabetic';
+    } else {
+      // Items purchased — gently remind player to continue
+      ctx.fillStyle='#00FF8866'; ctx.font='bold 9px Courier New';
+      ctx.textAlign='center';
+      ctx.fillText('▲ tap CONTINUE to use your items', W/2, H/2+252);
+    }
 
     if(shareFlash>0) shareFlash--;
 
@@ -7157,6 +7156,9 @@ function handleClick(ex, ey) {
         // Apply heart on top
         if(heartReady){ lives=Math.min(lives+1,5); if(!checkpointReady){ invincible=180; } }
         checkpointReady=false; heartReady=false;
+        // Clear all obstacles so the player respawns in a SAFE centered spot
+        pipes=[]; stars=[]; shieldItems=[]; fireStars=[]; coins=[];
+        lastGapCenter=H/2; firePower=0; starPower=0;
         bleu.y=H/2; bleu.vy=0; bleu.vx=0;
         gameState='playing'; startMusic(getPhaseIdx());
         screenShake=8; hitFlash=4;
@@ -7176,19 +7178,19 @@ function handleClick(ex, ey) {
       else { try{ navigator.clipboard.writeText(shareText); }catch(e){} }
       shareFlash=90; return;
     }
-    // ── WALLET disconnect ──
-    if(walletAddress&&cx>=W/2-110&&cx<=W/2+110&&cy>=H/2+298&&cy<=H/2+322){
-      disconnectWallet(); return;
-    }
-    // ── MENU button (H/2+272 to H/2+296) → go to idle menu ──
-    if(cx>=W/2-64&&cx<=W/2+64&&cy>=H/2+268&&cy<=H/2+300){
-      menuTapReady=false; resetGame(); stopMusic();
-      beep(330,220,0.08,'sine',0.08);
+    // ── If items were purchased, BLOCK all exits — only CONTINUE works ──
+    // Protects the player from losing what they paid for.
+    if(checkpointReady||heartReady){
+      beep(220,150,0.08,'sawtooth',0.05); // gentle "nope" feedback
       return;
     }
-    // ── NEW GAME (H/2+238..266) OR any other tap → reset to idle ──
+    // ── WALLET disconnect ──
+    if(walletAddress&&cx>=W/2-110&&cx<=W/2+110&&cy>=H/2+302&&cy<=H/2+322){
+      disconnectWallet(); return;
+    }
+    // ── MENU button OR any other tap → reset to idle menu ──
     menuTapReady=false; resetGame(); stopMusic();
-    beep(440,660,0.08,'sine',0.1);
+    beep(330,220,0.08,'sine',0.08);
     return;
   }
 
