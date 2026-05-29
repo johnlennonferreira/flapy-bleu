@@ -1477,44 +1477,57 @@ function drawMarketTab() {
   ctx.fillText('USDC $0.50  ·  buy in SHOP', 58, _cy+38);
   _cy+=_h+_gap+6;
 
-  // ══ TÍTULOS — o que cada loop completo desbloqueia ══
+  // ══ NG+ — NEW GAME PLUS ══
   ctx.font='bold 8px Courier New'; ctx.fillStyle='#ffffff33'; ctx.textAlign='left';
-  ctx.fillText('── PRESTIGE TITLES ─────────────────────', 10, _cy+9); _cy+=12;
+  ctx.fillText('── NG+ (NEW GAME PLUS) ─────────────────', 10, _cy+9); _cy+=12;
+  // Explicação do conceito
+  ctx.font='7px Courier New'; ctx.fillStyle='#ffffff44'; ctx.textAlign='center';
+  ctx.fillText('Zerar as 10 fases = 1 loop completo. Cada loop sobe 1 nível NG+.', W/2, _cy+8);
+  ctx.fillText('A cada nível os gaps ficam menores e a velocidade aumenta.', W/2, _cy+18);
+  _cy+=24;
 
-  // Cada título tem altura maior para caber 3 linhas de texto
-  var _hT = 54;
+  var _hT = 66; // altura maior para caber 4 linhas
 
   // NG+1 — PHANTOM
   _card(_cy,_hT, gengarUnlocked?'✓':'?', '#aa44ff', gengarUnlocked);
   ctx.textAlign='left';
   ctx.font='bold 10px Courier New'; ctx.fillStyle=gengarUnlocked?'#aa44ff':'#aa44ffcc';
-  ctx.fillText('NG+1  —  PHANTOM', 58, _cy+14);
-  ctx.font='8px Courier New'; ctx.fillStyle='#ffffff66';
-  ctx.fillText('Complete all 10 phases once.', 58, _cy+26);
-  ctx.fillText('Unlocks: Phantom character + harder mode.', 58, _cy+37);
-  if(gengarUnlocked){ ctx.font='bold 7px Courier New'; ctx.fillStyle='#aa44ffcc'; ctx.textAlign='right'; ctx.fillText('UNLOCKED ✓', W-16, _cy+14); }
+  ctx.fillText('NG+1  —  PHANTOM', 58, _cy+13);
+  ctx.font='8px Courier New'; ctx.fillStyle='#ffffff88';
+  ctx.fillText('Como: zere as 10 fases no modo normal.', 58, _cy+26);
+  ctx.fillStyle='#ffffff55';
+  ctx.fillText('Efeito: próximos loops ficam +difíceis.', 58, _cy+37);
+  ctx.fillStyle='#aa44ffaa';
+  ctx.fillText('Prêmio: personagem PHANTOM desbloqueado.', 58, _cy+48);
+  if(gengarUnlocked){ ctx.font='bold 7px Courier New'; ctx.fillStyle='#aa44ffcc'; ctx.textAlign='right'; ctx.fillText('UNLOCKED ✓', W-16, _cy+13); }
   _cy+=_hT+_gap;
 
   // NG+2 — WORM
   _card(_cy,_hT, wormUnlocked?'✓':'?', '#88dd44', wormUnlocked);
   ctx.textAlign='left';
   ctx.font='bold 10px Courier New'; ctx.fillStyle=wormUnlocked?'#88dd44':'#88dd44cc';
-  ctx.fillText('NG+2  —  WORM', 58, _cy+14);
-  ctx.font='8px Courier New'; ctx.fillStyle='#ffffff66';
-  ctx.fillText('Complete 2 full loops (NG+1 mode).', 58, _cy+26);
-  ctx.fillText('Unlocks: Worm character + faster speeds.', 58, _cy+37);
-  if(wormUnlocked){ ctx.font='bold 7px Courier New'; ctx.fillStyle='#88dd44cc'; ctx.textAlign='right'; ctx.fillText('UNLOCKED ✓', W-16, _cy+14); }
+  ctx.fillText('NG+2  —  WORM', 58, _cy+13);
+  ctx.font='8px Courier New'; ctx.fillStyle='#ffffff88';
+  ctx.fillText('Como: zere as 10 fases no modo NG+1.', 58, _cy+26);
+  ctx.fillStyle='#ffffff55';
+  ctx.fillText('Efeito: dificuldade aumenta novamente.', 58, _cy+37);
+  ctx.fillStyle='#88dd44aa';
+  ctx.fillText('Prêmio: personagem WORM desbloqueado.', 58, _cy+48);
+  if(wormUnlocked){ ctx.font='bold 7px Courier New'; ctx.fillStyle='#88dd44cc'; ctx.textAlign='right'; ctx.fillText('UNLOCKED ✓', W-16, _cy+13); }
   _cy+=_hT+_gap;
 
   // NG+3 — ALIEN
   _card(_cy,_hT, alienUnlocked?'✓':'?', '#44FF88', alienUnlocked);
   ctx.textAlign='left';
   ctx.font='bold 10px Courier New'; ctx.fillStyle=alienUnlocked?'#44FF88':'#44FF88cc';
-  ctx.fillText('NG+3  —  ALIEN', 58, _cy+14);
-  ctx.font='8px Courier New'; ctx.fillStyle='#ffffff66';
-  ctx.fillText('Complete 3 full loops (NG+2 mode).', 58, _cy+26);
-  ctx.fillText('Unlocks: Alien UFO character + tighter gaps.', 58, _cy+37);
-  if(alienUnlocked){ ctx.font='bold 7px Courier New'; ctx.fillStyle='#44FF88cc'; ctx.textAlign='right'; ctx.fillText('UNLOCKED ✓', W-16, _cy+14); }
+  ctx.fillText('NG+3  —  ALIEN', 58, _cy+13);
+  ctx.font='8px Courier New'; ctx.fillStyle='#ffffff88';
+  ctx.fillText('Como: zere as 10 fases no modo NG+2.', 58, _cy+26);
+  ctx.fillStyle='#ffffff55';
+  ctx.fillText('Efeito: desafio máximo, gaps curtíssimos.', 58, _cy+37);
+  ctx.fillStyle='#44FF88aa';
+  ctx.fillText('Prêmio: personagem ALIEN UFO desbloqueado.', 58, _cy+48);
+  if(alienUnlocked){ ctx.font='bold 7px Courier New'; ctx.fillStyle='#44FF88cc'; ctx.textAlign='right'; ctx.fillText('UNLOCKED ✓', W-16, _cy+13); }
   _cy+=_hT+_gap;
 
   // ── Progresso + teaser do segredo ──
