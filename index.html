@@ -1713,12 +1713,14 @@ function drawDailyModal() {
   }
   ctx.shadowBlur=0;
 
-  // Claim button
-  ctx.fillStyle='#0052FF'; ctx.strokeStyle='#00D4FF'; ctx.lineWidth=2;
-  ctx.fillRect(W/2-65,H/2+78,130,34); ctx.strokeRect(W/2-65,H/2+78,130,34);
-  ctx.font='bold 13px Courier New'; ctx.fillStyle='#fff';
-  ctx.shadowColor='#00D4FF'; ctx.shadowBlur=8;
-  ctx.fillText('CLAIM', W/2, H/2+100); ctx.shadowBlur=0;
+  // Claim button — 44px para mobile
+  ctx.beginPath(); ctx.roundRect(W/2-70,H/2+73,140,44,10); ctx.fillStyle='#0052FF'; ctx.fill();
+  ctx.strokeStyle='#00D4FF'; ctx.lineWidth=2; ctx.stroke();
+  ctx.font='bold 14px Courier New'; ctx.fillStyle='#fff';
+  ctx.textBaseline='middle';
+  ctx.shadowColor='#00D4FF'; ctx.shadowBlur=10;
+  ctx.fillText('🎁  CLAIM REWARD', W/2, H/2+95); ctx.shadowBlur=0;
+  ctx.textBaseline='alphabetic';
 }
 
 // ─── SCORE POPUP ─────────────────────────────────────────────────────
@@ -6947,7 +6949,8 @@ function handleClick(ex, ey) {
     return;
   }
   if(dailyModal){
-    if(cx>=W/2-65&&cx<=W/2+65&&cy>=H/2+78&&cy<=H/2+112){ claimDailyReward(); beep(523,1047,0.2,'sine',0.14); }
+    // Claim button — zona 44px (visual 34px + extensão de 5px cada lado)
+    if(cx>=W/2-70&&cx<=W/2+70&&cy>=H/2+73&&cy<=H/2+117){ claimDailyReward(); beep(523,1047,0.2,'sine',0.14); }
     return;
   }
 
@@ -6988,14 +6991,14 @@ function handleClick(ex, ey) {
   // ── HURT — qualquer toque retoma
   if(gameState === 'hurt') { flap(); return; }
 
-  // ── AWARD — phase complete, two buttons
+  // ── AWARD — phase complete, two buttons (zona 44px)
   if(gameState === 'award') {
     var btnY2 = H/2+82;
-    if(cy>=btnY2-18&&cy<=btnY2+18){
-      if(cx>=W/2-106&&cx<=W/2-10){ // SHOP
+    if(cy>=btnY2-22&&cy<=btnY2+22){
+      if(cx>=W/2-106&&cx<=W/2-6){ // SHOP
         gameState='idle'; idleTab='shop'; stopMusic(); beep(523,784,0.1,'sine',0.12); return;
       }
-      if(cx>=W/2+10&&cx<=W/2+106){ // GO / CONTINUE
+      if(cx>=W/2+6&&cx<=W/2+106){ // GO / CONTINUE
         gameState='playing'; startMusic(getPhaseIdx()); beep(659,1047,0.1,'sine',0.12); return;
       }
     }
