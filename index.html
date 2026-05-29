@@ -4121,11 +4121,13 @@ function drawSkeletonArmObstacle(p) {
       var headBaseY = tipY + dir * headLen;
       var headW = 10;
 
-      // Leaf-shaped spearhead — flat on mobile
-      var shG = ctx.createLinearGradient(cx - headW, 0, cx + headW, 0);
-      shG.addColorStop(0, '#5566aa'); shG.addColorStop(0.35, '#cce0ff');
-      shG.addColorStop(0.55, '#ffffff'); shG.addColorStop(1, '#3a4466');
-      ctx.fillStyle = shG;
+      // Leaf-shaped spearhead — flat on mobile (gradient too expensive per-frame)
+      if(!_isMobile){
+        var shG = ctx.createLinearGradient(cx - headW, 0, cx + headW, 0);
+        shG.addColorStop(0, '#5566aa'); shG.addColorStop(0.35, '#cce0ff');
+        shG.addColorStop(0.55, '#ffffff'); shG.addColorStop(1, '#3a4466');
+        ctx.fillStyle = shG;
+      } else { ctx.fillStyle = '#8899cc'; }
       ctx.beginPath();
       ctx.moveTo(cx, tipY);
       ctx.quadraticCurveTo(cx - headW - 3, tipY + dir * headLen * 0.52, cx - headW * 0.4, headBaseY);
@@ -4133,15 +4135,17 @@ function drawSkeletonArmObstacle(p) {
       ctx.lineTo(cx + headW * 0.4, headBaseY);
       ctx.quadraticCurveTo(cx + headW + 3, tipY + dir * headLen * 0.52, cx, tipY);
       ctx.fill();
-      // Spine line
-      ctx.strokeStyle = '#b0ccee99'; ctx.lineWidth = 1.5;
-      ctx.beginPath(); ctx.moveTo(cx, tipY + dir * (-1)); ctx.lineTo(cx, headBaseY); ctx.stroke();
-      // Edge gleam
-      ctx.strokeStyle = '#ddeeff88'; ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(cx + 2, tipY);
-      ctx.quadraticCurveTo(cx + headW + 1, tipY + dir * headLen * 0.5, cx + headW * 0.3, headBaseY);
-      ctx.stroke();
+      if(!_isMobile){
+        // Spine line
+        ctx.strokeStyle = '#b0ccee99'; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(cx, tipY + dir * (-1)); ctx.lineTo(cx, headBaseY); ctx.stroke();
+        // Edge gleam
+        ctx.strokeStyle = '#ddeeff88'; ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(cx + 2, tipY);
+        ctx.quadraticCurveTo(cx + headW + 1, tipY + dir * headLen * 0.5, cx + headW * 0.3, headBaseY);
+        ctx.stroke();
+      }
 
       // Socket ring where head meets shaft
       var sockLen = 9;
@@ -4162,16 +4166,18 @@ function drawSkeletonArmObstacle(p) {
         ctx.fillStyle = woodG;
       } else { ctx.fillStyle = '#9c6030'; }
       ctx.fillRect(cx - 3.5, Math.min(shaftStart, shaftEnd), 7, Math.abs(shaftEnd - shaftStart));
-      // Wood grain
-      ctx.strokeStyle = '#2a100433'; ctx.lineWidth = 0.8;
-      for (var wi = -2; wi <= 2; wi += 2) {
-        ctx.beginPath();
-        ctx.moveTo(cx + wi, shaftStart); ctx.lineTo(cx + wi, shaftEnd); ctx.stroke();
+      // Wood grain — skip on mobile
+      if(!_isMobile){
+        ctx.strokeStyle = '#2a100433'; ctx.lineWidth = 0.8;
+        for (var wi = -2; wi <= 2; wi += 2) {
+          ctx.beginPath();
+          ctx.moveTo(cx + wi, shaftStart); ctx.lineTo(cx + wi, shaftEnd); ctx.stroke();
+        }
       }
 
       // Butt spike (metal, points toward wall)
       var butTipY = shaftEnd + dir * 9;
-      ctx.shadowColor = '#aabbdd'; ctx.shadowBlur = 5;
+      if(!_isMobile){ ctx.shadowColor = '#aabbdd'; ctx.shadowBlur = 5; }
       ctx.fillStyle = '#8899bb';
       ctx.beginPath();
       ctx.moveTo(cx, butTipY);
@@ -5015,7 +5021,9 @@ function drawDrizzle() {
 }
 
 function drawForestTrees() {
-  var trees = [
+  var trees = _isMobile ? [
+    {ox:20, h:120, w:50}, {ox:170,h:145, w:56}, {ox:318,h:125, w:52},
+  ] : [
     {ox:20, h:120, w:50}, {ox:90, h:90,  w:40},
     {ox:170,h:145, w:56}, {ox:248,h:105, w:44},
     {ox:318,h:125, w:52}, {ox:372,h:84,  w:36},
