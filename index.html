@@ -6856,16 +6856,33 @@ function flap() {
     if(phasePaused){ if(shopOverlay) return; phasePaused=false; phaseFlash=0; bleu.vy=-4; bleuSquish=6; return; } // pula animação
     bleu.vy=-7.5; bleu.flap=0; bleuSquish=8; bleuFlapTimer=18;
     if(activeChar===1 && gengarUnlocked) {
-      // PHANTOM: fart propulsion instead of wing flap
+      // PHANTOM: fart propulsion + partículas roxas
       spawnPhantomFart(bleu.x, bleu.y);
+      spawnParticles(bleu.x-10, bleu.y+8, '#9966CC', 4);
       beep(160,80,0.18,'sawtooth',0.12);
       setTimeout(function(){ beep(90,60,0.12,'sawtooth',0.08); }, 60);
+    } else if(activeChar===2 && wormUnlocked) {
+      // WORM: partículas verdes ao "saltar"
+      spawnParticles(bleu.x, bleu.y+10, '#88dd44', 5);
+      spawnParticles(bleu.x, bleu.y+6, '#ffffff', 3);
+      beep(380,180,0.06,'triangle',0.13);
+      setTimeout(function(){ beep(160,320,0.05,'triangle',0.09); }, 55);
+    } else if(activeChar===3 && alienUnlocked) {
+      // ALIEN: partículas ciano (thruster)
+      spawnParticles(bleu.x, bleu.y+14, '#00FF88', 5);
+      spawnParticles(bleu.x, bleu.y+12, '#00FFDD', 3);
+      beep(340,160,0.07,'triangle',0.12);
+      setTimeout(function(){ beep(140,280,0.05,'triangle',0.08); }, 60);
     } else if(activeChar===4 && boatUnlocked) {
-      // VIKING BOAT: remada + buzina nórdica grave
+      // VIKING BOAT: remada + respingo de água
+      spawnParticles(bleu.x-12, bleu.y+8, '#88ccff', 5);
+      spawnParticles(bleu.x+12, bleu.y+8, '#aaddff', 4);
       beep(100,55,0.2,'sawtooth',0.14);
       setTimeout(function(){ beep(65,100,0.12,'triangle',0.1); }, 80);
     } else {
-      // BLEU: wing flap sound — whoosh down then up
+      // BLEU: whoosh + partículas azuis das asas
+      spawnParticles(bleu.x-14, bleu.y, '#00D4FF', 4);
+      spawnParticles(bleu.x-10, bleu.y-4, '#ffffff', 3);
       beep(380,180,0.06,'triangle',0.13);
       setTimeout(function(){ beep(160,320,0.05,'triangle',0.09); }, 55);
     }
