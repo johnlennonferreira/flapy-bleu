@@ -929,19 +929,40 @@ function drawAwardScreen() {
   ctx.shadowBlur=0;
 
   // Coins earned this phase — count-up animation from 0 to awardCoins
+  var _wasDone = (awardCoinAnim >= awardCoins);
   if(awardCoinAnim < awardCoins){
     var step = Math.max(1, Math.ceil((awardCoins - awardCoinAnim) * 0.12));
     awardCoinAnim = Math.min(awardCoins, awardCoinAnim + step);
   }
   var phCoins = awardCoinAnim;
   var coinDone = (awardCoinAnim >= awardCoins);
+  // Burst ao completar a contagem
+  if(coinDone && !_wasDone){
+    spawnParticles(cx, H/2, '#FFD700', 14);
+    spawnParticles(cx, H/2, '#ffffff', 6);
+    beep(880,1047,0.15,'sine',0.12);
+    if(navigator.vibrate) navigator.vibrate([20,10,40]);
+  }
+  // Escala suave no número quando terminando de contar
+  var _cScale = coinDone ? 1+0.04*Math.abs(Math.sin(frame*0.08)) : 1;
+  ctx.save(); ctx.translate(cx, H/2+10); ctx.scale(_cScale, _cScale);
   ctx.fillStyle='#FFD700'; ctx.font='bold 36px Arial';
-  ctx.shadowColor='#FFD700'; ctx.shadowBlur= coinDone ? 20 : 8;
-  ctx.fillText('+'+phCoins, cx, H/2+10); ctx.shadowBlur=0;
+  ctx.shadowColor='#FFD700'; ctx.shadowBlur= coinDone ? 22 : 8;
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText('+'+phCoins, 0, 0); ctx.shadowBlur=0;
+  ctx.restore();
+  ctx.textBaseline='alphabetic';
   ctx.fillStyle='#FFD700aa'; ctx.font='10px Courier New';
   ctx.fillText('🐉 dragon coins', cx, H/2+28);
-  ctx.fillStyle='#ffffff33'; ctx.font='9px Courier New';
-  ctx.fillText('total: '+coinCount+' coins', cx, H/2+44);
+  // Progresso para prestige (score / 150)
+  var _pct = Math.min(1, score/150);
+  ctx.fillStyle='#ffffff22'; ctx.font='9px Courier New';
+  ctx.fillText('score: '+score+' / 150  ('+Math.round(_pct*100)+'% to NG+)', cx, H/2+44);
+  // Mini progress bar
+  ctx.fillStyle='#ffffff11';
+  ctx.beginPath(); ctx.roundRect(cx-60, H/2+52, 120, 4, 2); ctx.fill();
+  ctx.fillStyle='#FFD700';
+  ctx.beginPath(); ctx.roundRect(cx-60, H/2+52, 120*_pct, 4, 2); ctx.fill();
 
   // Two buttons
   var p2=0.97+0.03*Math.sin(frame*0.14);
