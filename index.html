@@ -1890,6 +1890,7 @@ var checkpointUsed=false;   // checkpoint card already used this run
 var heartUsed=false;        // paid heart already bought on current death (resets each death)
 var checkpointReady=false;  // checkpoint purchased on death screen but not yet applied
 var heartReady=false;       // heart purchased on death screen but not yet applied
+var _purchasePending=false; // USDC tx in flight — show loading feedback
 var dizzyTimer=0;
 var checkpointFlash=0;
 var extraHeartStock=parseInt(_ls.get('bleuExtraHeart','0'));
@@ -2189,7 +2190,7 @@ function resetGame() {
   combo = 0; comboFlash = 0; coinsThisRun = 0; milestoneIdx = 0; recFlash = 0;
   lives = 3; // reset base — extraHeartStock é consumido em flap() ao iniciar nova run
   invincible = 0; starPower = 0; stars = []; firePower = 0; fireStars = [];
-  slowMoActive = 0; checkpointUsed = false; heartUsed = false; checkpointReady = false; heartReady = false; dizzyTimer = 0; deathOfferTimer = 0; checkpointFlash = 0;
+  slowMoActive = 0; checkpointUsed = false; heartUsed = false; checkpointReady = false; heartReady = false; _purchasePending = false; dizzyTimer = 0; deathOfferTimer = 0; checkpointFlash = 0;
   // slowMoStock e extraHeartStock NÃO são zerados — persistem para próxima run (limite já aplicado na compra)
   deadChest={active:false,opened:false,coins:0,anim:0};
   shield = 0; shieldPickedUp = 0;
@@ -6198,7 +6199,7 @@ function loop(ts) {
               if(comboBest<combo) comboBest=combo;
               top5=saveTop5(score); submitWalletScore(score);
               stopMusic(); menuTapReady=false;
-              heartUsed=false; checkpointReady=false; heartReady=false; deathOfferTimer=720; gameState='dead';
+              heartUsed=false; checkpointReady=false; heartReady=false; _purchasePending=false; deathOfferTimer=720; gameState='dead';
             }
           }
         }
@@ -6640,7 +6641,7 @@ function loop(ts) {
           if(score>0) submitWalletScore(score);
           if(navigator.vibrate) navigator.vibrate([80,30,80]);
           stopMusic(); menuTapReady=false;
-          heartUsed=false; checkpointReady=false; heartReady=false; deathOfferTimer=720; gameState='dead';
+          heartUsed=false; checkpointReady=false; heartReady=false; _purchasePending=false; deathOfferTimer=720; gameState='dead';
         }
       }
       } // fecha else do shield
@@ -6830,11 +6831,12 @@ function loop(ts) {
     ctx.font='bold 10px Courier New'; ctx.textBaseline='middle';
     ctx.fillStyle = checkpointReady ? '#00FF88' : _cpDone2 ? '#ffffff44' : _cpNeedWallet ? '#ffffff33' : (_hasCp2 ? '#00FF88' : '#66aaff');
     ctx.fillText(
-      checkpointReady ? '🃏  CHECKPOINT READY ✓' :
-      _cpDone2        ? '🃏  ALREADY USED' :
-      _cpNeedWallet   ? '🃏  CONNECT WALLET TO BUY  ·  $0.50' :
-      _hasCp2         ? '🃏  USE CHECKPOINT CARD' :
-                        '🃏  CHECKPOINT  ·  USDC $0.50',
+      checkpointReady          ? '🃏  CHECKPOINT READY ✓' :
+      _purchasePending && !_hasCp2 ? '⏳  PROCESSING...' :
+      _cpDone2                 ? '🃏  ALREADY USED' :
+      _cpNeedWallet            ? '🃏  CONNECT WALLET TO BUY  ·  $0.50' :
+      _hasCp2                  ? '🃏  USE CHECKPOINT CARD' :
+                                 '🃏  CHECKPOINT  ·  USDC $0.50',
       W/2, H/2+110);
     ctx.globalAlpha=1; ctx.textBaseline='alphabetic';
 
@@ -6846,7 +6848,13 @@ function loop(ts) {
     ctx.beginPath(); ctx.roundRect(W/2-112, H/2+128, 224, 28, 8); ctx.fill(); ctx.stroke();
     ctx.font='bold 10px Courier New'; ctx.textBaseline='middle';
     ctx.fillStyle = heartReady ? '#FF6680' : !walletAddress ? '#ffffff33' : heartUsed ? '#ffffff44' : '#FF6680';
-    ctx.fillText(heartReady ? '♥  +1 HEART READY ✓' : !walletAddress ? '♥  CONNECT WALLET TO USE' : heartUsed ? '♥  ALREADY BOUGHT' : '♥  +1 EXTRA HEART  ·  USDC $0.25', W/2, H/2+142);
+    ctx.fillText(
+      heartReady        ? '♥  +1 HEART READY ✓' :
+      _purchasePending  ? '⏳  PROCESSING...' :
+      !walletAddress    ? '♥  CONNECT WALLET TO USE' :
+      heartUsed         ? '♥  ALREADY BOUGHT' :
+                          '♥  +1 EXTRA HEART  ·  USDC $0.25',
+      W/2, H/2+142);
     ctx.globalAlpha=1; ctx.textBaseline='alphabetic';
 
     // ── CONTINUE (big — pulsing green when items ready) ──
@@ -7106,11 +7114,14 @@ function handleClick(ex, ey) {
           checkpointReady=true;
           beep(523,880,0.18,'sine',0.14); spawnParticles(W/2,H/2,'#00FF88',10);
         } else if(walletAddress){
-          // Buy via USDC — wallet already connected
-          sendUSDCPurchase(USDC_CHECKPOINT, function(){
-            checkpointReady=true;
-            beep(523,880,0.18,'sine',0.14); spawnParticles(W/2,H/2,'#00FF88',10);
-          });
+          // Buy via USDC — wallet connected, show processing state
+          if(!_purchasePending){
+            _purchasePending=true;
+            sendUSDCPurchase(USDC_CHECKPOINT, function(){
+              _purchasePending=false; checkpointReady=true;
+              beep(523,880,0.18,'sine',0.14); spawnParticles(W/2,H/2,'#00FF88',10);
+            });
+          }
         } else {
           // No card, no wallet — prompt to connect
           connectWallet();
@@ -7119,13 +7130,24 @@ function handleClick(ex, ey) {
       }
       return;
     }
-    // ── HEART button (1 per death, wallet required) ──
-    if(walletAddress&&!heartUsed&&!heartReady&&cx>=W/2-114&&cx<=W/2+114&&cy>=H/2+120&&cy<=H/2+162){
-      sendUSDCPurchase(USDC_HEART, function(){
-        heartReady=true; heartUsed=true;
-        beep(523,880,0.18,'sine',0.14); spawnParticles(W/2,H/2,'#FF6680',10);
-      });
-      return;
+    // ── HEART button — always capture zone, handle wallet inside ──
+    if(cx>=W/2-114&&cx<=W/2+114&&cy>=H/2+120&&cy<=H/2+162){
+      if(!heartReady && !heartUsed){
+        if(walletAddress){
+          if(!_purchasePending){
+            _purchasePending=true;
+            sendUSDCPurchase(USDC_HEART, function(){
+              _purchasePending=false; heartReady=true; heartUsed=true;
+              beep(523,880,0.18,'sine',0.14); spawnParticles(W/2,H/2,'#FF6680',10);
+            });
+          }
+        } else {
+          // No wallet — prompt to connect (never fall through to resetGame)
+          connectWallet();
+          beep(220,150,0.1,'sawtooth',0.06);
+        }
+      }
+      return; // always consume this zone — never fall to resetGame
     }
     // ── CONTINUE button — applies all purchased items and resumes ──
     if(cx>=W/2-110&&cx<=W/2+110&&cy>=H/2+162&&cy<=H/2+206){
