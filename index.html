@@ -680,9 +680,9 @@ function drawLegendaryUnlockScreen() {
       ctx.beginPath(); ctx.arc(_orx, _ory+8, 1.2+(_ob%3)*0.5, 0, Math.PI*2); ctx.fill();
     }
     ctx.globalAlpha = _bIn;
-    // O barco em si — grande, bobbing
+    // O barco em si — grande, bobbing (offset para centrar visualmente)
     var _bob2 = Math.sin(_t*0.048)*3.5;
-    ctx.save(); ctx.translate(0, _bob2); ctx.scale(2.85, 2.85);
+    ctx.save(); ctx.translate(-8, _bob2-8); ctx.scale(2.4, 2.4);
     drawBoat(0, 0, _t*0.14, 0);
     ctx.restore();
   }
@@ -864,12 +864,22 @@ function drawNFTRevealScreen() {
     }
     ctx.globalAlpha=_chEase;
     var _charScale=2.5*_chEase+(1-_chEase)*0.2;
-    ctx.save(); ctx.translate(0,_bob+(1-_chEase)*(1-_chEase)*50); ctx.scale(_charScale,_charScale);
-    if(_char===1)      drawPhantom(0,0,_t*0.12,0);
-    else if(_char===2) drawWorm(0,0,_t*0.10,0);
-    else if(_char===3) drawAlien(0,0,_t*0.09,0);
-    else if(_char===4) drawBoat(0,0,_t*0.12,0);
-    ctx.restore();
+    if(_char===4){
+      // Boat: visual center is ~y=-9 (midpoint mast top -34 / hull bottom +16)
+      // Mini Viking at x=18 with horns → offset left so everything fits in card
+      var _bScale=2.0*_chEase+(1-_chEase)*0.15;
+      ctx.save();
+      ctx.translate(-8, _bob+(1-_chEase)*(1-_chEase)*50 - 8);
+      ctx.scale(_bScale, _bScale);
+      drawBoat(0,0,_t*0.12,0);
+      ctx.restore();
+    } else {
+      ctx.save(); ctx.translate(0,_bob+(1-_chEase)*(1-_chEase)*50); ctx.scale(_charScale,_charScale);
+      if(_char===1)      drawPhantom(0,0,_t*0.12,0);
+      else if(_char===2) drawWorm(0,0,_t*0.10,0);
+      else if(_char===3) drawAlien(0,0,_t*0.09,0);
+      ctx.restore();
+    }
   }
   ctx.globalAlpha=1;
 
