@@ -1724,19 +1724,43 @@ function drawDailyModal() {
 // ─── SCORE POPUP ─────────────────────────────────────────────────────
 var scorePopups=[], scoreGlow=0;
 function spawnScorePopup(x,y,txt) {
-  if(scorePopups.length>5) return;
-  scorePopups.push({x:x, y:y, life:38, vy:-1.4, txt:txt||'+1'});
+  if(scorePopups.length>6) return;
+  var isMilestone = txt && (txt.indexOf('FEVER')>=0||txt.indexOf('ULTRA')>=0||txt.indexOf('MILESTONE')>=0);
+  var isCoin = txt && txt.indexOf('🐉')>=0;
+  scorePopups.push({
+    x:x, y:y,
+    life: isMilestone ? 55 : 38,
+    vy: isMilestone ? -2.2 : isCoin ? -1.6 : -1.4,
+    txt: txt||'+1',
+    big: isMilestone,
+    coin: isCoin
+  });
 }
 function updateScorePopups() {
   scorePopups=scorePopups.filter(function(p){return p.life>0;});
   for(var i=0;i<scorePopups.length;i++){
     var p=scorePopups[i];
-    ctx.save(); ctx.globalAlpha=Math.min(1,p.life/20);
-    ctx.textAlign='center'; ctx.font='bold 14px Courier New';
-    ctx.fillStyle='#FFD700';
-    ctx.fillText(p.txt||'+1', p.x, p.y);
+    var alpha = Math.min(1, p.life / (p.big ? 28 : 18));
+    ctx.save(); ctx.globalAlpha=alpha;
+    ctx.textAlign='center';
+    if(p.big){
+      // Milestone / fever — grande, com escala
+      var sc = 1 + (1 - p.life/55)*0.3;
+      ctx.translate(p.x, p.y); ctx.scale(sc, sc);
+      ctx.font='bold 18px Courier New';
+      ctx.fillStyle='#FF8800';
+      ctx.fillText(p.txt, 0, 0);
+    } else if(p.coin){
+      ctx.font='bold 13px Arial';
+      ctx.fillStyle='#FFD700';
+      ctx.fillText(p.txt, p.x, p.y);
+    } else {
+      ctx.font='bold 14px Courier New';
+      ctx.fillStyle=combo>=5?'#FF4488':combo>=3?'#FFD700':'#00D4FF';
+      ctx.fillText(p.txt, p.x, p.y);
+    }
     ctx.restore();
-    p.y+=p.vy; p.x+=(Math.random()-.5)*.4; p.life--;
+    p.y+=p.vy; p.x+=(Math.random()-.5)*0.5; p.life--;
   }
 }
 // ─── HIGHSCORE + TOP 5 ───────────────────────
@@ -6354,9 +6378,14 @@ function loop(ts) {
           coin.collected = true;
           coinCount++; coinsThisRun++;
           _ls.set('bleuCoins',coinCount);
-          spawnParticles(coin.x, coin.y, '#88ccff', 8);
-          spawnParticles(coin.x, coin.y, '#ffffff', 4);
-          beep(880, 1320, 0.12, 'sine', 0.1);
+          spawnParticles(coin.x, coin.y, '#FFD700', 10);
+          spawnParticles(coin.x, coin.y, '#88ccff', 6);
+          // Som satisfatório: acorde de moeda dourada (3 notas rápidas)
+          beep(1047, 1047, 0.08, 'sine', 0.10);
+          setTimeout(function(){ beep(1319, 1319, 0.07, 'sine', 0.08); }, 50);
+          setTimeout(function(){ beep(1568, 1568, 0.09, 'sine', 0.09); }, 95);
+          spawnScorePopup(coin.x, coin.y - 22, '+🐉');
+          if(navigator.vibrate) navigator.vibrate(8);
           coins.splice(ci3, 1); continue;
         }
       }
@@ -6890,8 +6919,8 @@ function handleClick(ex, ey) {
   if(walletAddress && cy >= 5 && cy <= 23 && cx >= W-112 && cx <= W-27) {
     disconnectWallet(); return;
   }
-  // Mute toggle — ícone de som no canto superior direito (área menor, não sobrepõe wallet)
-  if(cy >= 0 && cy <= 22 && cx >= W-24 && cx <= W) {
+  // Mute toggle — tap area alargada para 44px (Apple HIG)
+  if(cy >= 0 && cy <= 44 && cx >= W-44 && cx <= W) {
     muted = !muted;
     document.getElementById('mute').textContent = muted ? '🔇 MUTE' : '🔊 SFX';
     if(muted){ if(_curAudio) _curAudio.pause(); if(_presAudio) _presAudio.pause(); }
@@ -6956,10 +6985,11 @@ function handleClick(ex, ey) {
     return;
   }
 
-  // ── DEAD screen buttons — posições fixas (espelham o draw: CP=H/2+98, HT=H/2+130, SH=H/2+170, PL=H/2+210, MN=H/2+250)
+  // ── DEAD screen buttons — tap zones expandidas para 44px (Apple HIG)
+  // Visuais mantidos em 28px; zones de toque alargadas simetricamente
   if(gameState === 'dead') {
-    // ── Botão CHECKPOINT (H/2+98 a H/2+126) ──
-    if(cx>=W/2-110&&cx<=W/2+110&&cy>=H/2+98&&cy<=H/2+126){
+    // ── CHECKPOINT — zona 48px centrada no botão visual ──
+    if(cx>=W/2-112&&cx<=W/2+112&&cy>=H/2+88&&cy<=H/2+136){
       if(!checkpointUsed){
         if(checkpointStock > 0){
           checkpointStock--; _ls.set('bleuCheckpoint',checkpointStock);
@@ -6983,8 +7013,8 @@ function handleClick(ex, ey) {
       }
       return;
     }
-    // ── Botão CORAÇÃO (H/2+130 a H/2+158) — requer wallet ──
-    if(walletAddress&&!heartUsed&&cx>=W/2-110&&cx<=W/2+110&&cy>=H/2+130&&cy<=H/2+158){
+    // ── CORAÇÃO — zona 48px, requer wallet ──
+    if(walletAddress&&!heartUsed&&cx>=W/2-112&&cx<=W/2+112&&cy>=H/2+120&&cy<=H/2+168){
       sendUSDCPurchase(USDC_HEART, function(){
         heartUsed=true;
         lives=1; invincible=180; bleu.y=H/2; bleu.vy=0;
@@ -6994,21 +7024,21 @@ function handleClick(ex, ey) {
       });
       return;
     }
-    // ── Share (H/2+170 a H/2+198) ──
-    if(cx>=W/2-74&&cx<=W/2+74&&cy>=H/2+170&&cy<=H/2+198){
+    // ── SHARE — zona 44px ──
+    if(cx>=W/2-80&&cx<=W/2+80&&cy>=H/2+160&&cy<=H/2+210){
       var pv2=PHASE_VISUALS[runPhase]||PHASE_VISUALS[0];
       var shareText='🎮 Flapy Bleu\nScore: '+score+' | '+pv2.name+'\n🔵 https://flapy-bleu.vercel.app';
       if(navigator.share){ navigator.share({title:'Flapy Bleu',text:shareText,url:'https://flapy-bleu.vercel.app'}); }
       else { try{ navigator.clipboard.writeText(shareText); }catch(e){} }
       shareFlash=90; return;
     }
-    // ── Wallet section (H/2+282 a H/2+310) — conecta ou desconecta ──
-    if(cx>=W/2-108&&cx<=W/2+108&&cy>=H/2+282&&cy<=H/2+310){
+    // ── WALLET — zona ampliada ──
+    if(cx>=W/2-112&&cx<=W/2+112&&cy>=H/2+272&&cy<=H/2+320){
       if(walletAddress) disconnectWallet();
       else connectWallet();
       return;
     }
-    // ── Qualquer outro toque → reset (Play Again / Menu / área do card) ──
+    // ── Qualquer outro toque → NEW GAME ──
     menuTapReady=false; resetGame(); stopMusic();
     beep(440,660,0.08,'sine',0.1);
     return;
