@@ -3501,138 +3501,6 @@ function drawBoat(x, y, flapAnim, angle) {
   }
 
   // ══════════════════════════════════════════════
-  //  MINI VIKING — peeking above hull (head + torso + arms)
-  //  Positioned right of center, between mast and right shield
-  // ══════════════════════════════════════════════
-  ctx.save(); ctx.translate(10, 0);
-
-  // Arm animation: panic = arms up, rise = arms pumping, idle = relaxed
-  var _armL = _fast ? -0.9+Math.sin(frame*0.6)*0.3 : _rise ? -0.5+Math.sin(flapAnim*1.2)*0.4 : Math.sin(frame*0.04)*0.15;
-  var _armR = _fast ?  0.9+Math.sin(frame*0.6+1)*0.3 : _rise ? 0.5+Math.sin(flapAnim*1.2+0.8)*0.4 : Math.sin(frame*0.04+1)*0.15;
-
-  // ── Torso (partially hidden behind gunwale — clip to above y=0) ──
-  ctx.save();
-  // Only show body above gunwale line
-  ctx.beginPath(); ctx.rect(-20,-40,40,40); ctx.clip();
-  // Tunic body
-  ctx.beginPath(); ctx.roundRect(-4,-11,8,10,2);
-  ctx.fillStyle='#4A5A8A'; ctx.fill();
-  ctx.strokeStyle='#2A3560'; ctx.lineWidth=0.8; ctx.stroke();
-  // Tunic belt line
-  ctx.beginPath(); ctx.moveTo(-4,-4); ctx.lineTo(4,-4);
-  ctx.strokeStyle='#8B6030'; ctx.lineWidth=1.2; ctx.stroke();
-  ctx.restore();
-
-  // ── Left arm ──
-  ctx.save(); ctx.translate(-4,-8); ctx.rotate(_armL);
-  ctx.beginPath(); ctx.moveTo(0,0); ctx.quadraticCurveTo(-5,3,-6,7);
-  ctx.strokeStyle='#4A5A8A'; ctx.lineWidth=3; ctx.stroke();
-  ctx.strokeStyle='#FFCC88'; ctx.lineWidth=1.5; ctx.stroke();
-  // Hand
-  ctx.beginPath(); ctx.arc(-6,7,2,0,Math.PI*2);
-  ctx.fillStyle='#FFCC88'; ctx.fill();
-  ctx.restore();
-
-  // ── Right arm ──
-  ctx.save(); ctx.translate(4,-8); ctx.rotate(_armR);
-  ctx.beginPath(); ctx.moveTo(0,0); ctx.quadraticCurveTo(5,3,6,7);
-  ctx.strokeStyle='#4A5A8A'; ctx.lineWidth=3; ctx.stroke();
-  ctx.strokeStyle='#FFCC88'; ctx.lineWidth=1.5; ctx.stroke();
-  // Hand holding tiny oar/handle
-  ctx.beginPath(); ctx.arc(6,7,2,0,Math.PI*2);
-  ctx.fillStyle='#FFCC88'; ctx.fill();
-  ctx.restore();
-
-  // ── Head ──
-  ctx.beginPath(); ctx.arc(0,-15,5,0,Math.PI*2);
-  ctx.fillStyle='#FFCC88'; ctx.fill();
-  ctx.strokeStyle='#CC9955'; ctx.lineWidth=0.8; ctx.stroke();
-
-  // ── Beard (blonde, viking style) ──
-  ctx.beginPath();
-  ctx.moveTo(-3.5,-11);
-  ctx.quadraticCurveTo(-4,-7,-2,-5);
-  ctx.quadraticCurveTo(0,-4,2,-5);
-  ctx.quadraticCurveTo(4,-7,3.5,-11);
-  ctx.lineTo(2,-11); ctx.quadraticCurveTo(0,-9,-2,-11);
-  ctx.closePath();
-  ctx.fillStyle='#DDAA33'; ctx.fill();
-  ctx.strokeStyle='#AA8822'; ctx.lineWidth=0.5; ctx.stroke();
-  // Beard strands
-  ctx.strokeStyle='#BB9922'; ctx.lineWidth=0.5; ctx.globalAlpha=0.6;
-  ctx.beginPath(); ctx.moveTo(-1,-10); ctx.quadraticCurveTo(-1.5,-7,-1,-5); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(1,-10);  ctx.quadraticCurveTo(1.5,-7,1,-5);   ctx.stroke();
-  ctx.globalAlpha=1;
-
-  // ── Eyes ──
-  var _eyeBk = _fast ? '#FF2200' : '#222222';
-  ctx.fillStyle=_eyeBk;
-  ctx.beginPath(); ctx.ellipse(-2,-15.5,1.1,_fast?1.6:1.1,0,0,Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.ellipse( 2,-15.5,1.1,_fast?1.6:1.1,0,0,Math.PI*2); ctx.fill();
-  // Eye shine
-  ctx.fillStyle='#ffffff88';
-  ctx.beginPath(); ctx.arc(-1.4,-16,0.5,0,Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.arc( 2.6,-16,0.5,0,Math.PI*2); ctx.fill();
-  // Eyebrows (angry/normal)
-  ctx.strokeStyle='#8B6020'; ctx.lineWidth=0.8;
-  ctx.beginPath();
-  ctx.moveTo(-3.5,_fast?-18.5:-17.5); ctx.lineTo(-0.5,_fast?-17.5:-18);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(3.5,_fast?-18.5:-17.5); ctx.lineTo(0.5,_fast?-17.5:-18);
-  ctx.stroke();
-
-  // ── Nose ──
-  ctx.beginPath(); ctx.arc(0,-13.5,0.9,0,Math.PI*2);
-  ctx.fillStyle='#FFAA66'; ctx.fill();
-
-  // ── Viking Helmet (iron dome + horns) ──
-  // Dome
-  ctx.beginPath(); ctx.ellipse(0,-18,5.5,4,0,0,Math.PI*2);
-  ctx.fillStyle='#999999'; ctx.fill();
-  ctx.strokeStyle='#555555'; ctx.lineWidth=0.8; ctx.stroke();
-  // Helmet highlight
-  ctx.beginPath(); ctx.ellipse(-1.5,-20,2.5,1.5,-0.3,0,Math.PI*2);
-  ctx.fillStyle='#cccccc'; ctx.globalAlpha=0.5; ctx.fill(); ctx.globalAlpha=1;
-  // Nose guard (vertical band)
-  ctx.beginPath(); ctx.moveTo(0,-14); ctx.lineTo(0,-11.5);
-  ctx.strokeStyle='#777'; ctx.lineWidth=1.8; ctx.stroke();
-  // Rim band
-  ctx.beginPath(); ctx.ellipse(0,-18,5.5,4,0,Math.PI*0.85,Math.PI*2.15);
-  ctx.strokeStyle='#666'; ctx.lineWidth=1.5; ctx.stroke();
-
-  // ── Horns (curved, ivory) ──
-  ctx.fillStyle='#EEE0A0';
-  // Left horn
-  ctx.beginPath();
-  ctx.moveTo(-5,-18);
-  ctx.bezierCurveTo(-9,-20,-12,-22,-11,-27);
-  ctx.bezierCurveTo(-10,-30,-8,-29,-8,-26);
-  ctx.bezierCurveTo(-9,-23,-7,-21,-4,-19);
-  ctx.closePath();
-  ctx.fill(); ctx.strokeStyle='#AA9940'; ctx.lineWidth=0.7; ctx.stroke();
-  // Horn rings
-  ctx.strokeStyle='#BBAA60'; ctx.lineWidth=0.5;
-  ctx.beginPath(); ctx.moveTo(-9,-21); ctx.quadraticCurveTo(-10,-23,-9.5,-25); ctx.stroke();
-  // Right horn
-  ctx.beginPath();
-  ctx.moveTo(5,-18);
-  ctx.bezierCurveTo(9,-20,12,-22,11,-27);
-  ctx.bezierCurveTo(10,-30,8,-29,8,-26);
-  ctx.bezierCurveTo(9,-23,7,-21,4,-19);
-  ctx.closePath();
-  ctx.fill(); ctx.strokeStyle='#AA9940'; ctx.lineWidth=0.7; ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(9,-21); ctx.quadraticCurveTo(10,-23,9.5,-25); ctx.stroke();
-
-  // Panic expression: open mouth "O"
-  if(_fast){
-    ctx.beginPath(); ctx.ellipse(0,-12.5,2,2.5,0,0,Math.PI*2);
-    ctx.fillStyle='#5A1A1A'; ctx.fill();
-    ctx.strokeStyle='#CC9955'; ctx.lineWidth=0.6; ctx.stroke();
-  }
-
-  ctx.restore(); // mini viking
-
   // ══════════════════════════════════════════════
   //  MAST + RIGGING
   // ══════════════════════════════════════════════
@@ -3693,6 +3561,114 @@ function drawBoat(x, y, flapAnim, angle) {
   ctx.restore(); // unclip
   // Sail outline
   _sailPath(); ctx.strokeStyle='#881010'; ctx.lineWidth=1.5; ctx.stroke();
+
+  // ══════════════════════════════════════════════
+  //  MINI VIKING — drawn AFTER sail so he's always visible
+  //  x=18: bow-right side, outside sail coverage (sail ends at x≈14)
+  // ══════════════════════════════════════════════
+  ctx.save(); ctx.translate(18, 0);
+
+  var _armL = _fast ? -0.9+Math.sin(frame*0.6)*0.3   : _rise ? -0.5+Math.sin(flapAnim*1.2)*0.4   : Math.sin(frame*0.04)*0.15;
+  var _armR = _fast ?  0.9+Math.sin(frame*0.6+1)*0.3 : _rise ?  0.5+Math.sin(flapAnim*1.2+0.8)*0.4 : Math.sin(frame*0.04+1)*0.15;
+
+  // Torso — clipped to only show above gunwale (y<0)
+  ctx.save();
+  ctx.beginPath(); ctx.rect(-20,-40,40,40); ctx.clip();
+  ctx.beginPath(); ctx.roundRect(-4,-11,8,10,2);
+  ctx.fillStyle='#4A5A8A'; ctx.fill();
+  ctx.strokeStyle='#2A3560'; ctx.lineWidth=0.8; ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(-4,-4); ctx.lineTo(4,-4);
+  ctx.strokeStyle='#8B6030'; ctx.lineWidth=1.2; ctx.stroke();
+  ctx.restore();
+
+  // Left arm
+  ctx.save(); ctx.translate(-4,-8); ctx.rotate(_armL);
+  ctx.beginPath(); ctx.moveTo(0,0); ctx.quadraticCurveTo(-5,3,-6,7);
+  ctx.strokeStyle='#4A5A8A'; ctx.lineWidth=3; ctx.stroke();
+  ctx.strokeStyle='#FFCC88'; ctx.lineWidth=1.5; ctx.stroke();
+  ctx.beginPath(); ctx.arc(-6,7,2,0,Math.PI*2); ctx.fillStyle='#FFCC88'; ctx.fill();
+  ctx.restore();
+
+  // Right arm
+  ctx.save(); ctx.translate(4,-8); ctx.rotate(_armR);
+  ctx.beginPath(); ctx.moveTo(0,0); ctx.quadraticCurveTo(5,3,6,7);
+  ctx.strokeStyle='#4A5A8A'; ctx.lineWidth=3; ctx.stroke();
+  ctx.strokeStyle='#FFCC88'; ctx.lineWidth=1.5; ctx.stroke();
+  ctx.beginPath(); ctx.arc(6,7,2,0,Math.PI*2); ctx.fillStyle='#FFCC88'; ctx.fill();
+  ctx.restore();
+
+  // Head
+  ctx.beginPath(); ctx.arc(0,-15,5,0,Math.PI*2);
+  ctx.fillStyle='#FFCC88'; ctx.fill();
+  ctx.strokeStyle='#CC9955'; ctx.lineWidth=0.8; ctx.stroke();
+
+  // Beard (blonde)
+  ctx.beginPath();
+  ctx.moveTo(-3.5,-11); ctx.quadraticCurveTo(-4,-7,-2,-5);
+  ctx.quadraticCurveTo(0,-4,2,-5); ctx.quadraticCurveTo(4,-7,3.5,-11);
+  ctx.lineTo(2,-11); ctx.quadraticCurveTo(0,-9,-2,-11); ctx.closePath();
+  ctx.fillStyle='#DDAA33'; ctx.fill();
+  ctx.strokeStyle='#AA8822'; ctx.lineWidth=0.5; ctx.stroke();
+  ctx.strokeStyle='#BB9922'; ctx.lineWidth=0.5; ctx.globalAlpha=0.6;
+  ctx.beginPath(); ctx.moveTo(-1,-10); ctx.quadraticCurveTo(-1.5,-7,-1,-5); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo( 1,-10); ctx.quadraticCurveTo( 1.5,-7, 1,-5); ctx.stroke();
+  ctx.globalAlpha=1;
+
+  // Eyes
+  ctx.fillStyle = _fast ? '#FF2200' : '#222';
+  ctx.beginPath(); ctx.ellipse(-2,-15.5,1.1,_fast?1.6:1.1,0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse( 2,-15.5,1.1,_fast?1.6:1.1,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#ffffff88';
+  ctx.beginPath(); ctx.arc(-1.4,-16,0.5,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc( 2.6,-16,0.5,0,Math.PI*2); ctx.fill();
+  // Eyebrows
+  ctx.strokeStyle='#8B6020'; ctx.lineWidth=0.8;
+  ctx.beginPath(); ctx.moveTo(-3.5,_fast?-18.5:-17.5); ctx.lineTo(-0.5,_fast?-17.5:-18); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo( 3.5,_fast?-18.5:-17.5); ctx.lineTo( 0.5,_fast?-17.5:-18); ctx.stroke();
+
+  // Nose
+  ctx.beginPath(); ctx.arc(0,-13.5,0.9,0,Math.PI*2);
+  ctx.fillStyle='#FFAA66'; ctx.fill();
+
+  // Helmet dome
+  ctx.beginPath(); ctx.ellipse(0,-18,5.5,4,0,0,Math.PI*2);
+  ctx.fillStyle='#999'; ctx.fill(); ctx.strokeStyle='#555'; ctx.lineWidth=0.8; ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(-1.5,-20,2.5,1.5,-0.3,0,Math.PI*2);
+  ctx.fillStyle='#ccc'; ctx.globalAlpha=0.5; ctx.fill(); ctx.globalAlpha=1;
+  // Nose guard
+  ctx.beginPath(); ctx.moveTo(0,-14); ctx.lineTo(0,-11.5);
+  ctx.strokeStyle='#777'; ctx.lineWidth=1.8; ctx.stroke();
+  // Rim
+  ctx.beginPath(); ctx.ellipse(0,-18,5.5,4,0,Math.PI*0.85,Math.PI*2.15);
+  ctx.strokeStyle='#666'; ctx.lineWidth=1.5; ctx.stroke();
+
+  // Horns (ivory, curved)
+  ctx.fillStyle='#EEE0A0';
+  ctx.beginPath();
+  ctx.moveTo(-5,-18);
+  ctx.bezierCurveTo(-9,-20,-12,-22,-11,-27);
+  ctx.bezierCurveTo(-10,-30,-8,-29,-8,-26);
+  ctx.bezierCurveTo(-9,-23,-7,-21,-4,-19);
+  ctx.closePath();
+  ctx.fill(); ctx.strokeStyle='#AA9940'; ctx.lineWidth=0.7; ctx.stroke();
+  ctx.strokeStyle='#BBAA60'; ctx.lineWidth=0.5;
+  ctx.beginPath(); ctx.moveTo(-9,-21); ctx.quadraticCurveTo(-10,-23,-9.5,-25); ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(5,-18);
+  ctx.bezierCurveTo(9,-20,12,-22,11,-27);
+  ctx.bezierCurveTo(10,-30,8,-29,8,-26);
+  ctx.bezierCurveTo(9,-23,7,-21,4,-19);
+  ctx.closePath();
+  ctx.fill(); ctx.strokeStyle='#AA9940'; ctx.lineWidth=0.7; ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(9,-21); ctx.quadraticCurveTo(10,-23,9.5,-25); ctx.stroke();
+
+  // Panic mouth "O"
+  if(_fast){
+    ctx.beginPath(); ctx.ellipse(0,-12.5,2,2.5,0,0,Math.PI*2);
+    ctx.fillStyle='#5A1A1A'; ctx.fill();
+    ctx.strokeStyle='#CC9955'; ctx.lineWidth=0.6; ctx.stroke();
+  }
+  ctx.restore(); // mini viking
 
   // Bow tip — clean rounded end (no head, no neck)
   ctx.beginPath(); ctx.arc(26,3,3,0,Math.PI*2);
