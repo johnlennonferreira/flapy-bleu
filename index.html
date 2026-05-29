@@ -1036,6 +1036,15 @@ function isColorEquipped(charIdx, colorIdx) {
 function shopBuyOrEquip() {
   // Personagem bloqueado — não permite equipar nem comprar skin
   if((shopChar===1&&!gengarUnlocked)||(shopChar===2&&!wormUnlocked)||(shopChar===3&&!alienUnlocked)) return;
+  // Viking Boat — único, só equipa (sem variantes de cor)
+  if(shopChar===4){
+    if(!boatUnlocked) return;
+    activeChar=4; _ls.set('bleuChar','4');
+    beep(523,1047,0.22,'sine',0.14);
+    [659,784,1047].forEach(function(f,ii){setTimeout(function(){beep(f,f,0.12,'sine',0.1);},ii*70);});
+    spawnParticles(W/2,H/2,'#FFD700',18); spawnParticles(W/2,H/2,'#FF8800',10);
+    return;
+  }
   var colors = shopChar===0 ? BLEU_COLORS : shopChar===1 ? PHANTOM_COLORS : shopChar===2 ? WORM_COLORS : ALIEN_COLORS;
   var color  = colors[shopSelColor];
   if(!color) return;
@@ -1137,46 +1146,51 @@ function drawShopTab() {
   if(shopChar===0)      drawBleu(0,0,frame*0.28,0);
   else if(shopChar===1) drawPhantom(0,0,frame*0.28,0);
   else if(shopChar===2) drawWorm(0,0,frame*0.28,0);
-  else                  drawAlien(0,0,frame*0.28,0);
+  else if(shopChar===3) drawAlien(0,0,frame*0.28,0);
+  else if(shopChar===4) drawBoat(0,0,frame*0.28,0);
   ctx.globalAlpha=1; ctx.restore();
   activeColorBleu=_savedCB; activeColorGengar=_savedCG; activeColorWorm=_savedCW; activeColorAlien=_savedCA;
 
-  // ── Fan connector lines ──
-  ctx.strokeStyle='#ffffff11'; ctx.lineWidth=1;
-  for(var _fi=0; _fi<5; _fi++){
-    var _fa=FAN_ANGLES[_fi]*Math.PI/180;
-    ctx.beginPath(); ctx.moveTo(W/2,_prevY);
-    ctx.lineTo(W/2+(FAN_RADIUS-20)*Math.cos(_fa), _prevY+(FAN_RADIUS-20)*Math.sin(_fa));
-    ctx.stroke();
-  }
-
-  // ── Fan orbs ──
+  // ── Fan connector lines + orbs (hidden for boat — no color variants) ──
   var _fanColors = shopChar===0 ? BLEU_COLORS : shopChar===1 ? PHANTOM_COLORS : shopChar===2 ? WORM_COLORS : ALIEN_COLORS;
-  for(var _fi2=0; _fi2<5; _fi2++){
-    var _fa2=FAN_ANGLES[_fi2]*Math.PI/180;
-    var _fx=W/2+FAN_RADIUS*Math.cos(_fa2), _fy=_prevY+FAN_RADIUS*Math.sin(_fa2);
-    var _fc=_fanColors[_fi2];
-    var _fOwned=isColorOwned(shopChar,_fi2), _fSel=shopSelColor===_fi2;
-    var _orbR=_fSel?20:15;
-    // shadow
-    ctx.beginPath(); ctx.arc(_fx+2,_fy+2,_orbR,0,Math.PI*2);
-    ctx.fillStyle='#00000066'; ctx.fill();
-    // orb
-    ctx.beginPath(); ctx.arc(_fx,_fy,_orbR,0,Math.PI*2);
-    ctx.fillStyle=_fc.body; ctx.fill();
-    ctx.lineWidth=_fSel?3:1.5;
-    ctx.strokeStyle=_fSel?'#ffffff':(_fOwned?_fc.glow+'cc':'#ffffff33');
-    ctx.stroke();
-    // glow ring on selected
-    if(_fSel){ ctx.beginPath(); ctx.arc(_fx,_fy,_orbR+4,0,Math.PI*2); ctx.strokeStyle=_fc.glow+'55'; ctx.lineWidth=2; ctx.stroke(); }
-    // icon
+  if(shopChar !== 4){
+    ctx.strokeStyle='#ffffff11'; ctx.lineWidth=1;
+    for(var _fi=0; _fi<5; _fi++){
+      var _fa=FAN_ANGLES[_fi]*Math.PI/180;
+      ctx.beginPath(); ctx.moveTo(W/2,_prevY);
+      ctx.lineTo(W/2+(FAN_RADIUS-20)*Math.cos(_fa), _prevY+(FAN_RADIUS-20)*Math.sin(_fa));
+      ctx.stroke();
+    }
+    for(var _fi2=0; _fi2<5; _fi2++){
+      var _fa2=FAN_ANGLES[_fi2]*Math.PI/180;
+      var _fx=W/2+FAN_RADIUS*Math.cos(_fa2), _fy=_prevY+FAN_RADIUS*Math.sin(_fa2);
+      var _fc=_fanColors[_fi2];
+      var _fOwned=isColorOwned(shopChar,_fi2), _fSel=shopSelColor===_fi2;
+      var _orbR=_fSel?20:15;
+      ctx.beginPath(); ctx.arc(_fx+2,_fy+2,_orbR,0,Math.PI*2);
+      ctx.fillStyle='#00000066'; ctx.fill();
+      ctx.beginPath(); ctx.arc(_fx,_fy,_orbR,0,Math.PI*2);
+      ctx.fillStyle=_fc.body; ctx.fill();
+      ctx.lineWidth=_fSel?3:1.5;
+      ctx.strokeStyle=_fSel?'#ffffff':(_fOwned?_fc.glow+'cc':'#ffffff33');
+      ctx.stroke();
+      if(_fSel){ ctx.beginPath(); ctx.arc(_fx,_fy,_orbR+4,0,Math.PI*2); ctx.strokeStyle=_fc.glow+'55'; ctx.lineWidth=2; ctx.stroke(); }
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      if(isColorEquipped(shopChar,_fi2)){ ctx.font='bold 11px Arial'; ctx.fillStyle='#ffffff'; ctx.fillText('✓',_fx,_fy); }
+      else if(!_fOwned&&_fi2>0){         ctx.font='9px Arial';         ctx.fillStyle='#ffffffaa'; ctx.fillText('🔒',_fx,_fy); }
+      ctx.textBaseline='alphabetic';
+      ctx.beginPath(); ctx.arc(_fx-_orbR*0.3,_fy-_orbR*0.3,_orbR*0.28,0,Math.PI*2);
+      ctx.fillStyle='#ffffff44'; ctx.fill();
+    }
+  } else {
+    // Boat — show legendary badge instead of color orbs
     ctx.textAlign='center'; ctx.textBaseline='middle';
-    if(isColorEquipped(shopChar,_fi2)){ ctx.font='bold 11px Arial'; ctx.fillStyle='#ffffff'; ctx.fillText('✓',_fx,_fy); }
-    else if(!_fOwned&&_fi2>0){         ctx.font='9px Arial';         ctx.fillStyle='#ffffffaa'; ctx.fillText('🔒',_fx,_fy); }
+    ctx.font='bold 11px Courier New'; ctx.fillStyle='#FFD700'; ctx.shadowColor='#FF8800'; ctx.shadowBlur=14;
+    ctx.fillText('⚓  LEGENDARY  ·  NG+5', W/2, _prevY+FAN_RADIUS*0.55);
+    ctx.shadowBlur=0;
+    ctx.font='9px Courier New'; ctx.fillStyle='#ffffff44';
+    ctx.fillText('unique — no color variants', W/2, _prevY+FAN_RADIUS*0.55+14);
     ctx.textBaseline='alphabetic';
-    // shine
-    ctx.beginPath(); ctx.arc(_fx-_orbR*0.3,_fy-_orbR*0.3,_orbR*0.28,0,Math.PI*2);
-    ctx.fillStyle='#ffffff44'; ctx.fill();
   }
 
   // ── Selected color info ──
