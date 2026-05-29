@@ -4523,36 +4523,31 @@ function drawBasePipeObstacle(p) {
   var cx = p.x + p.bodyW/2;
   var rimH = 16, rimExt = 7;
 
-  function pipeGrad(x, w) {
-    var g = ctx.createLinearGradient(x, 0, x+w, 0);
-    g.addColorStop(0, pD); g.addColorStop(0.3, pL); g.addColorStop(0.65, pB); g.addColorStop(1, pD);
-    return g;
-  }
-
   function drawPipe(bodyY1, bodyY2, rimY, rimDir) {
-    // Body
-    ctx.fillStyle = pipeGrad(p.x, p.bodyW);
+    if(!_isMobile){
+      var g1 = ctx.createLinearGradient(p.x, 0, p.x+p.bodyW, 0);
+      g1.addColorStop(0,pD); g1.addColorStop(0.3,pL); g1.addColorStop(0.65,pB); g1.addColorStop(1,pD);
+      ctx.fillStyle = g1;
+    } else { ctx.fillStyle = pB; }
     ctx.fillRect(p.x, bodyY1, p.bodyW, bodyY2 - bodyY1);
-    // Rim
-    ctx.fillStyle = pipeGrad(p.x - rimExt, p.bodyW + rimExt*2);
+    if(!_isMobile){
+      var g2 = ctx.createLinearGradient(p.x-rimExt, 0, p.x+p.bodyW+rimExt*2, 0);
+      g2.addColorStop(0,pD); g2.addColorStop(0.3,pL); g2.addColorStop(0.65,pB); g2.addColorStop(1,pD);
+      ctx.fillStyle = g2;
+    } else { ctx.fillStyle = '#1a66cc'; }
     ctx.fillRect(p.x - rimExt, rimY, p.bodyW + rimExt*2, rimH);
-    // Outlines
-    ctx.strokeStyle = pOut; ctx.lineWidth = 1.5;
-    ctx.strokeRect(p.x, bodyY1, p.bodyW, bodyY2 - bodyY1);
-    ctx.strokeRect(p.x - rimExt, rimY, p.bodyW + rimExt*2, rimH);
-    // Shine strip
-    ctx.fillStyle = pHL; ctx.fillRect(p.x + 5, bodyY1 + 4, 7, bodyY2 - bodyY1 - 10);
-    // BASE text — vertical, neon white
-    var textH = bodyY2 - bodyY1;
-    if(textH > 50) {
-      ctx.save();
-      ctx.translate(cx, bodyY1 + textH/2);
-      ctx.rotate(-Math.PI/2);
-      ctx.shadowColor = '#aaddff'; ctx.shadowBlur = 8;
-      ctx.fillStyle = '#eef6ff'; ctx.font = 'bold 11px Courier New'; ctx.textAlign = 'center';
-      ctx.fillText('BASE', 0, 4);
-      ctx.shadowBlur = 0;
-      ctx.restore();
+    if(!_isMobile){
+      ctx.strokeStyle = pOut; ctx.lineWidth = 1.5;
+      ctx.strokeRect(p.x, bodyY1, p.bodyW, bodyY2-bodyY1);
+      ctx.strokeRect(p.x-rimExt, rimY, p.bodyW+rimExt*2, rimH);
+      ctx.fillStyle = pHL; ctx.fillRect(p.x+5, bodyY1+4, 7, bodyY2-bodyY1-10);
+      var textH = bodyY2 - bodyY1;
+      if(textH > 50){
+        ctx.save(); ctx.translate(cx, bodyY1+textH/2); ctx.rotate(-Math.PI/2);
+        ctx.shadowColor='#aaddff'; ctx.shadowBlur=8;
+        ctx.fillStyle='#eef6ff'; ctx.font='bold 11px Courier New'; ctx.textAlign='center';
+        ctx.fillText('BASE',0,4); ctx.shadowBlur=0; ctx.restore();
+      }
     }
   }
 
@@ -4678,33 +4673,33 @@ function drawVineObstacle(p) {
   var cx = p.x + p.bodyW/2;
 
   function drawVineBody(y1, y2) {
-    // Main vine body — flat on mobile
-    var vg = ctx.createLinearGradient(p.x, 0, p.x+p.bodyW, 0);
-    vg.addColorStop(0, vD); vg.addColorStop(0.4, vM); vg.addColorStop(0.7, vG); vg.addColorStop(1, vD);
-    ctx.fillStyle = vg;
+    if(!_isMobile){
+      var vg = ctx.createLinearGradient(p.x, 0, p.x+p.bodyW, 0);
+      vg.addColorStop(0, vD); vg.addColorStop(0.4, vM); vg.addColorStop(0.7, vG); vg.addColorStop(1, vD);
+      ctx.fillStyle = vg;
+    } else { ctx.fillStyle = vM; }
     ctx.fillRect(p.x, y1, p.bodyW, y2 - y1);
-    // Vine texture lines
-    ctx.strokeStyle = vD; ctx.lineWidth = 1;
-    for(var vy = y1+6; vy < y2-4; vy += 10) {
+    if(!_isMobile){
+      // Vine texture lines
+      ctx.strokeStyle = vD; ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.moveTo(p.x+3, vy);
-      ctx.quadraticCurveTo(cx, vy + 4, p.x+p.bodyW-3, vy);
+      for(var vy = y1+6; vy < y2-4; vy += 10) {
+        ctx.moveTo(p.x+3, vy); ctx.quadraticCurveTo(cx, vy+4, p.x+p.bodyW-3, vy);
+      }
       ctx.stroke();
     }
-    // Thorns on each side
-    ctx.fillStyle = vThorn;
-    for(var ty = y1+8; ty < y2-4; ty += 14) {
-      // Left thorn
+    // Thorns — skip on mobile (too many fills per frame)
+    if(!_isMobile){
+      ctx.fillStyle = vThorn;
       ctx.beginPath();
-      ctx.moveTo(p.x, ty); ctx.lineTo(p.x-12, ty+5); ctx.lineTo(p.x, ty+8);
-      ctx.closePath(); ctx.fill();
-      // Right thorn
-      ctx.beginPath();
-      ctx.moveTo(p.x+p.bodyW, ty+4); ctx.lineTo(p.x+p.bodyW+12, ty+8); ctx.lineTo(p.x+p.bodyW, ty+12);
-      ctx.closePath(); ctx.fill();
+      for(var ty = y1+8; ty < y2-4; ty += 14) {
+        ctx.moveTo(p.x, ty); ctx.lineTo(p.x-12, ty+5); ctx.lineTo(p.x, ty+8); ctx.closePath();
+        ctx.moveTo(p.x+p.bodyW, ty+4); ctx.lineTo(p.x+p.bodyW+12, ty+8); ctx.lineTo(p.x+p.bodyW, ty+12); ctx.closePath();
+      }
+      ctx.fill();
+      ctx.strokeStyle = '#0a0a0a'; ctx.lineWidth = 1;
+      ctx.strokeRect(p.x, y1, p.bodyW, y2-y1);
     }
-    ctx.strokeStyle = '#0a0a0a'; ctx.lineWidth = 1;
-    ctx.strokeRect(p.x, y1, p.bodyW, y2-y1);
   }
 
   drawVineBody(0, p.topH);
@@ -4998,17 +4993,21 @@ function drawStarField(count, alpha) {
 
 function drawClouds(alphaScale) {
   ctx.fillStyle = '#ffffff';
-  for(var i = 0; i < 3; i++) {
-    var cx = W + 60 - ((i*190 + frame*0.5) % (W+220));
-    var cy = 50 + i * 75;
-    var r  = 20 + (i%2)*14;
+  // Batch ALL cloud arcs into single fill call
+  ctx.beginPath();
+  var _nC = _isMobile ? 2 : 3;
+  for(var i = 0; i < _nC; i++) {
+    var cx2 = W + 60 - ((i*190 + frame*0.5) % (W+220));
+    var cy2 = 50 + i * 75;
+    var r2  = 20 + (i%2)*14;
     ctx.globalAlpha = alphaScale * (0.55 + (i%2)*0.18);
-    ctx.beginPath();
-    ctx.arc(cx, cy, r, 0, Math.PI*2);
-    ctx.arc(cx+r*0.9, cy-r*0.3, r*0.65, 0, Math.PI*2);
-    ctx.arc(cx+r*1.7, cy, r*0.7, 0, Math.PI*2);
-    ctx.fill();
+    ctx.moveTo(cx2+r2, cy2); ctx.arc(cx2, cy2, r2, 0, Math.PI*2);
+    if(!_isMobile){
+      ctx.moveTo(cx2+r2*0.9+r2*0.65,cy2-r2*0.3); ctx.arc(cx2+r2*0.9, cy2-r2*0.3, r2*0.65, 0, Math.PI*2);
+      ctx.moveTo(cx2+r2*1.7+r2*0.7,cy2); ctx.arc(cx2+r2*1.7, cy2, r2*0.7, 0, Math.PI*2);
+    }
   }
+  ctx.fill();
   ctx.globalAlpha = 1;
 }
 
@@ -5109,10 +5108,10 @@ function drawMountainBackground() {
 function drawSunnyBlueSkyBg() {
   // Sun
   var sunX = W - 65, sunY = 65;
-  ctx.shadowColor = '#FFE060'; ctx.shadowBlur = 35;
+  if(!_isMobile){ ctx.shadowColor='#FFE060'; ctx.shadowBlur=35; }
   ctx.fillStyle = '#FFF7AA';
   ctx.beginPath(); ctx.arc(sunX, sunY, 26, 0, Math.PI*2); ctx.fill();
-  ctx.shadowBlur = 0;
+  if(!_isMobile){ ctx.shadowBlur=0; }
   // Cache sun halo — position never changes
   if(!_sunHalo){ _sunHalo=ctx.createRadialGradient(sunX,sunY,20,sunX,sunY,80); _sunHalo.addColorStop(0,'#FFE06066'); _sunHalo.addColorStop(1,'transparent'); }
   ctx.fillStyle = _sunHalo; ctx.fillRect(0,0,W,H);
@@ -5208,47 +5207,50 @@ function drawAsteroids() {
 }
 
 function drawCelestialDesertBg() {
-  // Large celestial moon — gradient cached (position never changes)
   var moonX = W*0.2, moonY = 90;
   if(!_moonGrad){ _moonGrad=ctx.createRadialGradient(moonX-15,moonY-15,4,moonX,moonY,55); _moonGrad.addColorStop(0,'#ffeecc'); _moonGrad.addColorStop(0.6,'#cc8844'); _moonGrad.addColorStop(1,'#55220088'); }
   ctx.fillStyle = _moonGrad;
   ctx.beginPath(); ctx.arc(moonX, moonY, 55, 0, Math.PI*2); ctx.fill();
-  ctx.shadowColor = '#cc7722'; ctx.shadowBlur = 30;
-  ctx.strokeStyle = '#ffaa5544'; ctx.lineWidth = 3;
-  ctx.beginPath(); ctx.arc(moonX, moonY, 55, 0, Math.PI*2); ctx.stroke();
-  ctx.shadowBlur = 0;
-  // Colossal building silhouettes
-  var ruins = [{ox:10,h:320,w:55},{ox:100,h:260,w:40},{ox:230,h:380,w:70},{ox:320,h:290,w:50},{ox:390,h:340,w:60}];
+  if(!_isMobile){
+    ctx.shadowColor = '#cc7722'; ctx.shadowBlur = 30;
+    ctx.strokeStyle = '#ffaa5544'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(moonX, moonY, 55, 0, Math.PI*2); ctx.stroke();
+    ctx.shadowBlur = 0;
+  }
+  // Ruins — fewer on mobile, no inner detail
+  var ruins = _isMobile
+    ? [{ox:10,h:320,w:55},{ox:230,h:380,w:70},{ox:390,h:340,w:60}]
+    : [{ox:10,h:320,w:55},{ox:100,h:260,w:40},{ox:230,h:380,w:70},{ox:320,h:290,w:50},{ox:390,h:340,w:60}];
+  ctx.fillStyle = '#1a0800aa';
+  ctx.beginPath();
   for(var ri = 0; ri < ruins.length; ri++) {
     var r2 = ruins[ri];
     var rx = ((r2.ox - frame*0.05) % (W+150) + W+150) % (W+150) - 70;
-    ctx.fillStyle = '#1a0800aa';
-    ctx.fillRect(rx, H-80-r2.h, r2.w, r2.h);
-    // Arched window openings
-    for(var rw = 0; rw < 3; rw++) {
-      var rwY = H-80-r2.h + rw*(r2.h/3.5) + 20;
-      ctx.fillStyle = '#ff880022';
-      ctx.beginPath(); ctx.arc(rx + r2.w/2, rwY + 14, 10, Math.PI, 0); ctx.fill();
-      ctx.fillRect(rx + r2.w/2 - 10, rwY + 14, 20, 14); ctx.fill();
-    }
-    // Battlements on top
-    for(var rb = 0; rb < Math.floor(r2.w/12); rb++) {
-      ctx.fillStyle = '#1a0800bb';
-      ctx.fillRect(rx + rb*12, H-80-r2.h - 10, 8, 10);
-    }
-    ctx.fillStyle = '#1a0800aa';
+    ctx.rect(rx, H-80-r2.h, r2.w, r2.h);
   }
-  // Sandy desert ground band — gradient cached (fixed params)
+  ctx.fill();
+  if(!_isMobile){
+    // Arched windows + battlements — desktop only
+    for(var ri2=0; ri2<ruins.length; ri2++){
+      var r3=ruins[ri2], rx2=((r3.ox-frame*0.05)%(W+150)+W+150)%(W+150)-70;
+      ctx.fillStyle='#ff880022';
+      for(var rw=0;rw<3;rw++){
+        var rwY=H-80-r3.h+rw*(r3.h/3.5)+20;
+        ctx.beginPath(); ctx.arc(rx2+r3.w/2,rwY+14,10,Math.PI,0); ctx.fill();
+        ctx.fillRect(rx2+r3.w/2-10,rwY+14,20,14);
+      }
+      ctx.fillStyle='#1a0800bb';
+      for(var rb=0;rb<Math.floor(r3.w/12);rb++) ctx.fillRect(rx2+rb*12,H-80-r3.h-10,8,10);
+    }
+  }
   if(!_desertSand){ _desertSand=ctx.createLinearGradient(0,H-120,0,H-80); _desertSand.addColorStop(0,'#4a2800aa'); _desertSand.addColorStop(1,'#6a3c1088'); }
   ctx.fillStyle = _desertSand; ctx.fillRect(0, H-120, W, 40);
-  // Dune wave
+  // Dune wave — bigger step on mobile
   ctx.fillStyle = '#3a200666';
-  ctx.beginPath();
-  ctx.moveTo(0, H-100);
-  for(var dx = 0; dx <= W; dx += 10) {
-    ctx.lineTo(dx, H-100 + 8*Math.sin((dx + frame*0.5)*0.04));
-  }
-  ctx.lineTo(W, H-80); ctx.lineTo(0, H-80); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(0, H-100);
+  var _dStep = _isMobile ? 20 : 10;
+  for(var dx = 0; dx <= W; dx += _dStep) ctx.lineTo(dx, H-100 + 8*Math.sin((dx+frame*0.5)*0.04));
+  ctx.lineTo(W,H-80); ctx.lineTo(0,H-80); ctx.closePath(); ctx.fill();
 }
 
 function drawLimboBg() {
