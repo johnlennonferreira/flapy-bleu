@@ -5822,7 +5822,15 @@ function loop(ts) {
   if(gameState === 'idle'){
     if(idleTab==='play'){
       if(!_isMobile) drawIdleParticles(); // partículas decorativas — pula no mobile
-      drawCharacter(bleu.x, bleu.y + Math.sin(frame*.045)*8, frame*.22, 0);
+      // Sombra no chão (depth/premium feel)
+      var _charBobY = bleu.y + Math.sin(frame*.045)*8;
+      var _shadowDist = _charBobY - (H/2 - 60); // distância do ponto mais alto do bob
+      var _shadowScale = 0.7 + 0.3*(_shadowDist/16); // maior quando mais baixo
+      ctx.save(); ctx.globalAlpha = 0.18 - 0.06*(_shadowDist/16);
+      ctx.fillStyle = '#000828';
+      ctx.beginPath(); ctx.ellipse(bleu.x, H/2+62, 28*_shadowScale, 6, 0, 0, Math.PI*2); ctx.fill();
+      ctx.restore();
+      drawCharacter(bleu.x, _charBobY, frame*.22, 0);
       ctx.textAlign = 'center';
 
       // ── Title shadow layer ──
@@ -7191,12 +7199,12 @@ function handleClick(ex, ey) {
     // Play tab — wallet buttons
     if(idleTab==='play') {
       var wy0c = H/2+98;
-      // TAP TO START button: H/2+50 ± 18
-      if(cx>=W/2-88&&cx<=W/2+88&&cy>=H/2+32&&cy<=H/2+68){
+      // TAP TO START — zona 44px (visual 36px, extendida 4px cada lado)
+      if(cx>=W/2-92&&cx<=W/2+92&&cy>=H/2+28&&cy<=H/2+72){
         flap(); return;
       }
-      // Wallet toggle — same button connects or disconnects
-      if(cx>=W/2-100&&cx<=W/2+100&&cy>=wy0c&&cy<=wy0c+32){
+      // Wallet toggle — zona 44px
+      if(cx>=W/2-104&&cx<=W/2+104&&cy>=wy0c-4&&cy<=wy0c+40){
         walletAddress ? disconnectWallet() : connectWallet(); return;
       }
     }
