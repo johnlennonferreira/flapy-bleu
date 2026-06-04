@@ -7517,12 +7517,16 @@ function handleClick(ex, ey) {
 }
 
 canvas.addEventListener('click', function(e){ handleClick(e.clientX, e.clientY); });
-// iOS fallback — alguns Safari disparam touchend mas não touchstart em certas situações
-var _touchMoved = false;
+// Touch handlers — touchstart primário, touchend fallback iOS (anti double-fire)
+var _touchMoved = false, _touchHandled = false;
 canvas.addEventListener('touchmove', function(){ _touchMoved = true; }, {passive:true});
+canvas.addEventListener('touchstart', function(e){
+  e.preventDefault(); _touchMoved = false; _touchHandled = true;
+  handleClick(e.touches[0].clientX, e.touches[0].clientY);
+}, {passive:false});
 canvas.addEventListener('touchend', function(e){
-  if(_touchMoved){ _touchMoved=false; return; } // ignorar swipes
-  _touchMoved = false;
+  if(_touchHandled){ _touchHandled = false; return; } // touchstart já tratou
+  if(_touchMoved){ _touchMoved = false; return; }     // ignorar swipes
   e.preventDefault();
   handleClick(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
 }, {passive:false});
@@ -7536,7 +7540,6 @@ document.addEventListener('keydown', function(e){
   }
   if(e.code==='KeyP' && (gameState==='playing'||paused)){ paused=!paused; }
 });
-canvas.addEventListener('touchstart', function(e){ e.preventDefault(); handleClick(e.touches[0].clientX, e.touches[0].clientY); }, {passive:false});
 
 // ── MOBILE PAUSE/RESUME — visibilitychange ──────────────────────
 // Quando o jogador minimiza o app, sai para outra aba ou recebe
