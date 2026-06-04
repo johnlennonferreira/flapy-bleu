@@ -1647,9 +1647,9 @@ function drawLeaderboardTab() {
   ];
   for(var ri=0;ri<rows.length;ri++){
     var ry=statsY+ri*52;
-    ctx.fillStyle='#0052FF14'; ctx.strokeStyle='#0052FF33'; ctx.lineWidth=1;
+    ctx.fillStyle='#0052FF2a'; ctx.strokeStyle='#0052FF88'; ctx.lineWidth=1.5;
     ctx.beginPath(); ctx.roundRect(W/2-112,ry,224,44,8); ctx.fill(); ctx.stroke();
-    ctx.font='8px Courier New'; ctx.fillStyle='#ffffff44';
+    ctx.font='bold 9px Courier New'; ctx.fillStyle='#ffffffcc';
     ctx.textAlign='left'; ctx.fillText(rows[ri].icon+'  '+rows[ri].label, W/2-100, ry+14);
     ctx.textAlign='right';
     ctx.font='bold 22px Courier New'; ctx.fillStyle=rows[ri].color;
@@ -7358,14 +7358,14 @@ function handleClick(ex, ey) {
           checkpointUsed=true; lives=3; invincible=240; dizzyTimer=90; checkpointFlash=90;
           checkpointReady=false; checkpointFromCard=false;
         } else {
-          // Heart only: +1 life
-          lives=Math.min(lives+1,5); invincible=180;
+          // Heart only: restaura 3 vidas (pagou USDC — merece full health)
+          lives=3; invincible=180;
           heartReady=false;
         }
-        // Clear all obstacles and center the character in a safe spot
+        // Clear all obstacles and respawn character at normal position
         pipes=[]; stars=[]; shieldItems=[]; fireStars=[]; coins=[];
         lastGapCenter=H/2; firePower=0; starPower=0;
-        bleu.x=W/2; bleu.y=H/2; bleu.vy=0; bleu.vx=0;
+        bleu.x=90; bleu.y=H/2; bleu.vy=0; bleu.vx=0;
         gameState='playing'; startMusic(getPhaseIdx());
         screenShake=8; hitFlash=4;
         spawnParticles(W/2,H/2,'#FFD700',20); spawnParticles(W/2,H/2,'#00D4FF',12); spawnParticles(W/2,H/2,'#ffffff',8);
