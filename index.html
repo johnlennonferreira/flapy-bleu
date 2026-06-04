@@ -70,6 +70,8 @@
     height: min(600px, 100svh, calc(100svw * 3 / 2));
     touch-action: none;
     display: block;
+    /* GPU compositing hint — reduz jank no mobile */
+    will-change: transform;
     /* Suaviza transições de tamanho em rotação */
     transition: width 0.2s, height 0.2s;
   }
@@ -6389,7 +6391,7 @@ function loop(ts) {
       // Fim do firePower — vida já foi paga ao pegar a estrela (só 1 por efeito)
       if(firePower===0){
         invincible=100;
-        bleu.vx=0;
+        bleu.vx=0; bleu.x=90; // reset posição horizontal — evita personagem deslocado
         spawnParticles(bleu.x,bleu.y,'#FFaa00',20);
         spawnParticles(bleu.x,bleu.y,'#FF4400',12);
         beep(350,180,0.3,'sawtooth',0.18);
@@ -6411,19 +6413,25 @@ function loop(ts) {
       ctx.fillStyle=_starEdgeH; ctx.fillRect(0,0,W,H);
       ctx.fillStyle=_starEdgeV; ctx.fillRect(0,0,W,H);
       ctx.globalAlpha=1;
-      // ── Speed lines — mais rápidas e densas ──
+      // ── Speed lines — batch por cor (5 strokes em vez de 18) ──
+      var _slCols=['#00D4FF','#ffffff','#0052FF','#FF44FF','#FFD700'];
       ctx.lineCap='round';
       for(var sl=0;sl<speedLines.length;sl++){
         var line=speedLines[sl];
         line.y += (Math.random()-0.5)*1.8;
         if(line.x===undefined) line.x = W+10;
-        line.x -= line.speed * 5.5; // velocidade triplicada
+        line.x -= line.speed * 5.5;
         if(line.x < -line.len) line.x = W + 10;
-        ctx.globalAlpha = line.alpha * slFade * 1.4;
-        var _slCols=['#00D4FF','#ffffff','#0052FF','#FF44FF','#FFD700'];
-        ctx.strokeStyle = _slCols[sl%5];
-        ctx.lineWidth = 1 + (sl%3)*0.8;
-        ctx.beginPath(); ctx.moveTo(line.x+line.len*1.8, line.y); ctx.lineTo(line.x, line.y); ctx.stroke();
+      }
+      for(var _ci=0;_ci<5;_ci++){
+        ctx.strokeStyle=_slCols[_ci]; ctx.lineWidth=1+(_ci%3)*0.8;
+        ctx.globalAlpha=slFade*1.2;
+        ctx.beginPath();
+        for(var sl=_ci;sl<speedLines.length;sl+=5){
+          var line=speedLines[sl];
+          ctx.moveTo(line.x+line.len*1.8,line.y); ctx.lineTo(line.x,line.y);
+        }
+        ctx.stroke();
       }
       ctx.globalAlpha=1; ctx.lineCap='butt';
       // ── Aura épica pulsante — flat on mobile ──
@@ -7374,10 +7382,16 @@ function handleClick(ex, ey) {
     // ── SHARE ──
     if(cx>=W/2-78&&cx<=W/2+78&&cy>=H/2+206&&cy<=H/2+236){
       var pv2=PHASE_VISUALS[runPhase]||PHASE_VISUALS[0];
-      var shareText='🐦 Flapy Bleu — score: '+score+' on '+pv2.name+'\nCan you beat me?\n🔵 flapy-bleu.vercel.app';
-      if(navigator.share){ navigator.share({title:'Flapy Bleu',text:shareText,url:'https://flapy-bleu.vercel.app'}); }
-      else { try{ navigator.clipboard.writeText(shareText); shareFlash=90; }catch(e){} }
-      shareFlash=90; return;
+      var shareText='🐦 Flapy Bleu — score: '+score+' on '+pv2.name+'\nCan you beat me?\nflapy-bleu.vercel.app';
+      shareFlash=90;
+      if(navigator.share){
+        navigator.share({title:'Flapy Bleu',text:shareText,url:'https://flapy-bleu.vercel.app'}).catch(function(){
+          window.open('https://twitter.com/intent/tweet?text='+encodeURIComponent(shareText),'_blank');
+        });
+      } else {
+        window.open('https://twitter.com/intent/tweet?text='+encodeURIComponent(shareText),'_blank');
+      }
+      return;
     }
     // ── If items were purchased, BLOCK all exits — only CONTINUE works ──
     // Protects the player from losing what they paid for.
