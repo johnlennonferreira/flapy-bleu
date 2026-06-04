@@ -7072,17 +7072,19 @@ function loop(ts) {
     ctx.fillText(_anyReady ? '▶▶  CONTINUE WITH ITEMS' : '⌂  MENU', 0, 0);
     ctx.shadowBlur=0; ctx.textBaseline='alphabetic'; ctx.restore();
 
-    // ── SHARE (hidden when items purchased — only CONTINUE matters then) ──
+    // ── SHARE — botão prominente (sempre visível, exceto quando items prontos) ──
     if(!_anyReady){
       ctx.fillStyle='#ffffff10'; ctx.fillRect(W/2-100, H/2+208, 200, 1);
-      var _shareCol2 = shareFlash>0 ? '#00CC66' : '#335588';
-      ctx.fillStyle=_shareCol2+'18';
-      ctx.beginPath(); ctx.roundRect(W/2-74, H/2+212, 148, 22, 8); ctx.fill();
-      ctx.strokeStyle=_shareCol2+'55'; ctx.lineWidth=1; ctx.stroke();
-      ctx.fillStyle=shareFlash>0?'#00FF88':'#7799bb';
-      ctx.font='bold 10px Courier New'; ctx.textAlign='center'; ctx.textBaseline='middle';
-      ctx.fillText(shareFlash>0?'✓ COPIED!':'🔗 SHARE', W/2, H/2+223);
-      ctx.textBaseline='alphabetic';
+      var _shareCol2 = shareFlash>0 ? '#00CC66' : '#0044aa';
+      var _sharePulse = shareFlash>0 ? 1 : 0.97+0.03*Math.sin(frame*0.13);
+      ctx.save(); ctx.translate(W/2, H/2+224); ctx.scale(_sharePulse, _sharePulse);
+      ctx.fillStyle = shareFlash>0 ? '#006633' : _shareCol2+'44';
+      ctx.beginPath(); ctx.roundRect(-100,-18,200,36,10); ctx.fill();
+      ctx.strokeStyle = shareFlash>0 ? '#00FF88cc' : '#0088ffcc'; ctx.lineWidth=1.5; ctx.stroke();
+      ctx.fillStyle = shareFlash>0 ? '#00FF88' : '#55aaff';
+      ctx.font='bold 13px Courier New'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(shareFlash>0 ? '✓ SHARED!' : '🔗 SHARE SCORE', 0, 0);
+      ctx.textBaseline='alphabetic'; ctx.restore();
     }
 
     if(shareFlash>0) shareFlash--;
@@ -7372,9 +7374,9 @@ function handleClick(ex, ey) {
     // ── SHARE ──
     if(cx>=W/2-78&&cx<=W/2+78&&cy>=H/2+206&&cy<=H/2+236){
       var pv2=PHASE_VISUALS[runPhase]||PHASE_VISUALS[0];
-      var shareText='🎮 Flapy Bleu\nScore: '+score+' | '+pv2.name+'\n🔵 https://flapy-bleu.vercel.app';
+      var shareText='🐦 Flapy Bleu — score: '+score+' on '+pv2.name+'\nCan you beat me?\n🔵 flapy-bleu.vercel.app';
       if(navigator.share){ navigator.share({title:'Flapy Bleu',text:shareText,url:'https://flapy-bleu.vercel.app'}); }
-      else { try{ navigator.clipboard.writeText(shareText); }catch(e){} }
+      else { try{ navigator.clipboard.writeText(shareText); shareFlash=90; }catch(e){} }
       shareFlash=90; return;
     }
     // ── If items were purchased, BLOCK all exits — only CONTINUE works ──
