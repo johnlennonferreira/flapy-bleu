@@ -1695,13 +1695,14 @@ function drawLeaderboardTab() {
 }
 
 // ─── DAILY LOGIN ────────────────────────────────────────────────────
-var dailyModal=false, dailyDay=1, dailyReward='coins', dailyRewardVal=50;
+var dailyModal=false, dailyDay=1, dailyReward='coins', dailyRewardVal=50, dailyStreak=1;
 function checkDailyLogin() {
   var today = new Date().toDateString();
   var dl = _ls.getJSON('bleuDaily',{"date":"","streak":0});
-  if(dl.date===today) return;
+  if(dl.date===today) { dailyStreak=dl.streak||1; return; }
   var yest = new Date(); yest.setDate(yest.getDate()-1);
   var streak = dl.date===yest.toDateString() ? dl.streak+1 : 1;
+  dailyStreak = streak;
   _ls.set('bleuDaily', JSON.stringify({date:today, streak:streak}));
   dailyDay = ((streak-1)%7)+1;
   if(dailyDay===2)      { dailyReward='chest'; dailyRewardVal=1; }
@@ -1736,12 +1737,14 @@ function drawDailyModal() {
   ctx.fillText('DAILY LOGIN', W/2, H/2-122); ctx.shadowBlur=0;
   ctx.font='11px Courier New'; ctx.fillStyle='#ffffff66';
   ctx.fillText('Day '+dailyDay+' of 7', W/2, H/2-98);
+  ctx.font='bold 13px Courier New'; ctx.fillStyle='#FF6B35'; ctx.shadowColor='#FF6B35'; ctx.shadowBlur=8;
+  ctx.fillText('🔥 '+dailyStreak+' day streak', W/2, H/2-78); ctx.shadowBlur=0;
 
   // 7-day progress strip
   var icons=['💰','📦','🎨','💰','💰','💰','🎁'];
   for(var d=1;d<=7;d++){
     var dw=34, dh=38, dgap=4;
-    var total7=7*dw+6*dgap, dx7=W/2-total7/2+(d-1)*(dw+dgap), dy7=H/2-72;
+    var total7=7*dw+6*dgap, dx7=W/2-total7/2+(d-1)*(dw+dgap), dy7=H/2-58;
     var done=d<dailyDay, today=(d===dailyDay);
     ctx.fillStyle=done?'#0052FF44':today?'#0052FF22':'#ffffff08';
     ctx.strokeStyle=today?'#FFD700':done?'#0052FF':'#ffffff22'; ctx.lineWidth=today?2:1;
